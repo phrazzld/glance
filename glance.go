@@ -126,21 +126,110 @@ options:
 		}),
 	)
 
+	// this map will track directories that must be forced to regenerate
+	needsRegen := make(map[string]bool)
+
 	var finalResults []result
 
 	for _, d := range dirsList {
-		if *verbose {
-			logrus.Debugf("processing dir: %s", d)
+		// decide if we should forcibly regenerate glance.md
+		forceThisDir, errCheck := shouldRegenerate(d, *force, topIgnore)
+		if errCheck != nil {
+			// if we can't check mod times, log an error but attempt to proceed
+			if *verbose {
+				logrus.Warnf("mod-time check failed for %s: %v", d, errCheck)
+			}
 		}
-		r := processDirWithRetry(d, *force, apiKey, topIgnore)
+
+		// combine logic: if we've previously flagged this directory or parent's
+		// changes bubble up, that also triggers a force
+		forceThisDir = forceThisDir || needsRegen[d]
+
+		r := processDirWithRetry(d, forceThisDir, apiKey, topIgnore)
 		finalResults = append(finalResults, r)
 		_ = bar.Add(1)
+
+		if r.success && r.attempts > 0 && forceThisDir {
+			// if we just regenerated this directory,
+			// bubble up to all parent directories
+			bubbleUpParents(d, absDir, needsRegen)
+		}
 	}
 
 	fmt.Println()
 	logrus.Infof("done! a glance.md file has been generated recursively up to: %s", absDir)
 
 	printDebrief(finalResults)
+}
+
+// shouldRegenerate checks if we need to regenerate glance.md in `dir` due to --force,
+// no existing file, or the presence of any changes (added/deleted/modified files) since glance.md was last modified.
+func shouldRegenerate(dir string, globalForce bool, topIgnore *gitignore.GitIgnore) (bool, error) {
+	if globalForce {
+		return true, nil
+	}
+
+	glancePath := filepath.Join(dir, "glance.md")
+	glanceInfo, err := os.Stat(glancePath)
+	if err != nil {
+		// if no glance.md or can't stat it, definitely regenerate
+		return true, nil
+	}
+
+	// get the newest mod time of all files (recursively) in this directory
+	latest, err := latestModTime(dir, topIgnore)
+	if err != nil {
+		return false, err
+	}
+
+	// if any file in the subtree is newer than glance.md, we regenerate
+	if latest.After(glanceInfo.ModTime()) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// latestModTime scans a directory recursively to find the newest mod time of all files.
+// respects .gitignore for subfolders if topIgnore is specified.
+func latestModTime(dir string, topIgnore *gitignore.GitIgnore) (time.Time, error) {
+	var latest time.Time
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
+		if werr != nil {
+			return werr
+		}
+		// skip .git, node_modules, hidden, or anything the top-level .gitignore matches
+		if d.IsDir() && path != dir {
+			base := d.Name()
+			if base == ".git" || base == "node_modules" || strings.HasPrefix(base, ".") {
+				return filepath.SkipDir
+			}
+			rel, errRel := filepath.Rel(dir, path)
+			if errRel == nil && shouldIgnore(topIgnore, rel) {
+				return filepath.SkipDir
+			}
+		}
+		info, errStat := d.Info()
+		if errStat != nil {
+			return nil
+		}
+		if info.ModTime().After(latest) {
+			latest = info.ModTime()
+		}
+		return nil
+	})
+	return latest, err
+}
+
+// bubbleUpParents marks all ancestors of `dir` (up to `root`) to be regenerated
+func bubbleUpParents(dir, root string, needs map[string]bool) {
+	for {
+		parent := filepath.Dir(dir)
+		if parent == dir || len(parent) < len(root) {
+			break
+		}
+		needs[parent] = true
+		dir = parent
+	}
 }
 
 // listAllDirs enumerates directories BFS style, skipping hidden, .git, and anything matched by the top-level .gitignore.
@@ -187,15 +276,17 @@ func listAllDirs(start string, topIgnore *gitignore.GitIgnore) ([]string, error)
 	return results, nil
 }
 
-// processDirWithRetry tries up to maxRetries to generate a glance for "dir".
-func processDirWithRetry(dir string, force bool, apiKey string, topIgnore *gitignore.GitIgnore) result {
+// processDirWithRetry tries up to maxRetries to generate a glance for "dir" if forceThisDir is true,
+// or if no glance.md exists. if not forced and glance.md exists, we skip.
+func processDirWithRetry(dir string, forceThisDir bool, apiKey string, topIgnore *gitignore.GitIgnore) result {
 	r := result{dir: dir}
 	glancePath := filepath.Join(dir, "glance.md")
 
-	if !force {
+	// if not forced and glance.md already exists, skip
+	if !forceThisDir {
 		if _, err := os.Stat(glancePath); err == nil {
 			if *verbose {
-				logrus.Debugf("skipping %s because glance.md already exists", dir)
+				logrus.Debugf("skipping %s because glance.md already exists and no forced regeneration", dir)
 			}
 			r.success = true
 			r.attempts = 0
@@ -258,7 +349,7 @@ func generateGlanceText(dir string, fileMap map[string]string, subGlances string
 
 	promptBuilder.WriteString("subdirectory summaries:\n")
 	promptBuilder.WriteString(subGlances)
-	promptBuilder.WriteString("\n\nlocal file contents:\n")
+	promptBuilder.WriteString("\n\nlocal file contents:\n\n")
 
 	for filename, content := range fileMap {
 		finalContent := content
@@ -489,3 +580,4 @@ func isTextFile(path string) (bool, error) {
 	}
 	return false, nil
 }
+
