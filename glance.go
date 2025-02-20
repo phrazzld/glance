@@ -28,8 +28,8 @@ var (
 )
 
 const (
-	maxRetries   = 3               // number of times to retry LLM calls if they fail
-	maxFileBytes = 5 * 1024 * 1024 // 5 MB
+	maxRetries   = 3
+	maxFileBytes = 5 * 1024 * 1024
 )
 
 // result holds a summary of generation for each directory
@@ -41,7 +41,6 @@ type result struct {
 }
 
 func init() {
-	// attempt to load env vars from .env (non-fatal if it doesn't exist)
 	if err := godotenv.Load(); err != nil {
 		logrus.Warn("no .env file found (or error loading it), continuing with system environment")
 	}
@@ -60,13 +59,11 @@ options:
 
 	flag.Parse()
 
-	// set up logging
 	if *verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
 	}
-	// color + full timestamps
 	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 		ForceColors:   true,
@@ -108,7 +105,7 @@ options:
 		logrus.Fatalf("directory scan failed: %v", err)
 	}
 
-	// process from deepest subdirectories upward
+	// process from the deepest subdirectories upward so sub-glances exist first
 	reverseSlice(dirsList)
 
 	logrus.Info("preparing to generate all glance.md files...")
@@ -126,7 +123,6 @@ options:
 		}),
 	)
 
-	// track results for final debrief
 	var finalResults []result
 
 	for _, d := range dirsList {
@@ -141,23 +137,21 @@ options:
 	fmt.Println()
 	logrus.Infof("done! a glance.md file has been generated recursively up to: %s", absDir)
 
-	// produce final debrief
 	printDebrief(finalResults)
 }
 
-// processDirWithRetry tries up to maxRetries to generate a glance for "dir". if all fail, no file is written.
+// processDirWithRetry tries up to maxRetries to generate a glance for "dir".
 func processDirWithRetry(dir string, force bool, apiKey string) result {
 	r := result{dir: dir}
-
 	glancePath := filepath.Join(dir, "glance.md")
-	// skip if glance.md already exists (unless --force)
+
 	if !force {
 		if _, err := os.Stat(glancePath); err == nil {
 			if *verbose {
 				logrus.Debugf("skipping %s because glance.md already exists", dir)
 			}
 			r.success = true
-			r.attempts = 0 // we didn't attempt
+			r.attempts = 0
 			return r
 		}
 	}
@@ -179,33 +173,36 @@ func processDirWithRetry(dir string, force bool, apiKey string) result {
 		return r
 	}
 
-	// attempt up to maxRetries calls
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		r.attempts = attempt
+
+		if *verbose {
+			logrus.Debugf(
+				"attempt #%d for directory: %s -- immediate subdirs: %d subGlancesLen=%d localFiles=%d",
+				attempt, dir, len(subdirs), len(subGlances), len(fileContents),
+			)
+		}
+
 		summary, llmErr := generateGlanceText(dir, fileContents, subGlances, apiKey)
 		if llmErr == nil {
-			// success, write the file
 			if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
 				r.err = fmt.Errorf("failed writing glance.md to %s: %w", dir, werr)
-				// even though the LLM succeeded, if we can't write, we consider that a final fail
-				// so we do NOT continue the loop
 				return r
 			}
 			r.success = true
 			r.err = nil
 			return r
 		}
-		// log attempts if verbose
+
 		if *verbose {
 			logrus.Debugf("attempt %d for %s failed: %v", attempt, dir, llmErr)
 		}
 		r.err = llmErr
 	}
-	// if we get here, all attempts failed
+
 	return r
 }
 
-// generateGlanceText calls the LLM, skipping recommendations and focusing on an overview only.
 func generateGlanceText(dir string, fileMap map[string]string, subGlances string, apiKey string) (string, error) {
 	var promptBuilder strings.Builder
 	promptBuilder.WriteString("you are an expert code reviewer and technical writer.\n\n")
@@ -222,11 +219,15 @@ func generateGlanceText(dir string, fileMap map[string]string, subGlances string
 
 	for filename, content := range fileMap {
 		finalContent := content
-		// only truncate extremely large files (~5mb+)
 		if len(finalContent) > maxFileBytes {
 			finalContent = finalContent[:maxFileBytes] + "...(truncated)"
 		}
 		promptBuilder.WriteString(fmt.Sprintf("=== file: %s ===\n%s\n\n", filename, finalContent))
+	}
+
+	promptStr := promptBuilder.String()
+	if *verbose {
+		logrus.Debugf("[generateGlanceText] directory=%s, final prompt length in bytes=%d", dir, len(promptStr))
 	}
 
 	ctx := context.Background()
@@ -237,7 +238,17 @@ func generateGlanceText(dir string, fileMap map[string]string, subGlances string
 	defer client.Close()
 
 	model := client.GenerativeModel("gemini-1.5-flash")
-	stream := model.GenerateContentStream(ctx, genai.Text(promptBuilder.String()))
+
+	if *verbose {
+		tokenResp, tokenErr := model.CountTokens(ctx, genai.Text(promptStr))
+		if tokenErr == nil {
+			logrus.Debugf("[generateGlanceText] directory=%s, prompt tokens=%d", dir, tokenResp.TotalTokens)
+		} else {
+			logrus.Debugf("[generateGlanceText] directory=%s, token count check failed: %v", dir, tokenErr)
+		}
+	}
+
+	stream := model.GenerateContentStream(ctx, genai.Text(promptStr))
 
 	var result strings.Builder
 	for {
@@ -262,46 +273,44 @@ func generateGlanceText(dir string, fileMap map[string]string, subGlances string
 	return result.String(), nil
 }
 
-// gatherSubGlances merges existing subdirectory glance.md contents
+// gatherSubGlances merges existing subdirectory glance.md contents only
 func gatherSubGlances(subdirs []string) (string, error) {
 	var combined []string
 	for _, sd := range subdirs {
 		data, err := os.ReadFile(filepath.Join(sd, "glance.md"))
 		if err == nil {
-			// ensure valid utf-8
 			combined = append(combined, strings.ToValidUTF8(string(data), "�"))
 		}
 	}
 	return strings.Join(combined, "\n\n"), nil
 }
 
-// gatherLocalFiles enumerates files in 'dir', but only text-like files, ignoring .gitignore matches, hidden files, etc.
+// gatherLocalFiles enumerates *only the immediate files* in `dir` (no recursion), ignoring .gitignore, etc.
 func gatherLocalFiles(dir string, matcher *gitignore.GitIgnore) (map[string]string, error) {
 	files := make(map[string]string)
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
 			return werr
 		}
+		// if we hit a subdirectory that is not the starting dir, skip recursion
+		if d.IsDir() && path != dir {
+			return fs.SkipDir
+		}
 		if d.IsDir() {
 			return nil
 		}
-		// skip the local glance
 		if path == filepath.Join(dir, "glance.md") {
 			return nil
 		}
-		// skip dotfiles (including .gitignore) so they don't appear in the prompt
 		if strings.HasPrefix(d.Name(), ".") {
 			return nil
 		}
-		// skip if .gitignore says so
 		rel, _ := filepath.Rel(dir, path)
 		if shouldIgnore(matcher, rel) {
 			return nil
 		}
-		// check if the file is text-based
 		isText, err := isTextFile(path)
 		if err != nil {
-			// if uncertain or we hit an error, skip it
 			if *verbose {
 				logrus.Debugf("error checking if file is text: %s => %v", path, err)
 			}
@@ -327,7 +336,7 @@ func gatherLocalFiles(dir string, matcher *gitignore.GitIgnore) (map[string]stri
 	return files, nil
 }
 
-// isTextFile does a best-effort check by reading up to 512 bytes and calling http.DetectContentType
+// isTextFile does a best-effort check by reading up to 512 bytes
 func isTextFile(path string) (bool, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -342,7 +351,6 @@ func isTextFile(path string) (bool, error) {
 	}
 	ctype := http.DetectContentType(buf[:n])
 
-	// treat "text/*", "application/json", "application/xml", "yaml" as text
 	if strings.HasPrefix(ctype, "text/") ||
 		strings.HasPrefix(ctype, "application/json") ||
 		strings.HasPrefix(ctype, "application/xml") ||
@@ -392,7 +400,6 @@ func shouldIgnore(matcher *gitignore.GitIgnore, name string) bool {
 	return matcher.MatchesPath(name)
 }
 
-// listAllDirs enumerates *all* dirs BFS, skipping .git, hidden, or .gitignore-labeled ones
 func listAllDirs(start string) ([]string, error) {
 	var queue []string
 	queue = append(queue, start)
@@ -408,7 +415,6 @@ func listAllDirs(start string) ([]string, error) {
 			return nil, err
 		}
 		ignoreMatcher, _ := loadGitignore(current)
-
 		for _, e := range entries {
 			if !e.IsDir() {
 				continue
@@ -431,7 +437,6 @@ func reverseSlice(s []string) {
 	}
 }
 
-// printDebrief prints a final summary of successes and failures
 func printDebrief(results []result) {
 	var totalSuccess, totalFailed int
 	for _, r := range results {
