@@ -32,7 +32,6 @@ const (
 	maxFileBytes = 5 * 1024 * 1024
 )
 
-// result holds a summary of generation for each directory
 type result struct {
 	dir      string
 	attempts int
@@ -93,13 +92,17 @@ options:
 		logrus.Fatalf("path %q is not a directory", absDir)
 	}
 
+	// load the top-level .gitignore (if any)
+	var topIgnore *gitignore.GitIgnore
+	topIgnore, _ = loadGitignore(absDir)
+
 	logrus.Info("fabulous! scanning directories now...")
 
 	s := spinner.New(spinner.CharSets[14], 120*time.Millisecond)
 	s.Suffix = " scanning directories..."
 	s.FinalMSG = "scan complete!\n"
 	s.Start()
-	dirsList, err := listAllDirs(absDir)
+	dirsList, err := listAllDirs(absDir, topIgnore)
 	s.Stop()
 	if err != nil {
 		logrus.Fatalf("directory scan failed: %v", err)
@@ -129,7 +132,7 @@ options:
 		if *verbose {
 			logrus.Debugf("processing dir: %s", d)
 		}
-		r := processDirWithRetry(d, *force, apiKey)
+		r := processDirWithRetry(d, *force, apiKey, topIgnore)
 		finalResults = append(finalResults, r)
 		_ = bar.Add(1)
 	}
@@ -140,8 +143,52 @@ options:
 	printDebrief(finalResults)
 }
 
+// listAllDirs enumerates directories BFS style, skipping hidden, .git, and anything matched by the top-level .gitignore.
+func listAllDirs(start string, topIgnore *gitignore.GitIgnore) ([]string, error) {
+	var queue []string
+	queue = append(queue, start)
+	var results []string
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		results = append(results, current)
+
+		entries, err := os.ReadDir(current)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			name := e.Name()
+
+			// skip hidden folders
+			if strings.HasPrefix(name, ".") {
+				continue
+			}
+			// skip .git or node_modules specifically
+			if name == ".git" || name == "node_modules" {
+				continue
+			}
+			// if the top-level .gitignore says to skip
+			rel, err := filepath.Rel(start, filepath.Join(current, name))
+			if err == nil && shouldIgnore(topIgnore, rel) {
+				if *verbose {
+					logrus.Debugf("skipping %s due to .gitignore match", rel)
+				}
+				continue
+			}
+			queue = append(queue, filepath.Join(current, name))
+		}
+	}
+	return results, nil
+}
+
 // processDirWithRetry tries up to maxRetries to generate a glance for "dir".
-func processDirWithRetry(dir string, force bool, apiKey string) result {
+func processDirWithRetry(dir string, force bool, apiKey string, topIgnore *gitignore.GitIgnore) result {
 	r := result{dir: dir}
 	glancePath := filepath.Join(dir, "glance.md")
 
@@ -156,8 +203,7 @@ func processDirWithRetry(dir string, force bool, apiKey string) result {
 		}
 	}
 
-	ignoreMatcher, _ := loadGitignore(dir)
-	subdirs, err := readSubdirectories(dir, ignoreMatcher)
+	subdirs, err := readSubdirectories(dir, topIgnore)
 	if err != nil {
 		r.err = err
 		return r
@@ -167,7 +213,7 @@ func processDirWithRetry(dir string, force bool, apiKey string) result {
 		r.err = fmt.Errorf("gatherSubGlances failed: %w", err)
 		return r
 	}
-	fileContents, err := gatherLocalFiles(dir, ignoreMatcher)
+	fileContents, err := gatherLocalFiles(dir, topIgnore)
 	if err != nil {
 		r.err = fmt.Errorf("gatherLocalFiles failed: %w", err)
 		return r
@@ -177,10 +223,8 @@ func processDirWithRetry(dir string, force bool, apiKey string) result {
 		r.attempts = attempt
 
 		if *verbose {
-			logrus.Debugf(
-				"attempt #%d for directory: %s -- immediate subdirs: %d subGlancesLen=%d localFiles=%d",
-				attempt, dir, len(subdirs), len(subGlances), len(fileContents),
-			)
+			logrus.Debugf("attempt #%d for %s -> subdirs=%d subGlancesLen=%d localFiles=%d",
+				attempt, dir, len(subdirs), len(subGlances), len(fileContents))
 		}
 
 		summary, llmErr := generateGlanceText(dir, fileContents, subGlances, apiKey)
@@ -193,7 +237,6 @@ func processDirWithRetry(dir string, force bool, apiKey string) result {
 			r.err = nil
 			return r
 		}
-
 		if *verbose {
 			logrus.Debugf("attempt %d for %s failed: %v", attempt, dir, llmErr)
 		}
@@ -226,8 +269,9 @@ func generateGlanceText(dir string, fileMap map[string]string, subGlances string
 	}
 
 	promptStr := promptBuilder.String()
+
 	if *verbose {
-		logrus.Debugf("[generateGlanceText] directory=%s, final prompt length in bytes=%d", dir, len(promptStr))
+		logrus.Debugf("[generateGlanceText] directory=%s, prompt length in bytes=%d", dir, len(promptStr))
 	}
 
 	ctx := context.Background()
@@ -239,6 +283,7 @@ func generateGlanceText(dir string, fileMap map[string]string, subGlances string
 
 	model := client.GenerativeModel("gemini-1.5-flash")
 
+	// optional token debug
 	if *verbose {
 		tokenResp, tokenErr := model.CountTokens(ctx, genai.Text(promptStr))
 		if tokenErr == nil {
@@ -285,30 +330,33 @@ func gatherSubGlances(subdirs []string) (string, error) {
 	return strings.Join(combined, "\n\n"), nil
 }
 
-// gatherLocalFiles enumerates *only the immediate files* in `dir` (no recursion), ignoring .gitignore, etc.
-func gatherLocalFiles(dir string, matcher *gitignore.GitIgnore) (map[string]string, error) {
+// gatherLocalFiles enumerates only the immediate files in `dir`, ignoring topIgnore, etc.
+func gatherLocalFiles(dir string, topIgnore *gitignore.GitIgnore) (map[string]string, error) {
 	files := make(map[string]string)
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
 			return werr
 		}
-		// if we hit a subdirectory that is not the starting dir, skip recursion
+		// if subdirectory (and not the dir itself), skip
 		if d.IsDir() && path != dir {
 			return fs.SkipDir
 		}
 		if d.IsDir() {
 			return nil
 		}
-		if path == filepath.Join(dir, "glance.md") {
+		base := d.Name()
+		if base == "glance.md" || strings.HasPrefix(base, ".") {
 			return nil
 		}
-		if strings.HasPrefix(d.Name(), ".") {
-			return nil
-		}
+		// if .gitignore says skip
 		rel, _ := filepath.Rel(dir, path)
-		if shouldIgnore(matcher, rel) {
+		if shouldIgnore(topIgnore, rel) {
+			if *verbose {
+				logrus.Debugf("ignoring file via .gitignore: %s", rel)
+			}
 			return nil
 		}
+
 		isText, err := isTextFile(path)
 		if err != nil {
 			if *verbose {
@@ -336,31 +384,8 @@ func gatherLocalFiles(dir string, matcher *gitignore.GitIgnore) (map[string]stri
 	return files, nil
 }
 
-// isTextFile does a best-effort check by reading up to 512 bytes
-func isTextFile(path string) (bool, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return false, err
-	}
-	defer f.Close()
-
-	buf := make([]byte, 512)
-	n, err := f.Read(buf)
-	if err != nil && err != io.EOF {
-		return false, err
-	}
-	ctype := http.DetectContentType(buf[:n])
-
-	if strings.HasPrefix(ctype, "text/") ||
-		strings.HasPrefix(ctype, "application/json") ||
-		strings.HasPrefix(ctype, "application/xml") ||
-		strings.Contains(ctype, "yaml") {
-		return true, nil
-	}
-	return false, nil
-}
-
-func readSubdirectories(dir string, matcher *gitignore.GitIgnore) ([]string, error) {
+// readSubdirectories enumerates immediate subdirectories in `dir`, skipping node_modules, hidden, topIgnore, etc.
+func readSubdirectories(dir string, topIgnore *gitignore.GitIgnore) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -370,17 +395,26 @@ func readSubdirectories(dir string, matcher *gitignore.GitIgnore) ([]string, err
 		if !e.IsDir() {
 			continue
 		}
-		if e.Name() == ".git" || strings.HasPrefix(e.Name(), ".") {
+		name := e.Name()
+		if name == ".git" || name == "node_modules" {
 			continue
 		}
-		if shouldIgnore(matcher, e.Name()) {
+		if strings.HasPrefix(name, ".") {
 			continue
 		}
-		subdirs = append(subdirs, filepath.Join(dir, e.Name()))
+		rel, _ := filepath.Rel(dir, filepath.Join(dir, name))
+		if shouldIgnore(topIgnore, rel) {
+			if *verbose {
+				logrus.Debugf("ignoring subdir via .gitignore: %s", rel)
+			}
+			continue
+		}
+		subdirs = append(subdirs, filepath.Join(dir, name))
 	}
 	return subdirs, nil
 }
 
+// loadGitignore tries to parse .gitignore in the given dir
 func loadGitignore(dir string) (*gitignore.GitIgnore, error) {
 	path := filepath.Join(dir, ".gitignore")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -398,37 +432,6 @@ func shouldIgnore(matcher *gitignore.GitIgnore, name string) bool {
 		return false
 	}
 	return matcher.MatchesPath(name)
-}
-
-func listAllDirs(start string) ([]string, error) {
-	var queue []string
-	queue = append(queue, start)
-	var results []string
-
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-		results = append(results, current)
-
-		entries, err := os.ReadDir(current)
-		if err != nil {
-			return nil, err
-		}
-		ignoreMatcher, _ := loadGitignore(current)
-		for _, e := range entries {
-			if !e.IsDir() {
-				continue
-			}
-			if e.Name() == ".git" || strings.HasPrefix(e.Name(), ".") {
-				continue
-			}
-			if shouldIgnore(ignoreMatcher, e.Name()) {
-				continue
-			}
-			queue = append(queue, filepath.Join(current, e.Name()))
-		}
-	}
-	return results, nil
 }
 
 func reverseSlice(s []string) {
@@ -463,3 +466,26 @@ func printDebrief(results []result) {
 	logrus.Info("=====================")
 }
 
+// isTextFile checks up to 512 bytes with http.DetectContentType
+func isTextFile(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	buf := make([]byte, 512)
+	n, err := f.Read(buf)
+	if err != nil && err != io.EOF {
+		return false, err
+	}
+	ctype := http.DetectContentType(buf[:n])
+
+	if strings.HasPrefix(ctype, "text/") ||
+		strings.HasPrefix(ctype, "application/json") ||
+		strings.HasPrefix(ctype, "application/xml") ||
+		strings.Contains(ctype, "yaml") {
+		return true, nil
+	}
+	return false, nil
+}
