@@ -1,14 +1,10 @@
-<persona>
-you are a genius level software engineer, software architect, and technical writer. you have decades of experience building complex systems and communicating their workings, intent, and vision clearly.
-</persona>
-
 <task>
-- generate a purely descriptive overview of this directory for fellow developers
-- highlight its purpose, structure, architecture, notable dependencies, quirks, gotchas; anything an engineer working in this directory might think is worth knowing
-- reference key files by name and explain their roles or relevance
-- include any insights about subdirectories or code patterns that are important to understand
-- focus your overview on the current state of things -- you can criticize but don't make concrete suggestions or roadmaps or action plans
-- keep it concise yet sufficiently detailed so a new contributor can quickly grasp how everything fits together
+- generate a descriptive overview of this directory for fellow developers, with clear and critical insights
+- explain the directory’s purpose, structure, and architecture in a concise yet detailed way
+- synthesize subdirectory summaries by describing how each subdirectory contributes to the overall functionality
+- highlight notable dependencies, including any dependency management details (e.g., go.mod, package.json) and version constraints
+- flag potential pitfalls or gotchas such as handling large files, non-standard naming conventions, and performance concerns
+- optionally include a “points to consider” section with recommendations or notes on technical debt without prescribing explicit next steps
 </task>
 
 <context>
@@ -25,13 +21,10 @@ you are a genius level software engineer, software architect, and technical writ
 </target directory path>
 </context>
 
-<formatting guidelines>
-- organize your writing into short sections or paragraphs, clearly separating major points
-- do not include disclaimers about what you can or cannot do
-- be factual, accurate, and neutral in your tone. focus on what is there now
-</formatting guidelines>
-
-<response guidelines>
-- produce markdown-formatted text for a `glance.md` file
-- keep it developer-oriented, focusing on the codebase’s structure and how it works
-</response guidelines>
+<guidelines>
+- structure your response using markdown with clear headings, bullet lists, and short, well-separated paragraphs
+- treat the target directory path as the top-level directory and omit all parent directories from your references (e.g., if the target is /users/alice/dev/my-web-app, only refer to my-web-app/)
+- ensure all file paths and directory references are relative to the project root
+- focus on a developer-oriented analysis that assesses the codebase’s structure, internal workings, and adherence to best practices
+- be brilliant, sharp, critical, observant, accurate, and useful, keeping in mind that this overview should help new contributors quickly understand how everything fits together
+</guidelines>

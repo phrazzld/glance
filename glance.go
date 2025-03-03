@@ -82,7 +82,7 @@ type promptData struct {
 
 func main() {
 	// define cli flags using the standard flag package
-	flag.BoolVar(&force, "force", false, "regenerate glance.md even if it already exists")
+	flag.BoolVar(&force, "force", false, "regenerate GLANCE.md even if it already exists")
 	flag.BoolVar(&verbose, "verbose", false, "enable verbose logging (debug level)")
 	flag.StringVar(&promptFile, "prompt-file", "", "path to custom prompt file (overrides default)")
 	flag.Parse()
@@ -93,69 +93,75 @@ func main() {
 		os.Exit(1)
 	}
 
-	// set up logging
+	// set up logging with custom formatter for more personality and distinctiveness
 	if verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
 	}
 	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-		ForceColors:   true,
+		FullTimestamp:    true,
+		ForceColors:      true,
+		TimestampFormat:  "2006-01-02 15:04:05",
+		DisableTimestamp: false,
+		PadLevelText:     true,
+		ForceQuote:       false,
+		DisableSorting:   true,
+		DisableColors:    false,
 	})
 
 	// load .env if present
 	if err := godotenv.Load(); err != nil {
-		logrus.Warn("no .env file found (or error loading it), continuing with system environment")
+		logrus.Warn("📝 No .env file found or couldn't load it. Using system environment variables instead.")
 	}
 
 	targetDir := flag.Arg(0)
 	absDir, err := filepath.Abs(targetDir)
 	if err != nil {
-		logrus.Fatalf("invalid target directory: %v", err)
+		logrus.Fatalf("❌ Invalid target directory: %v - Please provide a valid path", err)
 	}
 
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		logrus.Fatal("environment variable GEMINI_API_KEY is not set. set GEMINI_API_KEY or put it in your .env")
+		logrus.Fatal("🔑 GEMINI_API_KEY is missing! Please set this environment variable or add it to your .env file")
 	}
 
 	stat, err := os.Stat(absDir)
 	if err != nil {
-		logrus.Fatalf("cannot read directory %q: %v", absDir, err)
+		logrus.Fatalf("📁 Cannot access directory %q: %v - Check permissions and path", absDir, err)
 	}
 	if !stat.IsDir() {
-		logrus.Fatalf("path %q is not a directory", absDir)
+		logrus.Fatalf("📄 Path %q is a file, not a directory. Please provide a directory path", absDir)
 	}
 
 	// load prompt template (from --prompt-file, "prompt.txt", or fallback)
 	promptTemplate, err := loadPromptTemplate(promptFile)
 	if err != nil {
-		logrus.Fatalf("failed to load prompt template: %v", err)
+		logrus.Fatalf("📜 Failed to load prompt template: %v - Check file path and content", err)
 	}
 
-	logrus.Info("fabulous! scanning directories now...")
+	logrus.Info("✨ Excellent! Scanning directories now... Let's explore your code!")
 
 	s := spinner.New(spinner.CharSets[14], 120*time.Millisecond)
-	s.Suffix = " scanning directories, loading .gitignore files..."
-	s.FinalMSG = "scan complete!\n"
+	s.Suffix = " 🔍 Scanning directories and loading .gitignore files..."
+	s.FinalMSG = "🎉 Scan complete! Found all the good stuff!\n"
 	s.Start()
 
 	// perform BFS scanning and gather .gitignore chain info per directory
 	dirsList, dirToIgnoreChain, err := listAllDirsWithIgnores(absDir)
 	if err != nil {
 		s.Stop()
-		logrus.Fatalf("directory scan failed: %v", err)
+		logrus.Fatalf("🚫 Directory scan failed: %v - Check file permissions and disk space", err)
 	}
 	s.Stop()
 
 	// process from deepest subdirectories upward
 	reverseSlice(dirsList)
 
-	logrus.Info("preparing to generate all glance.md files...")
+	logrus.Info("🧠 Preparing to generate all GLANCE.md files... Getting ready to make your code shine!")
 
 	bar := progressbar.NewOptions(len(dirsList),
-		progressbar.OptionSetDescription("generating glance files"),
+		progressbar.OptionSetDescription("✍️ Creating GLANCE files"),
 		progressbar.OptionShowCount(),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionSetPredictTime(false),
@@ -175,7 +181,7 @@ func main() {
 
 		forceDir, errCheck := shouldRegenerate(d, force, ignoreChain)
 		if errCheck != nil && verbose {
-			logrus.Warnf("mod-time check failed for %s: %v", d, errCheck)
+			logrus.Warnf("⏱️ Couldn't check modification time for %s: %v", d, errCheck)
 		}
 
 		forceDir = forceDir || needsRegen[d]
@@ -192,7 +198,7 @@ func main() {
 	}
 
 	fmt.Println()
-	logrus.Infof("done! a glance.md file has been generated recursively up to: %s", absDir)
+	logrus.Infof("🎯 All done! GLANCE.md files have been generated for your codebase up to: %s", absDir)
 
 	printDebrief(finalResults)
 }
@@ -296,18 +302,18 @@ func reverseSlice(s []string) {
 }
 
 // -----------------------------------------------------------------------------
-// processing directories and generating glance.md
+// processing directories and generating GLANCE.md
 // -----------------------------------------------------------------------------
 
 func processDirWithRetry(dir string, forceDir bool, apiKey string, ignoreChain []*gitignore.GitIgnore, promptTemplate string) result {
 	r := result{dir: dir}
 
-	glancePath := filepath.Join(dir, "glance.md")
+	glancePath := filepath.Join(dir, "GLANCE.md")
 	if !forceDir {
-		// skip if glance.md exists and not forcing regeneration
+		// skip if GLANCE.md exists and not forcing regeneration
 		if _, err := os.Stat(glancePath); err == nil {
 			if verbose {
-				logrus.Debugf("skipping %s because glance.md already exists", dir)
+				logrus.Debugf("⏩ Skipping %s (GLANCE.md already exists and looks fresh)", dir)
 			}
 			r.success = true
 			return r
@@ -334,14 +340,14 @@ func processDirWithRetry(dir string, forceDir bool, apiKey string, ignoreChain [
 		r.attempts = attempt
 
 		if verbose {
-			logrus.Debugf("attempt #%d for %s -> subdirs=%d, subGlancesLen=%d, localFiles=%d",
+			logrus.Debugf("🔄 Attempt #%d for %s → Found %d subdirs, %d sub-glances, %d local files",
 				attempt, dir, len(subdirs), len(subGlances), len(fileContents))
 		}
 
 		summary, llmErr := generateGlanceText(dir, fileContents, subGlances, apiKey, promptTemplate)
 		if llmErr == nil {
 			if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
-				r.err = fmt.Errorf("failed writing glance.md to %s: %w", dir, werr)
+				r.err = fmt.Errorf("failed writing GLANCE.md to %s: %w", dir, werr)
 				return r
 			}
 			r.success = true
@@ -349,7 +355,7 @@ func processDirWithRetry(dir string, forceDir bool, apiKey string, ignoreChain [
 			return r
 		}
 		if verbose {
-			logrus.Debugf("attempt %d for %s failed: %v", attempt, dir, llmErr)
+			logrus.Debugf("❌ Attempt %d for %s failed: %v - Will retry if attempts remain", attempt, dir, llmErr)
 		}
 		r.err = llmErr
 	}
@@ -357,11 +363,11 @@ func processDirWithRetry(dir string, forceDir bool, apiKey string, ignoreChain [
 	return r
 }
 
-// gatherSubGlances merges the contents of existing subdirectory glance.md files.
+// gatherSubGlances merges the contents of existing subdirectory GLANCE.md files.
 func gatherSubGlances(subdirs []string) (string, error) {
 	var combined []string
 	for _, sd := range subdirs {
-		data, err := os.ReadFile(filepath.Join(sd, "glance.md"))
+		data, err := os.ReadFile(filepath.Join(sd, "GLANCE.md"))
 		if err == nil {
 			combined = append(combined, strings.ToValidUTF8(string(data), "�"))
 		}
@@ -388,7 +394,7 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 		rel, _ := filepath.Rel(dir, fullPath)
 		if isIgnored(rel, ignoreChain) {
 			if verbose {
-				logrus.Debugf("ignoring subdir via .gitignore chain: %s", rel)
+				logrus.Debugf("🙈 Ignoring subdirectory (matched .gitignore pattern): %s", rel)
 			}
 			continue
 		}
@@ -397,7 +403,7 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 	return subdirs, nil
 }
 
-// gatherLocalFiles reads immediate files in a directory (excluding glance.md, hidden files, etc.).
+// gatherLocalFiles reads immediate files in a directory (excluding GLANCE.md, hidden files, etc.).
 func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore) (map[string]string, error) {
 	files := make(map[string]string)
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
@@ -408,7 +414,7 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore) (map[strin
 		if d.IsDir() && path != dir {
 			return fs.SkipDir
 		}
-		if d.IsDir() || d.Name() == "glance.md" || strings.HasPrefix(d.Name(), ".") {
+		if d.IsDir() || d.Name() == "GLANCE.md" || strings.HasPrefix(d.Name(), ".") {
 			return nil
 		}
 
@@ -426,7 +432,7 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore) (map[strin
 		}
 		if !isText {
 			if verbose {
-				logrus.Debugf("skipping non-text file: %s", path)
+				logrus.Debugf("📊 Skipping binary/non-text file: %s", path)
 			}
 			return nil
 		}
@@ -518,9 +524,9 @@ func generateGlanceText(dir string, fileMap map[string]string, subGlances string
 	if verbose {
 		tokenResp, tokenErr := model.CountTokens(ctx, genai.Text(promptStr))
 		if tokenErr == nil {
-			logrus.Debugf("[generateGlanceText] directory=%s, prompt tokens=%d", dir, tokenResp.TotalTokens)
+			logrus.Debugf("🔤 Token count for %s: %d tokens in prompt", dir, tokenResp.TotalTokens)
 		} else {
-			logrus.Debugf("[generateGlanceText] directory=%s, token count check failed: %v", dir, tokenErr)
+			logrus.Debugf("⚠️ Couldn't count tokens for %s: %v", dir, tokenErr)
 		}
 	}
 
@@ -558,7 +564,7 @@ func shouldRegenerate(dir string, globalForce bool, ignoreChain []*gitignore.Git
 		return true, nil
 	}
 
-	glancePath := filepath.Join(dir, "glance.md")
+	glancePath := filepath.Join(dir, "GLANCE.md")
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
 		return true, nil
@@ -639,20 +645,20 @@ func printDebrief(results []result) {
 			totalFailed++
 		}
 	}
-	logrus.Info("=== final debrief ===")
-	logrus.Infof("processed %d directories -> successes: %d, failures: %d", len(results), totalSuccess, totalFailed)
+	logrus.Info("📊 === FINAL SUMMARY === 📊")
+	logrus.Infof("🔢 Processed %d directories → %d successes, %d failures", len(results), totalSuccess, totalFailed)
 
 	if totalFailed == 0 {
-		logrus.Info("no failures! we're all set.")
+		logrus.Info("🌟 Perfect run! No failures detected. Your codebase is now well-documented!")
 		return
 	}
 
-	logrus.Info("some directories failed to generate glance.md:")
+	logrus.Info("⚠️ Some directories couldn't be processed:")
 	for _, r := range results {
 		if !r.success {
-			logrus.Warnf(" - %s: attempts=%d err=%v", r.dir, r.attempts, r.err)
+			logrus.Warnf("❌ %s: Attempts=%d Error=%v", r.dir, r.attempts, r.err)
 		}
 	}
-	logrus.Info("=====================")
+	logrus.Info("📊 ===================== 📊")
 }
 
