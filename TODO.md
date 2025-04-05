@@ -6,7 +6,7 @@
   - **Depends On:** None
   - **AC Ref:** RFT-01
 
-- [ ] **Create Main Test File**
+- [x] **Create Main Test File**
   - **Action:** Create main_test.go with end-to-end test that verifies GLANCE.md creation with test directory
   - **Depends On:** Setup Testing Framework
   - **AC Ref:** RFT-01
