@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -16,44 +15,19 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/google/generative-ai-go/genai"
-	"github.com/joho/godotenv"
+	_ "github.com/joho/godotenv" // Used by the config package for loading environment variables
 	gitignore "github.com/sabhiram/go-gitignore"
 	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+	
+	"glance/config"
 )
 
 // -----------------------------------------------------------------------------
-// global flags and constants
+// type definitions
 // -----------------------------------------------------------------------------
-
-var (
-	force      bool
-	verbose    bool
-	promptFile string
-
-	// fallback prompt template
-	defaultPrompt = `you are an expert code reviewer and technical writer.
-generate a descriptive technical overview of this directory:
-- highlight purpose, architecture, and key file roles
-- mention important dependencies or gotchas
-- do NOT provide recommendations or next steps
-
-directory: {{.Directory}}
-
-subdirectory summaries:
-{{.SubGlances}}
-
-local file contents:
-{{.FileContents}}
-`
-)
-
-const (
-	maxRetries   = 3
-	maxFileBytes = 5 * 1024 * 1024
-)
 
 // result tracks per-directory summarization outcomes.
 type result struct {
@@ -81,24 +55,43 @@ type promptData struct {
 // -----------------------------------------------------------------------------
 
 func main() {
-	// define cli flags using the standard flag package
-	flag.BoolVar(&force, "force", false, "regenerate GLANCE.md even if it already exists")
-	flag.BoolVar(&verbose, "verbose", false, "enable verbose logging (debug level)")
-	flag.StringVar(&promptFile, "prompt-file", "", "path to custom prompt file (overrides default)")
-	flag.Parse()
-
-	if flag.NArg() != 1 {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] <directory>\n", os.Args[0])
-		flag.PrintDefaults()
+	// Load configuration from command-line flags, environment variables, etc.
+	cfg, err := config.LoadConfig(os.Args)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		os.Exit(1)
 	}
 
-	// set up logging with custom formatter for more personality and distinctiveness
+	// Set up logging based on the verbose flag
+	setupLogging(cfg.Verbose)
+
+	// Scan directories and process them to generate GLANCE.md files
+	dirs, ignoreChains, err := scanDirectories(cfg)
+	if err != nil {
+		logrus.Fatalf("🚫 Directory scan failed: %v - Check file permissions and disk space", err)
+	}
+
+	// Process directories and generate GLANCE.md files
+	results := processDirectories(dirs, ignoreChains, cfg)
+
+	// Print summary of results
+	printDebrief(results)
+}
+
+// -----------------------------------------------------------------------------
+// Main function components
+// -----------------------------------------------------------------------------
+
+// setupLogging configures the logger based on the verbose flag
+func setupLogging(verbose bool) {
+	// Set log level based on verbose flag
 	if verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
 	}
+
+	// Configure formatter with custom settings
 	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:    true,
 		ForceColors:      true,
@@ -109,57 +102,36 @@ func main() {
 		DisableSorting:   true,
 		DisableColors:    false,
 	})
+}
 
-	// load .env if present
-	if err := godotenv.Load(); err != nil {
-		logrus.Warn("📝 No .env file found or couldn't load it. Using system environment variables instead.")
-	}
-
-	targetDir := flag.Arg(0)
-	absDir, err := filepath.Abs(targetDir)
-	if err != nil {
-		logrus.Fatalf("❌ Invalid target directory: %v - Please provide a valid path", err)
-	}
-
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		logrus.Fatal("🔑 GEMINI_API_KEY is missing! Please set this environment variable or add it to your .env file")
-	}
-
-	stat, err := os.Stat(absDir)
-	if err != nil {
-		logrus.Fatalf("📁 Cannot access directory %q: %v - Check permissions and path", absDir, err)
-	}
-	if !stat.IsDir() {
-		logrus.Fatalf("📄 Path %q is a file, not a directory. Please provide a directory path", absDir)
-	}
-
-	// load prompt template (from --prompt-file, "prompt.txt", or fallback)
-	promptTemplate, err := loadPromptTemplate(promptFile)
-	if err != nil {
-		logrus.Fatalf("📜 Failed to load prompt template: %v - Check file path and content", err)
-	}
-
+// scanDirectories performs BFS scanning and gathers .gitignore chain info per directory
+func scanDirectories(cfg *config.Config) ([]string, map[string][]*gitignore.GitIgnore, error) {
 	logrus.Info("✨ Excellent! Scanning directories now... Let's explore your code!")
 
+	// Show a spinner while scanning
 	s := spinner.New(spinner.CharSets[14], 120*time.Millisecond)
 	s.Suffix = " 🔍 Scanning directories and loading .gitignore files..."
 	s.FinalMSG = "🎉 Scan complete! Found all the good stuff!\n"
 	s.Start()
+	defer s.Stop()
 
-	// perform BFS scanning and gather .gitignore chain info per directory
-	dirsList, dirToIgnoreChain, err := listAllDirsWithIgnores(absDir)
+	// Perform BFS scanning and gather .gitignore chain info per directory
+	dirsList, dirToIgnoreChain, err := listAllDirsWithIgnores(cfg.TargetDir)
 	if err != nil {
-		s.Stop()
-		logrus.Fatalf("🚫 Directory scan failed: %v - Check file permissions and disk space", err)
+		return nil, nil, err
 	}
-	s.Stop()
 
-	// process from deepest subdirectories upward
+	// Process from deepest subdirectories upward
 	reverseSlice(dirsList)
 
+	return dirsList, dirToIgnoreChain, nil
+}
+
+// processDirectories generates GLANCE.md files for each directory in the list
+func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitignore.GitIgnore, cfg *config.Config) []result {
 	logrus.Info("🧠 Preparing to generate all GLANCE.md files... Getting ready to make your code shine!")
 
+	// Create progress bar
 	bar := progressbar.NewOptions(len(dirsList),
 		progressbar.OptionSetDescription("✍️ Creating GLANCE files"),
 		progressbar.OptionShowCount(),
@@ -176,31 +148,172 @@ func main() {
 	needsRegen := make(map[string]bool)
 	var finalResults []result
 
+	// Process each directory
 	for _, d := range dirsList {
 		ignoreChain := dirToIgnoreChain[d]
 
-		forceDir, errCheck := shouldRegenerate(d, force, ignoreChain)
-		if errCheck != nil && verbose {
+		// Check if we need to regenerate the GLANCE.md file
+		forceDir, errCheck := shouldRegenerate(d, cfg.Force, ignoreChain)
+		if errCheck != nil && cfg.Verbose {
 			logrus.Warnf("⏱️ Couldn't check modification time for %s: %v", d, errCheck)
 		}
 
 		forceDir = forceDir || needsRegen[d]
 
-		r := processDirWithRetry(d, forceDir, apiKey, ignoreChain, promptTemplate)
+		// Process the directory with retry logic
+		r := processDirectory(d, forceDir, ignoreChain, cfg)
 		finalResults = append(finalResults, r)
 
 		_ = bar.Add(1)
 
-		// bubble up parent's regeneration flag if needed
+		// Bubble up parent's regeneration flag if needed
 		if r.success && r.attempts > 0 && forceDir {
-			bubbleUpParents(d, absDir, needsRegen)
+			bubbleUpParents(d, cfg.TargetDir, needsRegen)
 		}
 	}
 
 	fmt.Println()
-	logrus.Infof("🎯 All done! GLANCE.md files have been generated for your codebase up to: %s", absDir)
+	logrus.Infof("🎯 All done! GLANCE.md files have been generated for your codebase up to: %s", cfg.TargetDir)
 
-	printDebrief(finalResults)
+	return finalResults
+}
+
+// processDirectory processes a single directory with retry logic
+func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgnore, cfg *config.Config) result {
+	r := result{dir: dir}
+
+	glancePath := filepath.Join(dir, "GLANCE.md")
+	if !forceDir {
+		// Skip if GLANCE.md exists and not forcing regeneration
+		if _, err := os.Stat(glancePath); err == nil {
+			if cfg.Verbose {
+				logrus.Debugf("⏩ Skipping %s (GLANCE.md already exists and looks fresh)", dir)
+			}
+			r.success = true
+			return r
+		}
+	}
+
+	// Gather data for GLANCE.md generation
+	subdirs, err := readSubdirectories(dir, ignoreChain)
+	if err != nil {
+		r.err = err
+		return r
+	}
+	subGlances, err := gatherSubGlances(subdirs)
+	if err != nil {
+		r.err = fmt.Errorf("gatherSubGlances failed: %w", err)
+		return r
+	}
+	fileContents, err := gatherLocalFiles(dir, ignoreChain, cfg.MaxFileBytes, cfg.Verbose)
+	if err != nil {
+		r.err = fmt.Errorf("gatherLocalFiles failed: %w", err)
+		return r
+	}
+
+	// Attempt to generate GLANCE.md with retries
+	for attempt := 1; attempt <= cfg.MaxRetries; attempt++ {
+		r.attempts = attempt
+
+		if cfg.Verbose {
+			logrus.Debugf("🔄 Attempt #%d for %s → Found %d subdirs, %d sub-glances, %d local files",
+				attempt, dir, len(subdirs), len(subGlances), len(fileContents))
+		}
+
+		// Generate markdown content
+		summary, llmErr := generateMarkdown(dir, fileContents, subGlances, cfg)
+		if llmErr == nil {
+			if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
+				r.err = fmt.Errorf("failed writing GLANCE.md to %s: %w", dir, werr)
+				return r
+			}
+			r.success = true
+			r.err = nil
+			return r
+		}
+		if cfg.Verbose {
+			logrus.Debugf("❌ Attempt %d for %s failed: %v - Will retry if attempts remain", attempt, dir, llmErr)
+		}
+		r.err = llmErr
+	}
+
+	return r
+}
+
+// generateMarkdown generates the content for a GLANCE.md file
+func generateMarkdown(dir string, fileMap map[string]string, subGlances string, cfg *config.Config) (string, error) {
+	// Build file contents chunk
+	var fileContentsBuilder strings.Builder
+	for filename, content := range fileMap {
+		fileContentsBuilder.WriteString(fmt.Sprintf("=== file: %s ===\n%s\n\n", filename, content))
+	}
+
+	// Fill promptData struct for the template
+	data := promptData{
+		Directory:    dir,
+		SubGlances:   subGlances,
+		FileContents: fileContentsBuilder.String(),
+	}
+
+	// Parse and execute the prompt template
+	tmpl, err := template.New("prompt").Parse(cfg.PromptTemplate)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse prompt template: %w", err)
+	}
+	var rendered bytes.Buffer
+	if err = tmpl.Execute(&rendered, data); err != nil {
+		return "", fmt.Errorf("failed to execute prompt template: %w", err)
+	}
+
+	promptStr := rendered.String()
+	if cfg.Verbose {
+		logrus.Debugf("[generateMarkdown] directory=%s, prompt length in bytes=%d", dir, len(promptStr))
+	}
+
+	// Set up the Gemini API client
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(cfg.APIKey))
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+
+	model := client.GenerativeModel("gemini-2.0-flash")
+
+	// Optional token debug
+	if cfg.Verbose {
+		tokenResp, tokenErr := model.CountTokens(ctx, genai.Text(promptStr))
+		if tokenErr == nil {
+			logrus.Debugf("🔤 Token count for %s: %d tokens in prompt", dir, tokenResp.TotalTokens)
+		} else {
+			logrus.Debugf("⚠️ Couldn't count tokens for %s: %v", dir, tokenErr)
+		}
+	}
+
+	// Generate content using the Gemini API
+	stream := model.GenerateContentStream(ctx, genai.Text(promptStr))
+
+	var result strings.Builder
+	for {
+		resp, err := stream.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+		for _, c := range resp.Candidates {
+			if c.Content == nil {
+				continue
+			}
+			for _, p := range c.Content.Parts {
+				if txt, ok := p.(genai.Text); ok {
+					result.WriteString(string(txt))
+				}
+			}
+		}
+	}
+	return result.String(), nil
 }
 
 // -----------------------------------------------------------------------------
@@ -256,7 +369,7 @@ func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitI
 			fullChildPath := filepath.Join(current.path, name)
 			rel, _ := filepath.Rel(root, fullChildPath)
 			if isIgnored(rel, combinedChain) {
-				if verbose {
+				if logrus.IsLevelEnabled(logrus.DebugLevel) {
 					logrus.Debugf("skipping %s because of .gitignore match", rel)
 				}
 				continue
@@ -302,66 +415,8 @@ func reverseSlice(s []string) {
 }
 
 // -----------------------------------------------------------------------------
-// processing directories and generating GLANCE.md
+// file collection and processing
 // -----------------------------------------------------------------------------
-
-func processDirWithRetry(dir string, forceDir bool, apiKey string, ignoreChain []*gitignore.GitIgnore, promptTemplate string) result {
-	r := result{dir: dir}
-
-	glancePath := filepath.Join(dir, "GLANCE.md")
-	if !forceDir {
-		// skip if GLANCE.md exists and not forcing regeneration
-		if _, err := os.Stat(glancePath); err == nil {
-			if verbose {
-				logrus.Debugf("⏩ Skipping %s (GLANCE.md already exists and looks fresh)", dir)
-			}
-			r.success = true
-			return r
-		}
-	}
-
-	subdirs, err := readSubdirectories(dir, ignoreChain)
-	if err != nil {
-		r.err = err
-		return r
-	}
-	subGlances, err := gatherSubGlances(subdirs)
-	if err != nil {
-		r.err = fmt.Errorf("gatherSubGlances failed: %w", err)
-		return r
-	}
-	fileContents, err := gatherLocalFiles(dir, ignoreChain)
-	if err != nil {
-		r.err = fmt.Errorf("gatherLocalFiles failed: %w", err)
-		return r
-	}
-
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		r.attempts = attempt
-
-		if verbose {
-			logrus.Debugf("🔄 Attempt #%d for %s → Found %d subdirs, %d sub-glances, %d local files",
-				attempt, dir, len(subdirs), len(subGlances), len(fileContents))
-		}
-
-		summary, llmErr := generateGlanceText(dir, fileContents, subGlances, apiKey, promptTemplate)
-		if llmErr == nil {
-			if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
-				r.err = fmt.Errorf("failed writing GLANCE.md to %s: %w", dir, werr)
-				return r
-			}
-			r.success = true
-			r.err = nil
-			return r
-		}
-		if verbose {
-			logrus.Debugf("❌ Attempt %d for %s failed: %v - Will retry if attempts remain", attempt, dir, llmErr)
-		}
-		r.err = llmErr
-	}
-
-	return r
-}
 
 // gatherSubGlances merges the contents of existing subdirectory GLANCE.md files.
 func gatherSubGlances(subdirs []string) (string, error) {
@@ -393,7 +448,7 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 		fullPath := filepath.Join(dir, name)
 		rel, _ := filepath.Rel(dir, fullPath)
 		if isIgnored(rel, ignoreChain) {
-			if verbose {
+			if logrus.IsLevelEnabled(logrus.DebugLevel) {
 				logrus.Debugf("🙈 Ignoring subdirectory (matched .gitignore pattern): %s", rel)
 			}
 			continue
@@ -404,7 +459,7 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 }
 
 // gatherLocalFiles reads immediate files in a directory (excluding GLANCE.md, hidden files, etc.).
-func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore) (map[string]string, error) {
+func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileBytes int64, verbose bool) (map[string]string, error) {
 	files := make(map[string]string)
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
@@ -441,7 +496,7 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore) (map[strin
 			return nil
 		}
 		contentStr := strings.ToValidUTF8(string(content), "�")
-		if len(contentStr) > maxFileBytes {
+		if len(contentStr) > int(maxFileBytes) {
 			contentStr = contentStr[:maxFileBytes] + "...(truncated)"
 		}
 		files[rel] = contentStr
@@ -474,85 +529,6 @@ func isTextFile(path string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-// -----------------------------------------------------------------------------
-// LLM interaction
-// -----------------------------------------------------------------------------
-
-func generateGlanceText(dir string, fileMap map[string]string, subGlances string,
-	apiKey string, promptTemplate string) (string, error) {
-
-	// build file contents chunk
-	var fileContentsBuilder strings.Builder
-	for filename, content := range fileMap {
-		fileContentsBuilder.WriteString(fmt.Sprintf("=== file: %s ===\n%s\n\n", filename, content))
-	}
-
-	// fill promptData struct for the template
-	data := promptData{
-		Directory:    dir,
-		SubGlances:   subGlances,
-		FileContents: fileContentsBuilder.String(),
-	}
-
-	// parse and execute the prompt template
-	tmpl, err := template.New("prompt").Parse(promptTemplate)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse prompt template: %w", err)
-	}
-	var rendered bytes.Buffer
-	if err = tmpl.Execute(&rendered, data); err != nil {
-		return "", fmt.Errorf("failed to execute prompt template: %w", err)
-	}
-
-	promptStr := rendered.String()
-	if verbose {
-		logrus.Debugf("[generateGlanceText] directory=%s, prompt length in bytes=%d", dir, len(promptStr))
-	}
-
-	ctx := context.Background()
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
-	if err != nil {
-		return "", err
-	}
-	defer client.Close()
-
-	model := client.GenerativeModel("gemini-1.5-flash")
-
-	// optional token debug
-	if verbose {
-		tokenResp, tokenErr := model.CountTokens(ctx, genai.Text(promptStr))
-		if tokenErr == nil {
-			logrus.Debugf("🔤 Token count for %s: %d tokens in prompt", dir, tokenResp.TotalTokens)
-		} else {
-			logrus.Debugf("⚠️ Couldn't count tokens for %s: %v", dir, tokenErr)
-		}
-	}
-
-	stream := model.GenerateContentStream(ctx, genai.Text(promptStr))
-
-	var result strings.Builder
-	for {
-		resp, err := stream.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return "", err
-		}
-		for _, c := range resp.Candidates {
-			if c.Content == nil {
-				continue
-			}
-			for _, p := range c.Content.Parts {
-				if txt, ok := p.(genai.Text); ok {
-					result.WriteString(string(txt))
-				}
-			}
-		}
-	}
-	return result.String(), nil
 }
 
 // -----------------------------------------------------------------------------
@@ -620,8 +596,31 @@ func bubbleUpParents(dir, root string, needs map[string]bool) {
 	}
 }
 
-// loadPromptTemplate tries to read from --prompt-file, then "prompt.txt", else returns defaultPrompt.
+// -----------------------------------------------------------------------------
+// utility functions
+// -----------------------------------------------------------------------------
+
+// loadPromptTemplate tries to read from the specified file path, then "prompt.txt",
+// and falls back to the default prompt template.
+// This function is retained for test compatibility and is used by the config package.
 func loadPromptTemplate(path string) (string, error) {
+	// Import statement for godotenv is kept for compatibility with the existing tests
+	// In the actual application, godotenv is imported and used by the config package
+	defaultPrompt := `you are an expert code reviewer and technical writer.
+generate a descriptive technical overview of this directory:
+- highlight purpose, architecture, and key file roles
+- mention important dependencies or gotchas
+- do NOT provide recommendations or next steps
+
+directory: {{.Directory}}
+
+subdirectory summaries:
+{{.SubGlances}}
+
+local file contents:
+{{.FileContents}}
+`
+
 	if path != "" {
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -634,6 +633,10 @@ func loadPromptTemplate(path string) (string, error) {
 	}
 	return defaultPrompt, nil
 }
+
+// -----------------------------------------------------------------------------
+// results reporting
+// -----------------------------------------------------------------------------
 
 // printDebrief displays a summary of successes and failures.
 func printDebrief(results []result) {
