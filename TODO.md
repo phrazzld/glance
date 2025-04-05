@@ -28,7 +28,7 @@
   - **AC Ref:** RFT-03
 
 ## Filesystem Package
-- [ ] **Create Filesystem Scanner**
+- [x] **Create Filesystem Scanner**
   - **Action:** Create filesystem/scanner.go with directory traversal functions (ListDirs, loadGitignore, etc.)
   - **Depends On:** None
   - **AC Ref:** RFT-04
