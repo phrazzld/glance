@@ -17,7 +17,7 @@
   - **Depends On:** None
   - **AC Ref:** RFT-02
 
-- [ ] **Implement LoadConfig Function**
+- [x] **Implement LoadConfig Function**
   - **Action:** Move flag parsing, env var loading, and prompt template loading to LoadConfig function in config package
   - **Depends On:** Create Config Package and Struct
   - **AC Ref:** RFT-02
