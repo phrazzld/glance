@@ -7,6 +7,8 @@ import (
 
 	gitignore "github.com/sabhiram/go-gitignore"
 	"github.com/stretchr/testify/assert"
+
+	"glance/llm"
 )
 
 // TestLoadPromptTemplate verifies the prompt template loading functionality
@@ -23,13 +25,13 @@ func TestLoadPromptTemplate(t *testing.T) {
 	assert.NoError(t, err, "Failed to create test prompt file")
 
 	// Test loading the custom prompt file
-	loadedPrompt, err := loadPromptTemplate(testPromptPath)
+	loadedPrompt, err := llm.LoadTemplate(testPromptPath)
 	assert.NoError(t, err, "Failed to load test prompt template")
 	assert.Equal(t, testPromptContent, loadedPrompt, "Loaded prompt content doesn't match expected")
 
 	// Test with empty path - should check for prompt.txt
 	// Since prompt.txt exists in this project, let's verify it loads correctly
-	emptyPathResult, err := loadPromptTemplate("")
+	emptyPathResult, err := llm.LoadTemplate("")
 	assert.NoError(t, err, "Loading with empty path should succeed")
 	assert.NotEmpty(t, emptyPathResult, "Should return a non-empty template when path is empty")
 }

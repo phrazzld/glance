@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,19 +9,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/google/generative-ai-go/genai"
 	_ "github.com/joho/godotenv" // Used by the config package for loading environment variables
 	gitignore "github.com/sabhiram/go-gitignore"
 	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 	
 	"glance/config"
+	"glance/llm"
 )
 
 // -----------------------------------------------------------------------------
@@ -43,12 +39,7 @@ type queueItem struct {
 	ignoreChain []*gitignore.GitIgnore
 }
 
-// promptData is used for filling the text/template.
-type promptData struct {
-	Directory    string
-	SubGlances   string
-	FileContents string
-}
+// Removed the promptData struct - this is now part of the llm package
 
 // -----------------------------------------------------------------------------
 // main
@@ -64,6 +55,13 @@ func main() {
 
 	// Set up logging based on the verbose flag
 	setupLogging(cfg.Verbose)
+	
+	// Set up the LLM client and service
+	llmClient, llmService, err := setupLLMService(cfg)
+	if err != nil {
+		logrus.Fatalf("🚫 Failed to initialize LLM service: %v", err)
+	}
+	defer llmClient.Close()
 
 	// Scan directories and process them to generate GLANCE.md files
 	dirs, ignoreChains, err := scanDirectories(cfg)
@@ -72,7 +70,7 @@ func main() {
 	}
 
 	// Process directories and generate GLANCE.md files
-	results := processDirectories(dirs, ignoreChains, cfg)
+	results := processDirectories(dirs, ignoreChains, cfg, llmService)
 
 	// Print summary of results
 	printDebrief(results)
@@ -104,6 +102,36 @@ func setupLogging(verbose bool) {
 	})
 }
 
+// setupLLMService initializes the LLM client and service
+func setupLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
+	// Create client options
+	clientOptions := llm.DefaultClientOptions().
+		WithModelName("gemini-2.0-flash").
+		WithMaxRetries(cfg.MaxRetries).
+		WithTimeout(60)
+		
+	// Create the client
+	client, err := llm.NewGeminiClient(cfg.APIKey, clientOptions)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create LLM client: %w", err)
+	}
+	
+	// Create service options
+	serviceOptions := []llm.ServiceOption{
+		llm.WithMaxRetries(cfg.MaxRetries),
+		llm.WithVerbose(cfg.Verbose),
+	}
+	
+	// Create the service
+	service, err := llm.NewService(client, serviceOptions...)
+	if err != nil {
+		client.Close()
+		return nil, nil, fmt.Errorf("failed to create LLM service: %w", err)
+	}
+	
+	return client, service, nil
+}
+
 // scanDirectories performs BFS scanning and gathers .gitignore chain info per directory
 func scanDirectories(cfg *config.Config) ([]string, map[string][]*gitignore.GitIgnore, error) {
 	logrus.Info("✨ Excellent! Scanning directories now... Let's explore your code!")
@@ -128,7 +156,7 @@ func scanDirectories(cfg *config.Config) ([]string, map[string][]*gitignore.GitI
 }
 
 // processDirectories generates GLANCE.md files for each directory in the list
-func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitignore.GitIgnore, cfg *config.Config) []result {
+func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitignore.GitIgnore, cfg *config.Config, llmService *llm.Service) []result {
 	logrus.Info("🧠 Preparing to generate all GLANCE.md files... Getting ready to make your code shine!")
 
 	// Create progress bar
@@ -161,7 +189,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 		forceDir = forceDir || needsRegen[d]
 
 		// Process the directory with retry logic
-		r := processDirectory(d, forceDir, ignoreChain, cfg)
+		r := processDirectory(d, forceDir, ignoreChain, cfg, llmService)
 		finalResults = append(finalResults, r)
 
 		_ = bar.Add(1)
@@ -179,7 +207,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 }
 
 // processDirectory processes a single directory with retry logic
-func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgnore, cfg *config.Config) result {
+func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgnore, cfg *config.Config, llmService *llm.Service) result {
 	r := result{dir: dir}
 
 	glancePath := filepath.Join(dir, "GLANCE.md")
@@ -211,110 +239,35 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 		return r
 	}
 
-	// Attempt to generate GLANCE.md with retries
-	for attempt := 1; attempt <= cfg.MaxRetries; attempt++ {
-		r.attempts = attempt
-
-		if cfg.Verbose {
-			logrus.Debugf("🔄 Attempt #%d for %s → Found %d subdirs, %d sub-glances, %d local files",
-				attempt, dir, len(subdirs), len(subGlances), len(fileContents))
-		}
-
-		// Generate markdown content
-		summary, llmErr := generateMarkdown(dir, fileContents, subGlances, cfg)
-		if llmErr == nil {
-			if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
-				r.err = fmt.Errorf("failed writing GLANCE.md to %s: %w", dir, werr)
-				return r
-			}
-			r.success = true
-			r.err = nil
-			return r
-		}
-		if cfg.Verbose {
-			logrus.Debugf("❌ Attempt %d for %s failed: %v - Will retry if attempts remain", attempt, dir, llmErr)
-		}
-		r.err = llmErr
+	if cfg.Verbose {
+		logrus.Debugf("📊 Processing %s → Found %d subdirs, %d sub-glances, %d local files",
+			dir, len(subdirs), len(subGlances), len(fileContents))
 	}
 
+	// Create context for LLM operations
+	ctx := context.Background()
+	
+	// Generate markdown content using the LLM service
+	summary, llmErr := llmService.GenerateGlanceMarkdown(ctx, dir, fileContents, subGlances)
+	if llmErr != nil {
+		r.attempts = 1 // Service already handles retries internally
+		r.err = llmErr
+		return r
+	}
+	
+	// Write the generated content to file
+	if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
+		r.err = fmt.Errorf("failed writing GLANCE.md to %s: %w", dir, werr)
+		return r
+	}
+	
+	r.success = true
+	r.attempts = 1 // Service already handles retries internally
+	r.err = nil
 	return r
 }
 
-// generateMarkdown generates the content for a GLANCE.md file
-func generateMarkdown(dir string, fileMap map[string]string, subGlances string, cfg *config.Config) (string, error) {
-	// Build file contents chunk
-	var fileContentsBuilder strings.Builder
-	for filename, content := range fileMap {
-		fileContentsBuilder.WriteString(fmt.Sprintf("=== file: %s ===\n%s\n\n", filename, content))
-	}
-
-	// Fill promptData struct for the template
-	data := promptData{
-		Directory:    dir,
-		SubGlances:   subGlances,
-		FileContents: fileContentsBuilder.String(),
-	}
-
-	// Parse and execute the prompt template
-	tmpl, err := template.New("prompt").Parse(cfg.PromptTemplate)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse prompt template: %w", err)
-	}
-	var rendered bytes.Buffer
-	if err = tmpl.Execute(&rendered, data); err != nil {
-		return "", fmt.Errorf("failed to execute prompt template: %w", err)
-	}
-
-	promptStr := rendered.String()
-	if cfg.Verbose {
-		logrus.Debugf("[generateMarkdown] directory=%s, prompt length in bytes=%d", dir, len(promptStr))
-	}
-
-	// Set up the Gemini API client
-	ctx := context.Background()
-	client, err := genai.NewClient(ctx, option.WithAPIKey(cfg.APIKey))
-	if err != nil {
-		return "", err
-	}
-	defer client.Close()
-
-	model := client.GenerativeModel("gemini-2.0-flash")
-
-	// Optional token debug
-	if cfg.Verbose {
-		tokenResp, tokenErr := model.CountTokens(ctx, genai.Text(promptStr))
-		if tokenErr == nil {
-			logrus.Debugf("🔤 Token count for %s: %d tokens in prompt", dir, tokenResp.TotalTokens)
-		} else {
-			logrus.Debugf("⚠️ Couldn't count tokens for %s: %v", dir, tokenErr)
-		}
-	}
-
-	// Generate content using the Gemini API
-	stream := model.GenerateContentStream(ctx, genai.Text(promptStr))
-
-	var result strings.Builder
-	for {
-		resp, err := stream.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return "", err
-		}
-		for _, c := range resp.Candidates {
-			if c.Content == nil {
-				continue
-			}
-			for _, p := range c.Content.Parts {
-				if txt, ok := p.(genai.Text); ok {
-					result.WriteString(string(txt))
-				}
-			}
-		}
-	}
-	return result.String(), nil
-}
+// Removed the generateMarkdown function - this functionality is now handled by the LLM service
 
 // -----------------------------------------------------------------------------
 // .gitignore scanning and BFS
@@ -600,39 +553,7 @@ func bubbleUpParents(dir, root string, needs map[string]bool) {
 // utility functions
 // -----------------------------------------------------------------------------
 
-// loadPromptTemplate tries to read from the specified file path, then "prompt.txt",
-// and falls back to the default prompt template.
-// This function is retained for test compatibility and is used by the config package.
-func loadPromptTemplate(path string) (string, error) {
-	// Import statement for godotenv is kept for compatibility with the existing tests
-	// In the actual application, godotenv is imported and used by the config package
-	defaultPrompt := `you are an expert code reviewer and technical writer.
-generate a descriptive technical overview of this directory:
-- highlight purpose, architecture, and key file roles
-- mention important dependencies or gotchas
-- do NOT provide recommendations or next steps
-
-directory: {{.Directory}}
-
-subdirectory summaries:
-{{.SubGlances}}
-
-local file contents:
-{{.FileContents}}
-`
-
-	if path != "" {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", path, err)
-		}
-		return string(data), nil
-	}
-	if data, err := os.ReadFile("prompt.txt"); err == nil {
-		return string(data), nil
-	}
-	return defaultPrompt, nil
-}
+// Removed loadPromptTemplate - this functionality is now handled by the llm package
 
 // -----------------------------------------------------------------------------
 // results reporting
