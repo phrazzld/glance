@@ -49,7 +49,7 @@
   - **AC Ref:** RFT-04
 
 ## LLM Package
-- [ ] **Define LLM Client Interface**
+- [x] **Define LLM Client Interface**
   - **Action:** Create llm/client.go with Client interface and GeminiClient implementation
   - **Depends On:** None
   - **AC Ref:** RFT-05
