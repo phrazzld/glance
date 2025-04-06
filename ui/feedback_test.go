@@ -246,11 +246,15 @@ func TestProgressBarMethods(t *testing.T) {
 		// Create a progress bar with 3 items
 		bar := NewProcessor(3)
 
-		// Just test that increments don't panic
-		bar.Increment()
-		bar.Increment()
-		bar.Set(3) // Skip to the end
-		bar.Finish()
+		// Test that increments don't panic and check errors
+		err := bar.Increment()
+		assert.NoError(t, err, "Increment should not return an error")
+		err = bar.Increment()
+		assert.NoError(t, err, "Increment should not return an error")
+		err = bar.Set(3) // Skip to the end
+		assert.NoError(t, err, "Set should not return an error")
+		err = bar.Finish()
+		assert.NoError(t, err, "Finish should not return an error")
 
 		// Success if we get here without panicking
 		assert.True(t, true)
@@ -432,11 +436,13 @@ func TestSpinnerWithProgressBarIntegration(t *testing.T) {
 	for i := 0; i < total; i++ {
 		// Simulate processing work
 		time.Sleep(10 * time.Millisecond)
-		bar.Increment()
+		err := bar.Increment()
+		assert.NoError(t, err, "Increment should not return an error")
 	}
 
 	// Finish the progress bar
-	bar.Finish()
+	err := bar.Finish()
+	assert.NoError(t, err, "Finish should not return an error")
 
 	// If we got here without panicking, the test passes
 	assert.True(t, true)

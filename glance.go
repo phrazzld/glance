@@ -178,7 +178,9 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 		r := processDirectory(d, forceDir, ignoreChain, cfg, llmService)
 		finalResults = append(finalResults, r)
 
-		bar.Increment()
+		if err := bar.Increment(); err != nil {
+			logrus.Warnf("Failed to increment progress bar: %v", err)
+		}
 
 		// Bubble up parent's regeneration flag if needed
 		if r.success && r.attempts > 0 && forceDir {
@@ -197,15 +199,21 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 	r := result{dir: dir}
 
 	glancePath := filepath.Join(dir, "GLANCE.md")
-	if !forceDir {
-		// Skip if GLANCE.md exists and not forcing regeneration
-		if _, err := os.Stat(glancePath); err == nil {
-			if cfg.Verbose {
-				logrus.Debugf("⏩ Skipping %s (GLANCE.md already exists and looks fresh)", dir)
-			}
-			r.success = true
-			return r
+	fileExists := false
+
+	// Check if the file exists (and remember the result)
+	if _, err := os.Stat(glancePath); err == nil {
+		fileExists = true
+	}
+
+	// Skip if GLANCE.md exists and we're not forcing regeneration
+	if fileExists && !forceDir && !cfg.Force {
+		if cfg.Verbose {
+			logrus.Debugf("⏩ Skipping %s (GLANCE.md already exists and looks fresh)", dir)
 		}
+		r.success = true
+		r.attempts = 0 // Explicitly mark that we didn't attempt to regenerate
+		return r
 	}
 
 	// Gather data for GLANCE.md generation
@@ -281,11 +289,18 @@ func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitI
 
 		// load .gitignore in current.path, if exists
 		localIgnore, _ := loadGitignore(current.path)
-		var newChain []*gitignore.GitIgnore
-		if localIgnore != nil {
-			newChain = append(newChain, localIgnore)
+		
+		// Create a copy of the parent chain to avoid modifying it
+		var combinedChain []*gitignore.GitIgnore
+		if len(current.ignoreChain) > 0 {
+			combinedChain = make([]*gitignore.GitIgnore, len(current.ignoreChain))
+			copy(combinedChain, current.ignoreChain)
 		}
-		combinedChain := append(current.ignoreChain, newChain...)
+		
+		// Add the local .gitignore if it exists
+		if localIgnore != nil {
+			combinedChain = append(combinedChain, localIgnore)
+		}
 
 		dirToChain[current.path] = combinedChain
 
@@ -307,12 +322,15 @@ func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitI
 
 			fullChildPath := filepath.Join(current.path, name)
 			rel, _ := filepath.Rel(root, fullChildPath)
+			
+			// Check if this directory should be ignored by any gitignore rules
 			if isIgnored(rel, combinedChain) {
 				if logrus.IsLevelEnabled(logrus.DebugLevel) {
 					logrus.Debugf("skipping %s because of .gitignore match", rel)
 				}
 				continue
 			}
+			
 			queue = append(queue, queueItem{
 				path:        fullChildPath,
 				ignoreChain: combinedChain,
@@ -339,7 +357,12 @@ func loadGitignore(dir string) (*gitignore.GitIgnore, error) {
 // isIgnored checks a path against a chain of .gitignore patterns.
 func isIgnored(rel string, chain []*gitignore.GitIgnore) bool {
 	for _, ig := range chain {
-		if ig.MatchesPath(rel) {
+		if ig == nil {
+			continue
+		}
+		// For directories, test both with and without trailing slash
+		// as gitignore patterns like "dir/" only match "dir/" and not "dir"
+		if ig.MatchesPath(rel) || ig.MatchesPath(rel+"/") {
 			return true
 		}
 	}
