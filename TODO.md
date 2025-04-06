@@ -38,7 +38,7 @@
   - **Depends On:** None
   - **AC Ref:** RFT-04
 
-- [ ] **Centralize Ignore Logic**
+- [x] **Centralize Ignore Logic**
   - **Action:** Create filesystem/ignore.go with ShouldIgnore function for consistent file/directory skipping
   - **Depends On:** Create Filesystem Scanner
   - **AC Ref:** RFT-08
