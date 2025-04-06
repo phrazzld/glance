@@ -63,10 +63,10 @@ func setupTestDirectory(t *testing.T) (string, func()) {
 
 	// Create .gitignore files
 	gitignoreContents := map[string]string{
-		"":                "ignored_dir/\n*.log\n",
-		"dir1":            "subdir2/\n",
-		"nested":          "*.json\n",
-		"nested/level1":   "*.md\n",
+		"":                     "ignored_dir/\n*.log\n",
+		"dir1":                 "subdir2/\n",
+		"nested":               "*.json\n",
+		"nested/level1":        "*.md\n",
 		"nested/level1/level2": "*.yaml\n",
 	}
 
@@ -92,41 +92,41 @@ func TestListDirsWithIgnores(t *testing.T) {
 	rootGitignore, err := os.ReadFile(filepath.Join(root, ".gitignore"))
 	require.NoError(t, err, "Failed to read root .gitignore")
 	t.Logf("Root .gitignore content: %s", string(rootGitignore))
-	
+
 	dir1Gitignore, err := os.ReadFile(filepath.Join(root, "dir1", ".gitignore"))
 	require.NoError(t, err, "Failed to read dir1 .gitignore")
 	t.Logf("dir1 .gitignore content: %s", string(dir1Gitignore))
-	
+
 	// Check direct pattern matching with loaded .gitignore files for debugging
 	rootGI, err := LoadGitignore(root)
 	require.NoError(t, err, "Failed to load root .gitignore")
-	
+
 	t.Logf("Direct .gitignore matching checks:")
 	t.Logf("- root gitignore.MatchesPath('ignored_dir') = %v", rootGI.MatchesPath("ignored_dir"))
 	t.Logf("- root gitignore.MatchesPath('ignored_dir/') = %v", rootGI.MatchesPath("ignored_dir/"))
-	
+
 	dir1GI, err := LoadGitignore(filepath.Join(root, "dir1"))
 	require.NoError(t, err, "Failed to load dir1 .gitignore")
-	
+
 	t.Logf("- dir1 gitignore.MatchesPath('subdir2') = %v", dir1GI.MatchesPath("subdir2"))
 	t.Logf("- dir1 gitignore.MatchesPath('subdir2/') = %v", dir1GI.MatchesPath("subdir2/"))
-	
+
 	// Call the function we want to test
 	dirs, ignoreChains, err := ListDirsWithIgnores(root)
-	
+
 	// Verify no error occurred
 	require.NoError(t, err, "ListDirsWithIgnores should not return an error with valid directory")
-	
+
 	// Print the directories we found for debugging
 	t.Logf("Found directories: %v", dirs)
-	
+
 	// Check that we got the expected directories (and not the ignored ones)
 	assert.Contains(t, dirs, root, "Result should include the root directory")
 	assert.Contains(t, dirs, filepath.Join(root, "dir1"), "Result should include dir1")
 	assert.Contains(t, dirs, filepath.Join(root, "dir1/subdir1"), "Result should include dir1/subdir1")
 	assert.Contains(t, dirs, filepath.Join(root, "dir2"), "Result should include dir2")
 	assert.Contains(t, dirs, filepath.Join(root, "dir2/subdir1"), "Result should include dir2/subdir1")
-	
+
 	// Check that ignored dirs are NOT included
 	assert.NotContains(t, dirs, filepath.Join(root, ".hidden_dir"), "Result should not include .hidden_dir")
 	assert.NotContains(t, dirs, filepath.Join(root, "node_modules"), "Result should not include node_modules")
@@ -137,14 +137,14 @@ func TestListDirsWithIgnores(t *testing.T) {
 	// Root should have an ignore chain entry
 	rootChain, ok := ignoreChains[root]
 	assert.True(t, ok, "Root directory should have an ignore chain entry")
-	
+
 	// Root should have 1 rule after initialization (its own .gitignore)
 	assert.Equal(t, 1, len(rootChain), "Root should have 1 ignore rule (its own .gitignore)")
 	if len(rootChain) > 0 {
 		rootRule := rootChain[0]
 		assert.Equal(t, root, rootRule.OriginDir, "Rule's origin directory should match root")
 		assert.NotNil(t, rootRule.Matcher, "Root's matcher should not be nil")
-		
+
 		// Test specific matches using the matcher
 		assert.True(t, rootRule.Matcher.MatchesPath("ignored_dir/file.txt"), "Root matcher should ignore 'ignored_dir/file.txt'")
 		assert.True(t, rootRule.Matcher.MatchesPath("test.log"), "Root matcher should ignore '*.log'")
@@ -154,20 +154,20 @@ func TestListDirsWithIgnores(t *testing.T) {
 	dir1Path := filepath.Join(root, "dir1")
 	dir1Chain, ok := ignoreChains[dir1Path]
 	assert.True(t, ok, "dir1 should have an ignore chain entry")
-	
+
 	// dir1 should have 2 rules: inherited from root + its own
 	assert.Equal(t, 2, len(dir1Chain), "dir1 should have 2 ignore rules (root's + its own)")
-	
+
 	if len(dir1Chain) >= 2 {
 		// First rule is inherited from root
 		rootRule := dir1Chain[0]
 		assert.Equal(t, root, rootRule.OriginDir, "First rule's origin directory should match root")
-		
+
 		// Second rule is dir1's own
 		dir1Rule := dir1Chain[1]
 		assert.Equal(t, dir1Path, dir1Rule.OriginDir, "Second rule's origin directory should match dir1")
 		assert.NotNil(t, dir1Rule.Matcher, "dir1's matcher should not be nil")
-		
+
 		// Test specific matches using the matcher
 		assert.True(t, dir1Rule.Matcher.MatchesPath("subdir2/file.txt"), "dir1 matcher should ignore 'subdir2/file.txt'")
 	}
@@ -205,11 +205,11 @@ func TestListDirsWithIgnores_ErrorHandling(t *testing.T) {
 		// Create a directory with no read permissions
 		noPermDir := t.TempDir()
 		defer os.RemoveAll(noPermDir)
-		
+
 		// Create a subdirectory that we'll remove read permissions from
 		restrictedDir := filepath.Join(noPermDir, "restricted")
 		err := os.Mkdir(restrictedDir, 0000) // No permissions
-		
+
 		if err == nil { // Only run this test if we could create the restrictive directory
 			// Try to list dirs with no read permission
 			_, _, err = ListDirsWithIgnores(restrictedDir)
@@ -265,7 +265,7 @@ func TestLoadGitignore(t *testing.T) {
 func TestListDirsWithIgnores_ComplexPatterns(t *testing.T) {
 	// Create a test directory
 	testDir := t.TempDir()
-	
+
 	// Create a .gitignore with complex patterns including negation
 	gitignoreContent := `
 # Ignore all logs
@@ -328,7 +328,7 @@ node_modules/
 	assert.Contains(t, dirs, filepath.Join(testDir, "temp"), "temp directory should be included")
 	assert.Contains(t, dirs, filepath.Join(testDir, "config"), "config directory should be included")
 	assert.Contains(t, dirs, filepath.Join(testDir, "node_modules_tools"), "node_modules_tools should be included (negation pattern)")
-	
+
 	assert.NotContains(t, dirs, filepath.Join(testDir, "build"), "build directory should be excluded")
 	assert.NotContains(t, dirs, filepath.Join(testDir, "node_modules"), "node_modules directory should be excluded")
 }

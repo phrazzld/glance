@@ -22,16 +22,19 @@ type MockClient struct {
 	mock.Mock
 }
 
+// Generate implements the llm.Client interface for testing
 func (m *MockClient) Generate(ctx context.Context, prompt string) (string, error) {
 	args := m.Called(ctx, prompt)
 	return args.String(0), args.Error(1)
 }
 
+// CountTokens implements the llm.Client interface for testing
 func (m *MockClient) CountTokens(ctx context.Context, prompt string) (int, error) {
 	args := m.Called(ctx, prompt)
 	return args.Int(0), args.Error(1)
 }
 
+// Close implements the llm.Client interface for testing
 func (m *MockClient) Close() {
 	m.Called()
 }
@@ -71,14 +74,14 @@ func createTestProjectStructure(t *testing.T, root string) {
 
 	// Create test files
 	files := map[string]string{
-		"README.md":            "# Test Project\n\nThis is a test project for integration tests.\n",
-		"main.go":              "package main\n\nfunc main() {\n\tprintln(\"Hello, World!\")\n}\n",
-		"src/utils/utils.go":   "package utils\n\nfunc GetMessage() string {\n\treturn \"Hello from utils\"\n}\n",
-		"src/models/user.go":   "package models\n\ntype User struct {\n\tName string\n}\n",
-		"docs/api.md":          "# API Documentation\n\nAPI endpoints for the test project.\n",
-		"tests/main_test.go":   "package tests\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {\n\t// Test code\n}\n",
-		".gitignore":           "build/\n*.log\n",
-		"prompt.txt":           "Test prompt with {{.Directory}} and {{.SubGlances}} and {{.FileContents}}",
+		"README.md":          "# Test Project\n\nThis is a test project for integration tests.\n",
+		"main.go":            "package main\n\nfunc main() {\n\tprintln(\"Hello, World!\")\n}\n",
+		"src/utils/utils.go": "package utils\n\nfunc GetMessage() string {\n\treturn \"Hello from utils\"\n}\n",
+		"src/models/user.go": "package models\n\ntype User struct {\n\tName string\n}\n",
+		"docs/api.md":        "# API Documentation\n\nAPI endpoints for the test project.\n",
+		"tests/main_test.go": "package tests\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {\n\t// Test code\n}\n",
+		".gitignore":         "build/\n*.log\n",
+		"prompt.txt":         "Test prompt with {{.Directory}} and {{.SubGlances}} and {{.FileContents}}",
 	}
 
 	for path, content := range files {
@@ -133,7 +136,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
-		
+
 		// Create a mock LLM service
 		mockClient := setupMockLLMClient()
 		llmService, err := llm.NewService(mockClient)
@@ -144,7 +147,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 
 		// Verify results
 		assert.True(t, len(results) > 0, "Should have processed at least one directory")
-		
+
 		// Check that the root directory was processed successfully but didn't change the file
 		for _, r := range results {
 			if r.dir == testDir {
@@ -189,7 +192,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
-		
+
 		// Create a mock LLM service
 		mockClient := setupMockLLMClient()
 		llmService, err := llm.NewService(mockClient)
@@ -200,7 +203,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 
 		// Verify results
 		assert.True(t, len(results) > 0, "Should have processed at least one directory")
-		
+
 		// Check that the root directory was processed successfully and regenerated the file
 		rootProcessed := false
 		for _, r := range results {
@@ -237,9 +240,9 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 	defer cleanup()
 
 	t.Run("File content from filesystem flows to LLM", func(t *testing.T) {
-		// Setup a custom mock client that validates input data 
+		// Setup a custom mock client that validates input data
 		validatingMockClient := new(MockClient)
-		
+
 		// Capture the prompt to analyze its contents
 		var capturedPrompt string
 		validatingMockClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
@@ -249,7 +252,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 			Return("Generated GLANCE content", nil)
 		validatingMockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
 		validatingMockClient.On("Close").Return()
-		
+
 		// Setup configuration
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
@@ -259,7 +262,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
-		
+
 		// Create LLM service with the validating mock client
 		llmService, err := llm.NewService(validatingMockClient)
 		require.NoError(t, err)
@@ -269,11 +272,11 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 
 		// Verify results
 		assert.True(t, len(results) > 0, "Should have processed at least one directory")
-		
+
 		// Verify at least one GLANCE.md was created
 		glancePath := filepath.Join(testDir, "GLANCE.md")
 		assert.FileExists(t, glancePath, "GLANCE.md should exist in root directory")
-		
+
 		// Verify that file content was properly passed to the LLM
 		assert.Contains(t, capturedPrompt, "main.go", "Prompt should include main.go file content")
 		assert.Contains(t, capturedPrompt, "README.md", "Prompt should include README.md file content")
@@ -285,18 +288,18 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		ignoreDir := filepath.Join(testDir, "build")
 		err := os.MkdirAll(ignoreDir, 0755)
 		require.NoError(t, err)
-		
+
 		ignoredFile := filepath.Join(ignoreDir, "ignored.txt")
 		err = os.WriteFile(ignoredFile, []byte("This file should be ignored"), 0644)
 		require.NoError(t, err)
-		
+
 		logFile := filepath.Join(testDir, "test.log")
 		err = os.WriteFile(logFile, []byte("This log file should be ignored"), 0644)
 		require.NoError(t, err)
-		
-		// Setup a custom mock client that validates input data 
+
+		// Setup a custom mock client that validates input data
 		validatingMockClient := new(MockClient)
-		
+
 		// Capture the prompt to analyze its contents
 		var capturedPrompt string
 		validatingMockClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
@@ -306,7 +309,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 			Return("Generated GLANCE content", nil)
 		validatingMockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
 		validatingMockClient.On("Close").Return()
-		
+
 		// Setup configuration
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
@@ -316,19 +319,19 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
-		
+
 		// Create LLM service with the validating mock client
 		llmService, err := llm.NewService(validatingMockClient)
 		require.NoError(t, err)
 
 		// Process directories
 		processDirectories(dirs, ignoreChains, cfg, llmService)
-		
+
 		// Verify that ignored files were not passed to the LLM
 		assert.NotContains(t, capturedPrompt, "ignored.txt", "Prompt should not include ignored.txt file content")
 		assert.NotContains(t, capturedPrompt, "test.log", "Prompt should not include test.log file content")
 		assert.NotContains(t, capturedPrompt, "This file should be ignored", "Prompt should not include content from ignored files")
-		
+
 		// Verify GLANCE.md wasn't created in ignored directories
 		ignoredGlanceFile := filepath.Join(ignoreDir, "GLANCE.md")
 		assert.NoFileExists(t, ignoredGlanceFile, "GLANCE.md should not exist in ignored directory")
@@ -346,7 +349,7 @@ func TestLLMUIIntegration(t *testing.T) {
 	originalLevel := logrus.GetLevel()
 	logrus.SetLevel(logrus.DebugLevel)
 	defer logrus.SetLevel(originalLevel)
-	
+
 	// Create a buffer to capture log output
 	var logBuffer logCapture
 	originalOutput := logrus.StandardLogger().Out
@@ -368,20 +371,20 @@ func TestLLMUIIntegration(t *testing.T) {
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
-		
-		// Create a mock LLM service 
+
+		// Create a mock LLM service
 		mockClient := setupMockLLMClient()
 		llmService, err := llm.NewService(mockClient, llm.WithVerbose(true))
 		require.NoError(t, err)
 
 		// Process directories
 		processDirectories(dirs, ignoreChains, cfg, llmService)
-		
+
 		// Verify that progress indicators were reported
 		logs := logBuffer.String()
 		assert.Contains(t, logs, "Scanning", "Log should contain scanning indicator")
 		assert.Contains(t, logs, "Preparing to generate", "Log should contain generation preparation message")
-		
+
 		// Reset the log buffer for the next test
 		logBuffer.Reset()
 	})
@@ -404,10 +407,10 @@ func TestConfigLLMIntegration(t *testing.T) {
 		customPromptContent := "Custom prompt for {{.Directory}} with special marker CUSTOM_PROMPT_TEST"
 		err := os.WriteFile(customPromptPath, []byte(customPromptContent), 0644)
 		require.NoError(t, err)
-		
-		// Setup a custom mock client that validates input data 
+
+		// Setup a custom mock client that validates input data
 		validatingMockClient := new(MockClient)
-		
+
 		// Capture the prompt to analyze its contents
 		var capturedPrompt string
 		validatingMockClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
@@ -417,7 +420,7 @@ func TestConfigLLMIntegration(t *testing.T) {
 			Return("Generated GLANCE content", nil)
 		validatingMockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
 		validatingMockClient.On("Close").Return()
-		
+
 		// Setup configuration with custom prompt template
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
@@ -428,18 +431,18 @@ func TestConfigLLMIntegration(t *testing.T) {
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
-		
+
 		// Create LLM service
 		llmService, err := llm.NewService(validatingMockClient)
 		require.NoError(t, err)
 
 		// Process directories
 		processDirectories(dirs, ignoreChains, cfg, llmService)
-		
+
 		// Verify that the custom prompt template was used
-		assert.Contains(t, capturedPrompt, "CUSTOM_PROMPT_TEST", 
+		assert.Contains(t, capturedPrompt, "CUSTOM_PROMPT_TEST",
 			"Prompt should include the custom template marker")
-		assert.Contains(t, capturedPrompt, testDir, 
+		assert.Contains(t, capturedPrompt, testDir,
 			"Prompt should include the directory name from template substitution")
 	})
 }

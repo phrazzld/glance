@@ -22,10 +22,10 @@ type Service struct {
 type ServiceOptions struct {
 	// MaxRetries is the number of times to retry failed LLM operations
 	MaxRetries int
-	
+
 	// ModelName is the name of the LLM model to use
 	ModelName string
-	
+
 	// Verbose enables detailed logging for LLM operations
 	Verbose bool
 }
@@ -97,15 +97,15 @@ func NewService(client Client, options ...ServiceOption) (*Service, error) {
 	if client == nil {
 		return nil, fmt.Errorf("client cannot be nil")
 	}
-	
+
 	// Start with default options
 	serviceOptions := DefaultServiceOptions()
-	
+
 	// Apply any provided options
 	for _, option := range options {
 		option(serviceOptions)
 	}
-	
+
 	return &Service{
 		client:  client,
 		options: serviceOptions,
@@ -126,18 +126,18 @@ func NewService(client Client, options ...ServiceOption) (*Service, error) {
 func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMap map[string]string, subGlances string) (string, error) {
 	// Build prompt data
 	promptData := BuildPromptData(dir, subGlances, fileMap)
-	
+
 	// Get template and generate prompt
 	template, err := LoadTemplate("")
 	if err != nil {
 		return "", fmt.Errorf("failed to load template: %w", err)
 	}
-	
+
 	prompt, err := GeneratePrompt(promptData, template)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate prompt: %w", err)
 	}
-	
+
 	// Optional token counting for debugging
 	if s.options.Verbose {
 		tokens, tokenErr := s.client.CountTokens(ctx, prompt)
@@ -147,11 +147,11 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 			logrus.Debugf("⚠️ Couldn't count tokens for %s: %v", dir, tokenErr)
 		}
 	}
-	
+
 	// Attempt generation with retries
 	var lastError error
 	maxAttempts := s.options.MaxRetries + 1 // +1 for the initial attempt
-	
+
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if s.options.Verbose {
 			if attempt > 1 {
@@ -160,27 +160,27 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 				logrus.Debugf("🚀 Generating content for %s", dir)
 			}
 		}
-		
+
 		// Generate content
 		result, err := s.client.Generate(ctx, prompt)
 		if err == nil {
 			// Success
 			return result, nil
 		}
-		
+
 		// Log error and retry
 		lastError = err
 		if s.options.Verbose {
 			logrus.Debugf("❌ Attempt %d for %s failed: %v", attempt, dir, err)
 		}
-		
+
 		// Simple backoff before retry
 		if attempt < maxAttempts {
 			backoffMs := 100 * attempt * attempt
 			time.Sleep(time.Duration(backoffMs) * time.Millisecond)
 		}
 	}
-	
-	return "", fmt.Errorf("failed to generate content after %d attempts: %w", 
+
+	return "", fmt.Errorf("failed to generate content after %d attempts: %w",
 		s.options.MaxRetries, lastError)
 }

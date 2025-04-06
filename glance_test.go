@@ -79,10 +79,10 @@ func TestIsIgnored(t *testing.T) {
 func setupTestDir(t *testing.T, prefix string) (string, func()) {
 	tempDir, err := os.MkdirTemp("", prefix)
 	assert.NoError(t, err, "Failed to create temp directory")
-	
+
 	cleanup := func() {
 		os.RemoveAll(tempDir)
 	}
-	
+
 	return tempDir, cleanup
 }

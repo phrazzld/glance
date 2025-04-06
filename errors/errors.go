@@ -18,10 +18,10 @@ type ErrorSeverity int
 const (
 	// ErrorSeverityNormal indicates a standard error.
 	ErrorSeverityNormal ErrorSeverity = iota
-	
+
 	// ErrorSeverityWarning indicates a warning condition.
 	ErrorSeverityWarning
-	
+
 	// ErrorSeverityCritical indicates a critical error.
 	ErrorSeverityCritical
 )
@@ -47,31 +47,31 @@ func (s ErrorSeverity) String() string {
 // GlanceError is the base interface for all custom error types in the application.
 type GlanceError interface {
 	error
-	
+
 	// Type returns the error type identifier
 	Type() string
-	
+
 	// Code returns the error code
 	Code() string
-	
+
 	// Severity returns the error severity level
 	Severity() ErrorSeverity
-	
+
 	// Suggestion returns a recommended action to resolve the error
 	Suggestion() string
-	
+
 	// Unwrap returns the wrapped error if any
 	Unwrap() error
-	
+
 	// WithCode sets the error code and returns the error
 	WithCode(code string) GlanceError
-	
+
 	// WithSeverity sets the error severity and returns the error
 	WithSeverity(severity ErrorSeverity) GlanceError
-	
+
 	// WithSuggestion sets a suggestion for resolving the error and returns the error
 	WithSuggestion(suggestion string) GlanceError
-	
+
 	// WithCause sets the underlying cause of an error and returns the error
 	WithCause(cause error) GlanceError
 }
@@ -89,30 +89,30 @@ type baseError struct {
 // Error returns the error message.
 func (e *baseError) Error() string {
 	var result string
-	
+
 	// Include code if present
 	if e.code != "" {
 		result = fmt.Sprintf("[%s] ", e.code)
 	}
-	
+
 	// Add the main message
 	result += e.message
-	
+
 	// Add severity if not normal
 	if e.severity != ErrorSeverityNormal {
 		result += fmt.Sprintf(" (%s)", e.severity)
 	}
-	
+
 	// Add suggestion if present
 	if e.suggestion != "" {
 		result += fmt.Sprintf(" - Suggestion: %s", e.suggestion)
 	}
-	
+
 	// Add wrapped error if present
 	if e.cause != nil {
 		result += fmt.Sprintf(": %v", e.cause)
 	}
-	
+
 	return result
 }
 
@@ -264,13 +264,13 @@ func WrapFileError(err error, message string) GlanceError {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If it's already a FileSystemError, maintain the type but update the message
 	var fsErr *FileSystemError
 	if errors.As(err, &fsErr) {
 		return NewFileSystemError(message, err)
 	}
-	
+
 	// Map common os errors to specific sentinel errors
 	if errors.Is(err, os.ErrNotExist) {
 		return &FileSystemError{
@@ -295,7 +295,7 @@ func WrapFileError(err error, message string) GlanceError {
 			},
 		}
 	}
-	
+
 	// Default case
 	return NewFileSystemError(message, err)
 }
@@ -306,13 +306,13 @@ func WrapAPIError(err error, message string) GlanceError {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If it's already an APIError, maintain the type but update the message
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {
 		return NewAPIError(message, err)
 	}
-	
+
 	// Create a new API error
 	return NewAPIError(message, err)
 }
@@ -323,13 +323,13 @@ func WrapConfigError(err error, message string) GlanceError {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If it's already a ConfigError, maintain the type but update the message
 	var cfgErr *ConfigError
 	if errors.As(err, &cfgErr) {
 		return NewConfigError(message, err)
 	}
-	
+
 	// Create a new config error
 	return NewConfigError(message, err)
 }
@@ -340,13 +340,13 @@ func WrapValidationError(err error, message string) GlanceError {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If it's already a ValidationError, maintain the type but update the message
 	var valErr *ValidationError
 	if errors.As(err, &valErr) {
 		return NewValidationError(message, err)
 	}
-	
+
 	// Create a new validation error
 	return NewValidationError(message, err)
 }
@@ -392,28 +392,28 @@ func IsValidationError(err error) bool {
 
 // Common file system errors
 var (
-	ErrFileNotFound       = NewFileSystemError("file not found", nil).WithCode("FS-001")
-	ErrFilePermission     = NewFileSystemError("permission denied", nil).WithCode("FS-002")
-	ErrDirectoryNotFound  = NewFileSystemError("directory not found", nil).WithCode("FS-003")
-	ErrInvalidPath        = NewFileSystemError("invalid path", nil).WithCode("FS-004")
-	ErrFileAlreadyExists  = NewFileSystemError("file already exists", nil).WithCode("FS-005")
+	ErrFileNotFound      = NewFileSystemError("file not found", nil).WithCode("FS-001")
+	ErrFilePermission    = NewFileSystemError("permission denied", nil).WithCode("FS-002")
+	ErrDirectoryNotFound = NewFileSystemError("directory not found", nil).WithCode("FS-003")
+	ErrInvalidPath       = NewFileSystemError("invalid path", nil).WithCode("FS-004")
+	ErrFileAlreadyExists = NewFileSystemError("file already exists", nil).WithCode("FS-005")
 )
 
 // Common API errors
 var (
-	ErrAPITimeout         = NewAPIError("API request timed out", nil).WithCode("API-001")
-	ErrAPIRateLimit       = NewAPIError("API rate limit exceeded", nil).WithCode("API-002")
-	ErrAPIAuthentication  = NewAPIError("API authentication failed", nil).WithCode("API-003")
-	ErrAPIQuota           = NewAPIError("API quota exceeded", nil).WithCode("API-004")
-	ErrAPIResponseFormat  = NewAPIError("invalid API response format", nil).WithCode("API-005")
+	ErrAPITimeout        = NewAPIError("API request timed out", nil).WithCode("API-001")
+	ErrAPIRateLimit      = NewAPIError("API rate limit exceeded", nil).WithCode("API-002")
+	ErrAPIAuthentication = NewAPIError("API authentication failed", nil).WithCode("API-003")
+	ErrAPIQuota          = NewAPIError("API quota exceeded", nil).WithCode("API-004")
+	ErrAPIResponseFormat = NewAPIError("invalid API response format", nil).WithCode("API-005")
 )
 
 // Common configuration errors
 var (
-	ErrConfigMissingKey   = NewConfigError("required configuration key missing", nil).WithCode("CFG-001")
-	ErrConfigFormat       = NewConfigError("invalid configuration format", nil).WithCode("CFG-002")
-	ErrConfigEnvVar       = NewConfigError("environment variable not set", nil).WithCode("CFG-003")
-	ErrConfigValidation   = NewConfigError("configuration validation failed", nil).WithCode("CFG-004")
+	ErrConfigMissingKey = NewConfigError("required configuration key missing", nil).WithCode("CFG-001")
+	ErrConfigFormat     = NewConfigError("invalid configuration format", nil).WithCode("CFG-002")
+	ErrConfigEnvVar     = NewConfigError("environment variable not set", nil).WithCode("CFG-003")
+	ErrConfigValidation = NewConfigError("configuration validation failed", nil).WithCode("CFG-004")
 )
 
 // Common validation errors

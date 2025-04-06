@@ -39,7 +39,7 @@ func TestSetupLogging(t *testing.T) {
 func TestMainWithConfig(t *testing.T) {
 	// This test confirms that our refactored main function can properly use the config package
 	// It's more of an integration test and depends on the compiled binary
-	
+
 	if os.Getenv("TEST_WITH_COMPILED_BINARY") != "true" {
 		t.Skip("Skipping test that requires compiled binary. Set TEST_WITH_COMPILED_BINARY=true to run.")
 	}
@@ -55,10 +55,10 @@ func TestMainWithConfig(t *testing.T) {
 	// Run the glance command on the test project
 	cmd := exec.Command("./glance", testProjectDir)
 	output, err := cmd.CombinedOutput()
-	
+
 	// Command should succeed
 	require.NoError(t, err, "Glance command failed with output: %s", output)
-	
+
 	// Verify GLANCE.md files were created
 	mainGlanceFile := filepath.Join(testProjectDir, "GLANCE.md")
 	assert.FileExists(t, mainGlanceFile, "GLANCE.md should exist in test directory")

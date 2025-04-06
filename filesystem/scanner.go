@@ -55,39 +55,39 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 		} else {
 			// For non-root directories, check if they should be ignored
 			shouldInclude := true
-			
+
 			// Check if this directory is ignored by any rule in its parents' chain
 			for _, rule := range current.ignoreChain {
 				// Skip rules from directories that are not ancestors of the current path
 				if !strings.HasPrefix(current.path, rule.OriginDir) {
 					continue
 				}
-				
+
 				// Get the path relative to the rule's origin
 				relPath, err := filepath.Rel(rule.OriginDir, current.path)
 				if err != nil {
 					if logrus.IsLevelEnabled(logrus.DebugLevel) {
-						logrus.Debugf("Error calculating relative path for %s from %s: %v", 
+						logrus.Debugf("Error calculating relative path for %s from %s: %v",
 							current.path, rule.OriginDir, err)
 					}
 					continue
 				}
-				
+
 				// Convert to slash path for consistent matching
 				relPath = filepath.ToSlash(relPath)
-				
+
 				// For directories, we need to test both with and without trailing slash
 				// because gitignore patterns like "dir/" only match "dir/" and not "dir"
 				if rule.Matcher.MatchesPath(relPath) || rule.Matcher.MatchesPath(relPath+"/") {
 					shouldInclude = false
 					if logrus.IsLevelEnabled(logrus.DebugLevel) {
-						logrus.Debugf("Skipping directory %s: matched by gitignore rule from %s", 
+						logrus.Debugf("Skipping directory %s: matched by gitignore rule from %s",
 							current.path, rule.OriginDir)
 					}
 					break
 				}
 			}
-			
+
 			if shouldInclude {
 				dirsList = append(dirsList, current.path)
 			} else {
@@ -101,12 +101,12 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 		if err != nil && logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Error loading .gitignore from %s: %v", current.path, err)
 		}
-		
+
 		// Build the combined chain for this directory's children
 		// First, copy the parent chain to avoid modifying it
 		combinedChain := make(IgnoreChain, len(current.ignoreChain))
 		copy(combinedChain, current.ignoreChain)
-		
+
 		// Add the local .gitignore rule if one exists
 		if localIgnore != nil {
 			newRule := IgnoreRule{
@@ -115,7 +115,7 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 			}
 			combinedChain = append(combinedChain, newRule)
 		}
-		
+
 		// Store the applicable ignore chain for this directory
 		dirToChain[current.path] = combinedChain
 
@@ -131,14 +131,14 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 				continue
 			}
 			name := e.Name()
-			
+
 			// Skip hidden directories and node_modules by default
 			if strings.HasPrefix(name, ".") || name == "node_modules" {
 				continue
 			}
-			
+
 			fullChildPath := filepath.Join(current.path, name)
-			
+
 			// Add the child directory to the queue for processing
 			// It will be checked against ignore rules in the next iteration
 			queue = append(queue, queueItem{

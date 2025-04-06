@@ -16,10 +16,10 @@ import (
 type PromptData struct {
 	// Directory is the path to the directory being processed
 	Directory string
-	
+
 	// SubGlances contains the compiled contents of subdirectory GLANCE.md files
 	SubGlances string
-	
+
 	// FileContents contains the formatted contents of files in the directory
 	FileContents string
 }
@@ -62,12 +62,12 @@ func LoadTemplate(path string) (string, error) {
 		}
 		return string(data), nil
 	}
-	
+
 	// No path provided, try to load from default location
 	if data, err := os.ReadFile("prompt.txt"); err == nil {
 		return string(data), nil
 	}
-	
+
 	// Fall back to the default template
 	return DefaultTemplate(), nil
 }
@@ -87,13 +87,13 @@ func GeneratePrompt(data *PromptData, templateStr string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to parse prompt template: %w", err)
 	}
-	
+
 	// Execute the template with the provided data
 	var rendered bytes.Buffer
 	if err = tmpl.Execute(&rendered, data); err != nil {
 		return "", fmt.Errorf("failed to execute prompt template: %w", err)
 	}
-	
+
 	return rendered.String(), nil
 }
 
@@ -107,11 +107,11 @@ func GeneratePrompt(data *PromptData, templateStr string) (string, error) {
 //   - A formatted string containing all file contents
 func FormatFileContents(fileMap map[string]string) string {
 	var builder strings.Builder
-	
+
 	for filename, content := range fileMap {
 		builder.WriteString(fmt.Sprintf("=== file: %s ===\n%s\n\n", filename, content))
 	}
-	
+
 	return builder.String()
 }
 

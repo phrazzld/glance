@@ -14,7 +14,7 @@ import (
 	_ "github.com/joho/godotenv" // Used by the config package for loading environment variables
 	gitignore "github.com/sabhiram/go-gitignore"
 	"github.com/sirupsen/logrus"
-	
+
 	"glance/config"
 	"glance/llm"
 	"glance/ui"
@@ -54,7 +54,7 @@ func main() {
 
 	// Set up logging based on the verbose flag
 	setupLogging(cfg.Verbose)
-	
+
 	// Set up the LLM client and service
 	llmClient, llmService, err := setupLLMService(cfg)
 	if err != nil {
@@ -108,26 +108,26 @@ func setupLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 		WithModelName("gemini-2.0-flash").
 		WithMaxRetries(cfg.MaxRetries).
 		WithTimeout(60)
-		
+
 	// Create the client
 	client, err := llm.NewGeminiClient(cfg.APIKey, clientOptions)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create LLM client: %w", err)
 	}
-	
+
 	// Create service options
 	serviceOptions := []llm.ServiceOption{
 		llm.WithMaxRetries(cfg.MaxRetries),
 		llm.WithVerbose(cfg.Verbose),
 	}
-	
+
 	// Create the service
 	service, err := llm.NewService(client, serviceOptions...)
 	if err != nil {
 		client.Close()
 		return nil, nil, fmt.Errorf("failed to create LLM service: %w", err)
 	}
-	
+
 	return client, service, nil
 }
 
@@ -232,7 +232,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 
 	// Create context for LLM operations
 	ctx := context.Background()
-	
+
 	// Generate markdown content using the LLM service
 	summary, llmErr := llmService.GenerateGlanceMarkdown(ctx, dir, fileContents, subGlances)
 	if llmErr != nil {
@@ -240,13 +240,13 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 		r.err = llmErr
 		return r
 	}
-	
+
 	// Write the generated content to file
 	if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
 		r.err = fmt.Errorf("failed writing GLANCE.md to %s: %w", dir, werr)
 		return r
 	}
-	
+
 	r.success = true
 	r.attempts = 1 // Service already handles retries internally
 	r.err = nil
@@ -572,4 +572,3 @@ func printDebrief(results []result) {
 	}
 	logrus.Info("📊 ===================== 📊")
 }
-

@@ -122,10 +122,10 @@ func loadPromptTemplate(path string) (string, error) {
 		}
 		return string(data), nil
 	}
-	
+
 	if data, err := os.ReadFile("prompt.txt"); err == nil {
 		return string(data), nil
 	}
-	
+
 	return defaultPromptTemplate, nil
 }

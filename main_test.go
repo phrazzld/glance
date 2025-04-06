@@ -33,7 +33,7 @@ func TestCLIExecution(t *testing.T) {
 	// Execute the compiled binary with --help flag (doesn't require API key)
 	cmd := exec.Command("./glance", "--help")
 	output, err := cmd.CombinedOutput()
-	
+
 	// We just check if it runs without crashing - not checking specific output
 	// since it will change as the CLI evolves
 	assert.NoError(t, err, "CLI execution failed with error: %v, output: %s", err, output)
@@ -49,7 +49,7 @@ func TestUsage(t *testing.T) {
 	// Run glance with no arguments - should exit with non-zero status
 	cmd := exec.Command("./glance")
 	output, err := cmd.CombinedOutput()
-	
+
 	// Should fail due to missing arguments
 	assert.Error(t, err, "Expected CLI to fail with no arguments")
 	assert.Contains(t, string(output), "Usage:", "Expected usage information in output")
@@ -72,15 +72,15 @@ func TestGlanceWithTestStructure(t *testing.T) {
 	// Execute the glance binary on the test directory
 	cmd := exec.Command("./glance", testProjectDir)
 	output, err := cmd.CombinedOutput()
-	
+
 	// The command should succeed
 	require.NoError(t, err, "Glance command failed with output: %s", output)
-	
+
 	// Verify GLANCE.md files were created in each directory (except ignored ones)
 	mainGlanceFile := filepath.Join(testProjectDir, "GLANCE.md")
 	subdir1GlanceFile := filepath.Join(testProjectDir, "subdir1", "GLANCE.md")
 	subdir2GlanceFile := filepath.Join(testProjectDir, "subdir2", "GLANCE.md")
-	
+
 	assert.FileExists(t, mainGlanceFile, "GLANCE.md should exist in root directory")
 	assert.FileExists(t, subdir1GlanceFile, "GLANCE.md should exist in subdir1")
 	assert.FileExists(t, subdir2GlanceFile, "GLANCE.md should exist in subdir2")
@@ -263,11 +263,11 @@ func TestGlanceChangePropagation(t *testing.T) {
 
 	// Get the initial modification time of the root GLANCE.md file
 	mainGlanceFile := filepath.Join(testProjectDir, "GLANCE.md")
-	
+
 	mainInitialStat, err := os.Stat(mainGlanceFile)
 	require.NoError(t, err, "Failed to stat initial root GLANCE.md")
 	mainInitialTime := mainInitialStat.ModTime()
-	
+
 	// Wait a moment to ensure file timestamps will be different
 	time.Sleep(1 * time.Second)
 
@@ -284,7 +284,7 @@ func TestGlanceChangePropagation(t *testing.T) {
 	// Check that the parent GLANCE.md file was also regenerated due to changes in the subdirectory
 	mainCurrentStat, err := os.Stat(mainGlanceFile)
 	require.NoError(t, err, "Failed to stat root GLANCE.md after subdirectory change")
-	assert.NotEqual(t, mainInitialTime, mainCurrentStat.ModTime(), 
+	assert.NotEqual(t, mainInitialTime, mainCurrentStat.ModTime(),
 		"Root GLANCE.md should have been regenerated after subdirectory's GLANCE.md changed")
 }
 
@@ -301,7 +301,7 @@ func TestBinaryFileHandling(t *testing.T) {
 	// Set up test directory structure
 	testProjectDir, cleanup := setupTestProjectStructure(t)
 	defer cleanup()
-	
+
 	// Create a binary file (using PNG header)
 	binaryFileContent := []byte{
 		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
@@ -311,28 +311,28 @@ func TestBinaryFileHandling(t *testing.T) {
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 		0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
 	}
-	
+
 	binaryFile := filepath.Join(testProjectDir, "binary.png")
 	err := os.WriteFile(binaryFile, binaryFileContent, 0644)
 	require.NoError(t, err, "Failed to create binary file")
-	
+
 	// Run glance with verbose output
 	cmd := exec.Command("./glance", "--verbose", testProjectDir)
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "Glance run failed")
-	
+
 	// Check verbose output for binary file detection
 	outputStr := string(output)
 	assert.Contains(t, outputStr, "binary", "Output should mention binary file detection")
-	
+
 	// Verify GLANCE.md was created
 	mainGlanceFile := filepath.Join(testProjectDir, "GLANCE.md")
 	content, err := os.ReadFile(mainGlanceFile)
 	require.NoError(t, err, "Failed to read GLANCE.md content")
-	
+
 	// The content should not reference the binary file content
 	contentStr := string(content)
-	assert.NotContains(t, contentStr, string(binaryFileContent), 
+	assert.NotContains(t, contentStr, string(binaryFileContent),
 		"GLANCE.md should not contain binary file content")
 }
 

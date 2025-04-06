@@ -44,26 +44,26 @@ func TestMockExample(t *testing.T) {
 	// This is a simple demonstration of how mocks will be used
 	// in future tests to isolate components
 	mockClient := new(MockGeminiClient)
-	
+
 	// Set up expectations
 	mockClient.On("GenerativeModel", "gemini-2.0-flash").Return(mockClient)
 	mockClient.On("CountTokens", mock.Anything, mock.Anything).Return(map[string]interface{}{
 		"TotalTokens": int32(100),
 	})
 	mockClient.On("Close").Return(nil)
-	
+
 	// Example usage
 	model := mockClient.GenerativeModel("gemini-2.0-flash")
 	assert.NotNil(t, model, "Should return a mock model")
-	
+
 	tokenResponse := mockClient.CountTokens(context.Background(), "test prompt")
 	resp, ok := tokenResponse.(map[string]interface{})
 	assert.True(t, ok, "Should return a map")
 	assert.Equal(t, int32(100), resp["TotalTokens"], "Should return mocked token count")
-	
+
 	err := mockClient.Close()
 	assert.NoError(t, err, "Close should not return an error")
-	
+
 	// Verify all expectations were met
 	mockClient.AssertExpectations(t)
 }

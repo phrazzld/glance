@@ -24,12 +24,12 @@ import (
 //   - An error, if any occurred during the search
 func LatestModTime(dir string, ignoreChain IgnoreChain, verbose bool) (time.Time, error) {
 	var latest time.Time
-	
+
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
 			return werr
 		}
-		
+
 		// For directories (except the root dir), check if we should skip them
 		if d.IsDir() && path != dir {
 			// Check if the directory should be ignored
@@ -37,7 +37,7 @@ func LatestModTime(dir string, ignoreChain IgnoreChain, verbose bool) (time.Time
 				return fs.SkipDir
 			}
 		}
-		
+
 		// Get file info for modification time
 		info, errStat := d.Info()
 		if errStat != nil {
@@ -46,15 +46,15 @@ func LatestModTime(dir string, ignoreChain IgnoreChain, verbose bool) (time.Time
 			}
 			return nil
 		}
-		
+
 		// Update latest time if this file/dir is newer
 		if info.ModTime().After(latest) {
 			latest = info.ModTime()
 		}
-		
+
 		return nil
 	})
-	
+
 	return latest, err
 }
 
@@ -81,7 +81,7 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain, ver
 		}
 		return true, nil
 	}
-	
+
 	// Check if GLANCE.md exists
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
@@ -91,20 +91,20 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain, ver
 		}
 		return true, nil
 	}
-	
+
 	// Check if any file is newer than GLANCE.md
 	latest, err := LatestModTime(dir, ignoreChain, verbose)
 	if err != nil {
 		return false, err
 	}
-	
+
 	if latest.After(glanceInfo.ModTime()) {
 		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Found newer files in %s, will regenerate GLANCE.md", dir)
 		}
 		return true, nil
 	}
-	
+
 	return false, nil
 }
 
@@ -118,18 +118,18 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain, ver
 func BubbleUpParents(dir, root string, needs map[string]bool) {
 	for {
 		parent := filepath.Dir(dir)
-		
+
 		// Stop if we've reached the top directory
 		// or if we've gone above the root directory
 		if parent == dir || len(parent) < len(root) {
 			break
 		}
-		
+
 		// Mark this parent directory as needing regeneration, but only if it's not the root
 		if parent != root {
 			needs[parent] = true
 		}
-		
+
 		// Move up to the next parent
 		dir = parent
 	}

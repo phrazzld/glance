@@ -12,8 +12,8 @@ import (
 
 // mockDirectoryChecker implements directoryChecker for testing
 type mockDirectoryChecker struct {
-	shouldPass bool
-	errorMsg   string
+	shouldPass   bool
+	errorMsg     string
 	checkedPaths []string // Tracks all paths that were checked
 }
 
@@ -29,28 +29,27 @@ func (m *mockDirectoryChecker) CheckDirectory(path string) error {
 func setupMockDirectoryChecker(shouldPass bool, errorMsg string) (*mockDirectoryChecker, func()) {
 	original := dirChecker
 	mock := &mockDirectoryChecker{
-		shouldPass: shouldPass, 
-		errorMsg: errorMsg,
+		shouldPass:   shouldPass,
+		errorMsg:     errorMsg,
 		checkedPaths: []string{},
 	}
 	dirChecker = mock
-	
+
 	return mock, func() {
 		dirChecker = original
 	}
 }
 
-
 // Helper function to save and restore environment variables
 func setupEnvVars(t *testing.T, vars map[string]string) func() {
 	origValues := make(map[string]string)
-	
+
 	// Save original values and set test values
 	for key, value := range vars {
 		origValues[key] = os.Getenv(key)
 		os.Setenv(key, value)
 	}
-	
+
 	// Return cleanup function
 	return func() {
 		for key, value := range origValues {
@@ -87,14 +86,14 @@ func TestLoadConfig(t *testing.T) {
 	assert.NotEmpty(t, cfg.PromptTemplate, "Prompt template should not be empty")
 	assert.Equal(t, DefaultMaxRetries, cfg.MaxRetries, "MaxRetries should have default value")
 	assert.Equal(t, int64(DefaultMaxFileBytes), cfg.MaxFileBytes, "MaxFileBytes should have default value")
-	
+
 	// Verify the directory was checked
 	assert.Contains(t, mock.checkedPaths, "/test/dir", "Target directory should have been checked")
 }
 
 func TestLoadConfigAllFlags(t *testing.T) {
 	// Test all the available command-line flags
-	
+
 	// Setup the mock directory checker to pass
 	_, cleanup := setupMockDirectoryChecker(true, "")
 	defer cleanup()
@@ -104,7 +103,7 @@ func TestLoadConfigAllFlags(t *testing.T) {
 		"GEMINI_API_KEY": "test-api-key",
 	})
 	defer cleanupEnv()
-	
+
 	// Create a temporary prompt file
 	tempDir, err := os.MkdirTemp("", "glance-test-*")
 	require.NoError(t, err, "Failed to create temp directory")
@@ -139,7 +138,7 @@ func TestLoadConfigAllFlags(t *testing.T) {
 
 func TestLoadConfigDefaults(t *testing.T) {
 	// Test that defaults are applied correctly when flags aren't specified
-	
+
 	// Setup the mock directory checker to pass
 	_, cleanup := setupMockDirectoryChecker(true, "")
 	defer cleanup()
@@ -214,7 +213,7 @@ func TestLoadConfigWithPromptInWorkingDir(t *testing.T) {
 
 	// Create a prompt.txt file in the current directory
 	promptContent := "prompt template from working directory {{.Directory}}"
-	
+
 	// Create prompt.txt in current directory (will be cleaned up)
 	promptFile := "prompt.txt"
 	err := os.WriteFile(promptFile, []byte(promptContent), 0644)
@@ -231,7 +230,7 @@ func TestLoadConfigWithPromptInWorkingDir(t *testing.T) {
 	require.NoError(t, err, "LoadConfig should not return an error with valid inputs")
 
 	// Check the prompt template was loaded from the working directory
-	assert.Equal(t, promptContent, cfg.PromptTemplate, 
+	assert.Equal(t, promptContent, cfg.PromptTemplate,
 		"Prompt template should be loaded from prompt.txt in working directory")
 }
 
@@ -239,7 +238,7 @@ func TestLoadConfigWithDotEnvFile(t *testing.T) {
 	// This test is more complex because we're testing the godotenv functionality
 	// which is used in LoadConfig. Since we can't easily mock that dependency,
 	// we need to create an actual .env file and test it.
-	
+
 	// Setup the mock directory checker to pass
 	_, cleanup := setupMockDirectoryChecker(true, "")
 	defer cleanup()
@@ -249,7 +248,7 @@ func TestLoadConfigWithDotEnvFile(t *testing.T) {
 	// the .env file is created in the right place
 	envFile := ".env"
 	envContent := "GEMINI_API_KEY=from-dot-env-file"
-	
+
 	// Check for existing .env file
 	var existingEnvContent []byte
 	var existingEnvFile bool
@@ -260,11 +259,11 @@ func TestLoadConfigWithDotEnvFile(t *testing.T) {
 			t.Fatalf("Failed to read existing .env file: %v", err)
 		}
 	}
-	
+
 	// Create test .env file
 	err := os.WriteFile(envFile, []byte(envContent), 0644)
 	require.NoError(t, err, "Failed to create test .env file")
-	
+
 	// Clean up .env file after test
 	defer func() {
 		if existingEnvFile {
@@ -281,10 +280,10 @@ func TestLoadConfigWithDotEnvFile(t *testing.T) {
 			}
 		}
 	}()
-	
+
 	// Save and restore environment variables
 	origAPIKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "")  // Clear the env var to ensure .env is used
+	os.Setenv("GEMINI_API_KEY", "") // Clear the env var to ensure .env is used
 	defer os.Setenv("GEMINI_API_KEY", origAPIKey)
 
 	// Create test arguments
@@ -299,7 +298,7 @@ func TestLoadConfigWithDotEnvFile(t *testing.T) {
 	if err != nil && err.Error() == "GEMINI_API_KEY is missing: please set this environment variable or add it to your .env file" {
 		t.Skip("Skipping .env test - godotenv integration may require manual testing")
 	}
-	
+
 	// If we get here, verify that the test works as expected
 	require.NoError(t, err, "LoadConfig should not return an error with valid inputs")
 	assert.Equal(t, "from-dot-env-file", cfg.APIKey, "API Key should be loaded from .env file")
@@ -307,7 +306,7 @@ func TestLoadConfigWithDotEnvFile(t *testing.T) {
 
 func TestLoadConfigEnvVarPrecedence(t *testing.T) {
 	// Test that environment variables take precedence over .env file
-	
+
 	// Setup the mock directory checker to pass
 	_, cleanup := setupMockDirectoryChecker(true, "")
 	defer cleanup()
@@ -315,7 +314,7 @@ func TestLoadConfigEnvVarPrecedence(t *testing.T) {
 	// Create real .env file in current directory
 	envFile := ".env"
 	envContent := "GEMINI_API_KEY=from-dot-env-file"
-	
+
 	// Check for existing .env file
 	var existingEnvContent []byte
 	var existingEnvFile bool
@@ -326,11 +325,11 @@ func TestLoadConfigEnvVarPrecedence(t *testing.T) {
 			t.Fatalf("Failed to read existing .env file: %v", err)
 		}
 	}
-	
+
 	// Create test .env file
 	err := os.WriteFile(envFile, []byte(envContent), 0644)
 	require.NoError(t, err, "Failed to create test .env file")
-	
+
 	// Clean up .env file after test
 	defer func() {
 		if existingEnvFile {
@@ -347,7 +346,7 @@ func TestLoadConfigEnvVarPrecedence(t *testing.T) {
 			}
 		}
 	}()
-	
+
 	// Save and restore environment variables
 	cleanupEnv := setupEnvVars(t, map[string]string{
 		"GEMINI_API_KEY": "from-environment-variable",
@@ -364,7 +363,7 @@ func TestLoadConfigEnvVarPrecedence(t *testing.T) {
 	require.NoError(t, err, "LoadConfig should not return an error with valid inputs")
 
 	// Check the API key was loaded from the environment variable, not the .env file
-	assert.Equal(t, "from-environment-variable", cfg.APIKey, 
+	assert.Equal(t, "from-environment-variable", cfg.APIKey,
 		"API Key from environment variable should take precedence over .env file")
 }
 
@@ -375,7 +374,7 @@ func TestLoadConfigMissingAPIKey(t *testing.T) {
 
 	// Save and restore environment variables
 	cleanupEnv := setupEnvVars(t, map[string]string{
-		"GEMINI_API_KEY": "",  // Explicitly set to empty
+		"GEMINI_API_KEY": "", // Explicitly set to empty
 	})
 	defer cleanupEnv()
 
@@ -489,7 +488,7 @@ func TestLoadPromptTemplate(t *testing.T) {
 
 		// Load the template from the custom path
 		result, err := loadPromptTemplate(promptPath)
-		
+
 		// Verify
 		assert.NoError(t, err, "Should not return error for valid path")
 		assert.Equal(t, promptContent, result, "Should load content from specified file")
@@ -498,7 +497,7 @@ func TestLoadPromptTemplate(t *testing.T) {
 	t.Run("Invalid prompt file path", func(t *testing.T) {
 		// Load from a non-existent path
 		result, err := loadPromptTemplate("/path/does/not/exist.txt")
-		
+
 		// Verify
 		assert.Error(t, err, "Should return error for invalid path")
 		assert.Contains(t, err.Error(), "failed to read", "Error should indicate read failure")
@@ -514,7 +513,7 @@ func TestLoadPromptTemplate(t *testing.T) {
 
 		// Load with empty path
 		result, err := loadPromptTemplate("")
-		
+
 		// Verify
 		assert.NoError(t, err, "Should not return error when prompt.txt exists")
 		assert.Equal(t, promptContent, result, "Should load content from prompt.txt")
@@ -523,10 +522,10 @@ func TestLoadPromptTemplate(t *testing.T) {
 	t.Run("Fallback to default template", func(t *testing.T) {
 		// Ensure prompt.txt doesn't exist in current directory
 		os.Remove("prompt.txt")
-		
+
 		// Load with empty path
 		result, err := loadPromptTemplate("")
-		
+
 		// Verify
 		assert.NoError(t, err, "Should not return error when falling back to default")
 		assert.Equal(t, defaultPromptTemplate, result, "Should return default template")

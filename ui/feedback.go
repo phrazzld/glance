@@ -82,15 +82,15 @@ func NewCustomSpinner(options ...SpinnerOption) *Spinner {
 		finalMsg: "Done!\n",
 		speed:    120 * time.Millisecond,
 	}
-	
+
 	// Apply suffix to the spinner
 	s.spinner.Suffix = " " + s.suffix
-	
+
 	// Apply custom options
 	for _, option := range options {
 		option(s)
 	}
-	
+
 	return s
 }
 
@@ -187,12 +187,12 @@ func NewCustomProgressBar(total int, options ...ProgressBarOption) *ProgressBar 
 		width:       40,
 		theme:       DefaultTheme,
 	}
-	
+
 	// Apply custom options
 	for _, option := range options {
 		option(p)
 	}
-	
+
 	// Create the underlying progress bar
 	p.bar = progressbar.NewOptions(total,
 		progressbar.OptionSetDescription(p.description),
@@ -206,7 +206,7 @@ func NewCustomProgressBar(total int, options ...ProgressBarOption) *ProgressBar 
 			BarEnd:        p.theme.BarEnd,
 		}),
 	)
-	
+
 	return p
 }
 
@@ -237,7 +237,7 @@ func ReportError(err error, verbose bool, context string) {
 	if err == nil {
 		return
 	}
-	
+
 	if verbose {
 		logrus.Errorf("❌ %s: %v", context, err)
 	} else {

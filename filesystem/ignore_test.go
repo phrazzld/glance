@@ -13,17 +13,17 @@ import (
 func TestShouldIgnoreFile(t *testing.T) {
 	// Setup test directory and files
 	testDir := t.TempDir()
-	
+
 	// Create a .gitignore file
 	gitignoreContent := "*.log\n*.tmp\nignored_dir/\n"
 	gitignorePath := filepath.Join(testDir, ".gitignore")
 	err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644)
 	require.NoError(t, err)
-	
+
 	// Parse the gitignore file
 	gitignoreObj, err := gitignore.CompileIgnoreFile(gitignorePath)
 	require.NoError(t, err)
-	
+
 	// Create an ignore chain
 	ignoreChain := IgnoreChain{
 		{
@@ -31,14 +31,14 @@ func TestShouldIgnoreFile(t *testing.T) {
 			Matcher:   gitignoreObj,
 		},
 	}
-	
+
 	tests := []struct {
-		name      string
-		path      string
-		baseDir   string
-		chain     IgnoreChain
-		verbose   bool
-		expected  bool
+		name     string
+		path     string
+		baseDir  string
+		chain    IgnoreChain
+		verbose  bool
+		expected bool
 	}{
 		{
 			name:     "Hidden file",
@@ -89,7 +89,7 @@ func TestShouldIgnoreFile(t *testing.T) {
 			expected: true,
 		},
 	}
-	
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			result := ShouldIgnoreFile(tc.path, tc.baseDir, tc.chain, tc.verbose)
@@ -101,17 +101,17 @@ func TestShouldIgnoreFile(t *testing.T) {
 func TestShouldIgnoreDir(t *testing.T) {
 	// Setup test directory
 	testDir := t.TempDir()
-	
+
 	// Create a .gitignore file
 	gitignoreContent := "ignored_dir/\nbuild/\n*.log\n"
 	gitignorePath := filepath.Join(testDir, ".gitignore")
 	err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644)
 	require.NoError(t, err)
-	
+
 	// Parse the gitignore file
 	gitignoreObj, err := gitignore.CompileIgnoreFile(gitignorePath)
 	require.NoError(t, err)
-	
+
 	// Create an ignore chain
 	ignoreChain := IgnoreChain{
 		{
@@ -119,7 +119,7 @@ func TestShouldIgnoreDir(t *testing.T) {
 			Matcher:   gitignoreObj,
 		},
 	}
-	
+
 	tests := []struct {
 		name     string
 		path     string
@@ -169,7 +169,7 @@ func TestShouldIgnoreDir(t *testing.T) {
 			expected: true,
 		},
 	}
-	
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			result := ShouldIgnoreDir(tc.path, tc.baseDir, tc.chain, tc.verbose)
@@ -181,31 +181,31 @@ func TestShouldIgnoreDir(t *testing.T) {
 func TestMatchesGitignore(t *testing.T) {
 	// Setup test directory
 	testDir := t.TempDir()
-	
+
 	// Create a .gitignore file with various patterns
 	gitignoreContent := "*.log\n*.tmp\nignored_dir/\nbuild/\n"
 	gitignorePath := filepath.Join(testDir, ".gitignore")
 	err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644)
 	require.NoError(t, err)
-	
+
 	// Parse the gitignore file
 	gitignoreObj, err := gitignore.CompileIgnoreFile(gitignorePath)
 	require.NoError(t, err)
-	
+
 	// Create a nested directory with its own .gitignore
 	nestedDir := filepath.Join(testDir, "nested")
 	err = os.MkdirAll(nestedDir, 0755)
 	require.NoError(t, err)
-	
+
 	nestedGitignoreContent := "*.json\n*.md\n"
 	nestedGitignorePath := filepath.Join(nestedDir, ".gitignore")
 	err = os.WriteFile(nestedGitignorePath, []byte(nestedGitignoreContent), 0644)
 	require.NoError(t, err)
-	
+
 	// Parse the nested .gitignore file
 	nestedGitignoreObj, err := gitignore.CompileIgnoreFile(nestedGitignorePath)
 	require.NoError(t, err)
-	
+
 	// Create an ignore chain with both .gitignore files
 	ignoreChain := IgnoreChain{
 		{
@@ -217,14 +217,14 @@ func TestMatchesGitignore(t *testing.T) {
 			Matcher:   nestedGitignoreObj,
 		},
 	}
-	
+
 	tests := []struct {
-		name       string
-		path       string
-		baseDir    string
-		chain      IgnoreChain
-		isDir      bool
-		expected   bool
+		name     string
+		path     string
+		baseDir  string
+		chain    IgnoreChain
+		isDir    bool
+		expected bool
 	}{
 		{
 			name:     "File matching root .gitignore",
@@ -267,7 +267,7 @@ func TestMatchesGitignore(t *testing.T) {
 			expected: true,
 		},
 	}
-	
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			result := MatchesGitignore(tc.path, tc.baseDir, tc.chain, tc.isDir)
@@ -279,17 +279,17 @@ func TestMatchesGitignore(t *testing.T) {
 func TestShouldIgnorePath(t *testing.T) {
 	// Setup test directory and files
 	testDir := t.TempDir()
-	
+
 	// Create a .gitignore file
 	gitignoreContent := "*.log\n*.tmp\nignored_dir/\nbuild/\n"
 	gitignorePath := filepath.Join(testDir, ".gitignore")
 	err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644)
 	require.NoError(t, err)
-	
+
 	// Parse the gitignore file
 	gitignoreObj, err := gitignore.CompileIgnoreFile(gitignorePath)
 	require.NoError(t, err)
-	
+
 	// Create an ignore chain
 	ignoreChain := IgnoreChain{
 		{
@@ -297,7 +297,7 @@ func TestShouldIgnorePath(t *testing.T) {
 			Matcher:   gitignoreObj,
 		},
 	}
-	
+
 	// Create test directories
 	err = os.MkdirAll(filepath.Join(testDir, "ignored_dir"), 0755)
 	require.NoError(t, err)
@@ -305,7 +305,7 @@ func TestShouldIgnorePath(t *testing.T) {
 	require.NoError(t, err)
 	err = os.MkdirAll(filepath.Join(testDir, "node_modules"), 0755)
 	require.NoError(t, err)
-	
+
 	tests := []struct {
 		name     string
 		path     string
@@ -379,7 +379,7 @@ func TestShouldIgnorePath(t *testing.T) {
 			expected: true,
 		},
 	}
-	
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			result := ShouldIgnorePath(tc.path, tc.baseDir, tc.chain, tc.isDir, tc.verbose)

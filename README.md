@@ -2,7 +2,7 @@
 
 ## What is it?
 
-Glance is a command-line tool that recursively scans a directory tree and generates a `glance.md` file in each directory. This file provides a high-level summary of the directory's contents, generated using Google's Generative AI API (Gemini).
+Glance is a command-line tool that recursively scans a directory tree and generates a `GLANCE.md` file in each directory. This file provides a high-level summary of the directory's contents, generated using Google's Generative AI API (Gemini).
 
 ## Quick Usage
 
@@ -13,14 +13,15 @@ Glance is a command-line tool that recursively scans a directory tree and genera
 
    or run directly:
 
-       go run glance.go [--force] [--verbose] /path/to/directory
+       go run . [--force] [--verbose] /path/to/directory
 
 2. **Set Up Environment:**
    Ensure you have a valid `GEMINI_API_KEY` set in your environment or in a `.env` file.
 
 3. **Flags:**
-   - `--force` will regenerate `glance.md` even if it already exists.
+   - `--force` will regenerate `GLANCE.md` even if it already exists.
    - `--verbose` enables detailed logging output.
+   - `--prompt-file` allows specifying a custom prompt template file.
 
 ## Environment Variables
 
@@ -59,6 +60,16 @@ Glance uses [logrus](https://github.com/sirupsen/logrus) for logging:
 - **Debug-level Logging:** Enabled with the `--verbose` flag for more detailed output.
 - Additionally, it features a spinner and a progress bar during scanning and generation.
 
+## Package Structure
+
+Glance is organized into several packages:
+
+- **config:** Configuration management for API keys, directories, and other settings
+- **errors:** Custom error types and error handling utilities
+- **filesystem:** Directory scanning, file reading, and gitignore handling
+- **llm:** Abstractions for interacting with the Gemini API
+- **ui:** User interface components for feedback, including spinners and progress bars
+
 ## Dependencies
 
 - [github.com/briandowns/spinner](https://github.com/briandowns/spinner) – Spinner animation.
@@ -67,6 +78,7 @@ Glance uses [logrus](https://github.com/sirupsen/logrus) for logging:
 - [github.com/sabhiram/go-gitignore](https://github.com/sabhiram/go-gitignore) – Parses `.gitignore` files.
 - [github.com/schollz/progressbar/v3](https://github.com/schollz/progressbar) – Displays a progress bar.
 - [github.com/sirupsen/logrus](https://github.com/sirupsen/logrus) – Provides structured logging.
+- [github.com/stretchr/testify](https://github.com/stretchr/testify) – Testing toolkit.
 
 ## License
 

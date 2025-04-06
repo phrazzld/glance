@@ -31,15 +31,15 @@ func ReadTextFile(path string, maxBytes int64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Validate UTF-8 by replacing invalid sequences with the replacement character
 	contentStr := strings.ToValidUTF8(string(content), "�")
-	
+
 	// Truncate if needed
 	if maxBytes > 0 && int64(len(contentStr)) > maxBytes {
 		contentStr = TruncateContent(contentStr, maxBytes)
 	}
-	
+
 	return contentStr, nil
 }
 
@@ -57,12 +57,12 @@ func TruncateContent(content string, maxBytes int64) string {
 	if maxBytes <= 0 {
 		return content
 	}
-	
+
 	// If content is shorter than the max, return the full content
 	if int64(len(content)) <= maxBytes {
 		return content
 	}
-	
+
 	// Otherwise, truncate and add indicator
 	return content[:maxBytes] + "...(truncated)"
 }
@@ -88,7 +88,7 @@ func IsTextFile(path string) (bool, error) {
 	if err != nil && err != io.EOF {
 		return false, err
 	}
-	
+
 	ctype := http.DetectContentType(buf[:n])
 	if strings.HasPrefix(ctype, "text/") ||
 		strings.HasPrefix(ctype, "application/json") ||
@@ -96,7 +96,7 @@ func IsTextFile(path string) (bool, error) {
 		strings.Contains(ctype, "yaml") {
 		return true, nil
 	}
-	
+
 	return false, nil
 }
 
@@ -114,17 +114,17 @@ func IsTextFile(path string) (bool, error) {
 //   - An error, if any occurred during scanning or reading
 func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, verbose bool) (map[string]string, error) {
 	files := make(map[string]string)
-	
+
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
 			return werr
 		}
-		
+
 		// Skip subdirectories (beyond the current dir)
 		if d.IsDir() && path != dir {
 			return fs.SkipDir
 		}
-		
+
 		// Skip directories, GLANCE.md, and hidden files
 		if d.IsDir() || d.Name() == "GLANCE.md" || strings.HasPrefix(d.Name(), ".") {
 			return nil
@@ -134,12 +134,12 @@ func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, 
 		relPath, err := filepath.Rel(dir, path)
 		if err != nil {
 			if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("Error calculating relative path for %s from %s: %v", 
+				logrus.Debugf("Error calculating relative path for %s from %s: %v",
 					path, dir, err)
 			}
 			return nil
 		}
-		
+
 		// Check if the file should be ignored
 		shouldInclude := true
 		for _, rule := range ignoreChain {
@@ -147,20 +147,20 @@ func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, 
 			if !strings.HasPrefix(dir, rule.OriginDir) {
 				continue
 			}
-			
+
 			// Get the path relative to the rule's origin
 			ruleRelPath, err := filepath.Rel(rule.OriginDir, path)
 			if err != nil {
 				if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-					logrus.Debugf("Error calculating relative path for %s from %s: %v", 
+					logrus.Debugf("Error calculating relative path for %s from %s: %v",
 						path, rule.OriginDir, err)
 				}
 				continue
 			}
-			
+
 			// Convert to slash path for consistent matching
 			ruleRelPath = filepath.ToSlash(ruleRelPath)
-			
+
 			if rule.Matcher.MatchesPath(ruleRelPath) {
 				shouldInclude = false
 				if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -169,24 +169,24 @@ func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, 
 				break
 			}
 		}
-		
+
 		if !shouldInclude {
 			return nil
 		}
-		
+
 		// Check if file is text-based
 		isText, errCheck := IsTextFile(path)
 		if errCheck != nil && verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Error checking if file is text: %s => %v", path, errCheck)
 		}
-		
+
 		if !isText {
 			if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
 				logrus.Debugf("📊 Skipping binary/non-text file: %s", path)
 			}
 			return nil
 		}
-		
+
 		// Read file content
 		content, err := ReadTextFile(path, maxFileBytes)
 		if err != nil {
@@ -195,14 +195,14 @@ func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, 
 			}
 			return nil
 		}
-		
+
 		files[relPath] = content
 		return nil
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return files, nil
 }

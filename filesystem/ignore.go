@@ -13,7 +13,7 @@ import (
 const (
 	// GlanceFilename is the standard filename for glance summaries
 	GlanceFilename = "GLANCE.md"
-	
+
 	// NodeModulesDir is a heavy directory that should be skipped by default
 	NodeModulesDir = "node_modules"
 )
@@ -35,7 +35,7 @@ const (
 func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain, verbose bool) bool {
 	// Get the file name without the path
 	filename := filepath.Base(path)
-	
+
 	// Always ignore hidden files
 	if strings.HasPrefix(filename, ".") {
 		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -43,7 +43,7 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain, verb
 		}
 		return true
 	}
-	
+
 	// Always ignore GLANCE.md files (our output files)
 	if filename == GlanceFilename {
 		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -51,12 +51,12 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain, verb
 		}
 		return true
 	}
-	
+
 	// Check gitignore rules
 	if MatchesGitignore(path, baseDir, ignoreChain, false) {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -77,7 +77,7 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain, verb
 func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain, verbose bool) bool {
 	// Get the directory name without the path
 	dirname := filepath.Base(path)
-	
+
 	// Always ignore hidden directories
 	if strings.HasPrefix(dirname, ".") {
 		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -85,7 +85,7 @@ func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain, verbo
 		}
 		return true
 	}
-	
+
 	// Always ignore node_modules
 	if dirname == NodeModulesDir {
 		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -93,12 +93,12 @@ func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain, verbo
 		}
 		return true
 	}
-	
+
 	// Check gitignore rules
 	if MatchesGitignore(path, baseDir, ignoreChain, true) {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -138,20 +138,20 @@ func MatchesGitignore(path string, baseDir string, ignoreChain IgnoreChain, isDi
 		if !strings.HasPrefix(baseDir, rule.OriginDir) {
 			continue
 		}
-		
+
 		// Get the path relative to the rule's origin
 		relPath, err := filepath.Rel(rule.OriginDir, path)
 		if err != nil {
 			if logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("Error calculating relative path for %s from %s: %v", 
+				logrus.Debugf("Error calculating relative path for %s from %s: %v",
 					path, rule.OriginDir, err)
 			}
 			continue
 		}
-		
+
 		// Convert to slash path for consistent matching
 		relPath = filepath.ToSlash(relPath)
-		
+
 		// For directories, we need to test both with and without trailing slash
 		// because gitignore patterns like "dir/" only match "dir/" and not "dir"
 		if isDir {
@@ -170,6 +170,6 @@ func MatchesGitignore(path string, baseDir string, ignoreChain IgnoreChain, isDi
 			}
 		}
 	}
-	
+
 	return false
 }
