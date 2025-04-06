@@ -11,14 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/briandowns/spinner"
 	_ "github.com/joho/godotenv" // Used by the config package for loading environment variables
 	gitignore "github.com/sabhiram/go-gitignore"
-	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	
 	"glance/config"
 	"glance/llm"
+	"glance/ui"
 )
 
 // -----------------------------------------------------------------------------
@@ -137,11 +136,9 @@ func scanDirectories(cfg *config.Config) ([]string, map[string][]*gitignore.GitI
 	logrus.Info("✨ Excellent! Scanning directories now... Let's explore your code!")
 
 	// Show a spinner while scanning
-	s := spinner.New(spinner.CharSets[14], 120*time.Millisecond)
-	s.Suffix = " 🔍 Scanning directories and loading .gitignore files..."
-	s.FinalMSG = "🎉 Scan complete! Found all the good stuff!\n"
-	s.Start()
-	defer s.Stop()
+	scanner := ui.NewScanner()
+	scanner.Start()
+	defer scanner.Stop()
 
 	// Perform BFS scanning and gather .gitignore chain info per directory
 	dirsList, dirToIgnoreChain, err := listAllDirsWithIgnores(cfg.TargetDir)
@@ -160,18 +157,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 	logrus.Info("🧠 Preparing to generate all GLANCE.md files... Getting ready to make your code shine!")
 
 	// Create progress bar
-	bar := progressbar.NewOptions(len(dirsList),
-		progressbar.OptionSetDescription("✍️ Creating GLANCE files"),
-		progressbar.OptionShowCount(),
-		progressbar.OptionSetWidth(40),
-		progressbar.OptionSetPredictTime(false),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "█",
-			SaucerPadding: "░",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
-	)
+	bar := ui.NewProcessor(len(dirsList))
 
 	needsRegen := make(map[string]bool)
 	var finalResults []result
@@ -192,7 +178,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 		r := processDirectory(d, forceDir, ignoreChain, cfg, llmService)
 		finalResults = append(finalResults, r)
 
-		_ = bar.Add(1)
+		bar.Increment()
 
 		// Bubble up parent's regeneration flag if needed
 		if r.success && r.attempts > 0 && forceDir {
@@ -580,7 +566,8 @@ func printDebrief(results []result) {
 	logrus.Info("⚠️ Some directories couldn't be processed:")
 	for _, r := range results {
 		if !r.success {
-			logrus.Warnf("❌ %s: Attempts=%d Error=%v", r.dir, r.attempts, r.err)
+			// Use the UI error reporting
+			ui.ReportError(r.err, true, fmt.Sprintf("Failed to process %s (attempts: %d)", r.dir, r.attempts))
 		}
 	}
 	logrus.Info("📊 ===================== 📊")
