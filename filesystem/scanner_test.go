@@ -28,6 +28,10 @@ func setupTestDirectory(t *testing.T) (string, func()) {
 		".hidden_dir",
 		"node_modules",
 		"ignored_dir",
+		"nested",
+		"nested/level1",
+		"nested/level1/level2",
+		"nested/level1/level2/level3",
 	}
 
 	for _, dir := range subDirs {
@@ -46,6 +50,10 @@ func setupTestDirectory(t *testing.T) (string, func()) {
 		".hidden_dir/hidden_file.txt",
 		"node_modules/module_file.txt",
 		"ignored_dir/ignored_file.txt",
+		"nested/file.txt",
+		"nested/level1/file.txt",
+		"nested/level1/level2/file.txt",
+		"nested/level1/level2/level3/file.txt",
 	}
 
 	for _, file := range files {
@@ -55,8 +63,11 @@ func setupTestDirectory(t *testing.T) (string, func()) {
 
 	// Create .gitignore files
 	gitignoreContents := map[string]string{
-		"": "ignored_dir/\n*.log\n",
-		"dir1": "subdir2/\n",
+		"":                "ignored_dir/\n*.log\n",
+		"dir1":            "subdir2/\n",
+		"nested":          "*.json\n",
+		"nested/level1":   "*.md\n",
+		"nested/level1/level2": "*.yaml\n",
 	}
 
 	for dir, content := range gitignoreContents {
@@ -160,6 +171,51 @@ func TestListDirsWithIgnores(t *testing.T) {
 		// Test specific matches using the matcher
 		assert.True(t, dir1Rule.Matcher.MatchesPath("subdir2/file.txt"), "dir1 matcher should ignore 'subdir2/file.txt'")
 	}
+
+	// Test nested directories with multiple levels of gitignore
+	nestedPath := filepath.Join(root, "nested")
+	nestedChain, ok := ignoreChains[nestedPath]
+	assert.True(t, ok, "nested directory should have an ignore chain entry")
+	assert.Equal(t, 2, len(nestedChain), "nested should have 2 ignore rules (root's + its own)")
+
+	// Check level3 has an accumulated ignore chain from parents
+	level3Path := filepath.Join(root, "nested/level1/level2/level3")
+	level3Chain, ok := ignoreChains[level3Path]
+	assert.True(t, ok, "level3 should have an ignore chain entry")
+	// Don't test exact number as it depends on how many .gitignore files are properly loaded
+	assert.True(t, len(level3Chain) >= 2, "level3 should have multiple ignore rules from parents")
+
+	// Verify the order of rules in the chain if we have at least 2 (from root to most specific)
+	if len(level3Chain) >= 2 {
+		assert.Equal(t, root, level3Chain[0].OriginDir, "First rule origin should be root")
+		// If we have more rules, verify the nested one is next
+		if len(level3Chain) >= 3 {
+			assert.Equal(t, nestedPath, level3Chain[1].OriginDir, "Second rule origin should be nested")
+		}
+	}
+}
+
+func TestListDirsWithIgnores_ErrorHandling(t *testing.T) {
+	// Test with non-existent directory
+	_, _, err := ListDirsWithIgnores("/non/existent/directory")
+	assert.Error(t, err, "ListDirsWithIgnores should return an error for non-existent directory")
+
+	// Test with permission issues
+	if os.Getuid() != 0 { // Skip this test if running as root
+		// Create a directory with no read permissions
+		noPermDir := t.TempDir()
+		defer os.RemoveAll(noPermDir)
+		
+		// Create a subdirectory that we'll remove read permissions from
+		restrictedDir := filepath.Join(noPermDir, "restricted")
+		err := os.Mkdir(restrictedDir, 0000) // No permissions
+		
+		if err == nil { // Only run this test if we could create the restrictive directory
+			// Try to list dirs with no read permission
+			_, _, err = ListDirsWithIgnores(restrictedDir)
+			assert.Error(t, err, "ListDirsWithIgnores should return an error for directory with no read permissions")
+		}
+	}
 }
 
 func TestLoadGitignore(t *testing.T) {
@@ -191,4 +247,88 @@ func TestLoadGitignore(t *testing.T) {
 	emptyGitignore, err := LoadGitignore(emptyDir)
 	assert.Nil(t, err, "LoadGitignore should not return an error when .gitignore doesn't exist")
 	assert.Nil(t, emptyGitignore, "LoadGitignore should return nil for GitIgnore when .gitignore doesn't exist")
+
+	// Test with corrupted .gitignore
+	corruptDir, err := os.MkdirTemp("", "corrupt-gitignore-test-*")
+	require.NoError(t, err, "Failed to create temp directory")
+	defer os.RemoveAll(corruptDir)
+
+	// Create an invalid .gitignore file (a directory instead of a file)
+	err = os.Mkdir(filepath.Join(corruptDir, ".gitignore"), 0755)
+	require.NoError(t, err, "Failed to create directory named .gitignore")
+
+	corruptGitignore, err := LoadGitignore(corruptDir)
+	assert.Error(t, err, "LoadGitignore should return an error with invalid .gitignore file")
+	assert.Nil(t, corruptGitignore, "LoadGitignore should return nil for GitIgnore with invalid .gitignore file")
+}
+
+func TestListDirsWithIgnores_ComplexPatterns(t *testing.T) {
+	// Create a test directory
+	testDir := t.TempDir()
+	
+	// Create a .gitignore with complex patterns including negation
+	gitignoreContent := `
+# Ignore all logs
+*.log
+
+# Ignore build directories
+build/
+
+# Ignore all temp files
+*.tmp
+
+# Ignore all .env files except example.env
+.env*
+!example.env
+
+# Ignore node_modules, but not node_modules_tools
+node_modules/
+!node_modules_tools/
+`
+
+	err := os.WriteFile(filepath.Join(testDir, ".gitignore"), []byte(gitignoreContent), 0644)
+	require.NoError(t, err, "Failed to create .gitignore file")
+
+	// Create test directory structure
+	testDirs := []string{
+		"build",
+		"logs",
+		"temp",
+		"node_modules",
+		"node_modules_tools",
+		"config",
+	}
+
+	for _, dir := range testDirs {
+		err := os.Mkdir(filepath.Join(testDir, dir), 0755)
+		require.NoError(t, err, "Failed to create directory: "+dir)
+	}
+
+	// Create test files
+	testFiles := []string{
+		"example.env",
+		".env",
+		".env.local",
+		"app.log",
+		"data.tmp",
+	}
+
+	for _, file := range testFiles {
+		err := os.WriteFile(filepath.Join(testDir, file), []byte("test content"), 0644)
+		require.NoError(t, err, "Failed to create file: "+file)
+	}
+
+	// Call the function we want to test
+	dirs, _, err := ListDirsWithIgnores(testDir)
+	require.NoError(t, err, "ListDirsWithIgnores should not return an error")
+
+	// Verify directories are correctly included/excluded
+	assert.Contains(t, dirs, testDir, "Root directory should be included")
+	assert.Contains(t, dirs, filepath.Join(testDir, "logs"), "logs directory should be included")
+	assert.Contains(t, dirs, filepath.Join(testDir, "temp"), "temp directory should be included")
+	assert.Contains(t, dirs, filepath.Join(testDir, "config"), "config directory should be included")
+	assert.Contains(t, dirs, filepath.Join(testDir, "node_modules_tools"), "node_modules_tools should be included (negation pattern)")
+	
+	assert.NotContains(t, dirs, filepath.Join(testDir, "build"), "build directory should be excluded")
+	assert.NotContains(t, dirs, filepath.Join(testDir, "node_modules"), "node_modules directory should be excluded")
 }

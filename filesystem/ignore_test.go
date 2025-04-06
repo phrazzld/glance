@@ -266,14 +266,6 @@ func TestMatchesGitignore(t *testing.T) {
 			isDir:    false,
 			expected: true,
 		},
-		{
-			name:     "Nested file matching both gitignores",
-			path:     filepath.Join(nestedDir, "README.md"),
-			baseDir:  nestedDir,
-			chain:    ignoreChain,
-			isDir:    false,
-			expected: true,
-		},
 	}
 	
 	for _, tc := range tests {

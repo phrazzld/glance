@@ -3,8 +3,10 @@ package filesystem
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	gitignore "github.com/sabhiram/go-gitignore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,6 +25,12 @@ func TestReadTextFile(t *testing.T) {
 	invalidUTF8 := filepath.Join(testDir, "invalid.txt")
 	invalidContent := []byte{0x48, 0x65, 0x6c, 0x6c, 0x6f, 0xff, 0xfe, 0x57, 0x6f, 0x72, 0x6c, 0x64} // "Hello" + invalid bytes + "World"
 	err = os.WriteFile(invalidUTF8, invalidContent, 0644)
+	require.NoError(t, err)
+	
+	// Create a large file for truncation testing
+	largeFile := filepath.Join(testDir, "large.txt")
+	largeContent := strings.Repeat("Large file test content. ", 1000) // Approx 23KB
+	err = os.WriteFile(largeFile, []byte(largeContent), 0644)
 	require.NoError(t, err)
 	
 	tests := []struct {
@@ -59,6 +67,13 @@ func TestReadTextFile(t *testing.T) {
 			maxBytes: 0,
 			expect:   "",
 			wantErr:  true,
+		},
+		{
+			name:     "Truncate large file",
+			path:     largeFile,
+			maxBytes: 100,
+			expect:   largeContent[:100] + "...(truncated)",
+			wantErr:  false,
 		},
 	}
 	
@@ -100,6 +115,18 @@ func TestTruncateContent(t *testing.T) {
 			maxBytes: 10,
 			expected: "This is a ...(truncated)",
 		},
+		{
+			name:     "Zero max bytes (no truncation)",
+			content:  "Some content",
+			maxBytes: 0,
+			expected: "Some content",
+		},
+		{
+			name:     "Negative max bytes (no truncation)",
+			content:  "Some content",
+			maxBytes: -1,
+			expected: "Some content",
+		},
 	}
 	
 	for _, tc := range tests {
@@ -124,6 +151,16 @@ func TestIsTextFile(t *testing.T) {
 	err = os.WriteFile(jsonFile, []byte(`{"key": "value"}`), 0644)
 	require.NoError(t, err)
 	
+	// Create a XML file
+	xmlFile := filepath.Join(testDir, "test.xml")
+	err = os.WriteFile(xmlFile, []byte(`<root><item>value</item></root>`), 0644)
+	require.NoError(t, err)
+	
+	// Create a YAML file
+	yamlFile := filepath.Join(testDir, "test.yaml")
+	err = os.WriteFile(yamlFile, []byte(`key: value\nlist:\n  - item1\n  - item2`), 0644)
+	require.NoError(t, err)
+	
 	// Create a binary file
 	binFile := filepath.Join(testDir, "test.bin")
 	binData := make([]byte, 100)
@@ -131,6 +168,11 @@ func TestIsTextFile(t *testing.T) {
 		binData[i] = byte(i)
 	}
 	err = os.WriteFile(binFile, binData, 0644)
+	require.NoError(t, err)
+	
+	// Create an empty file
+	emptyFile := filepath.Join(testDir, "empty.txt")
+	err = os.WriteFile(emptyFile, []byte{}, 0644)
 	require.NoError(t, err)
 	
 	tests := []struct {
@@ -152,9 +194,27 @@ func TestIsTextFile(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name:     "XML file",
+			path:     xmlFile,
+			expected: true,
+			wantErr:  false,
+		},
+		{
+			name:     "YAML file",
+			path:     yamlFile,
+			expected: true,
+			wantErr:  false,
+		},
+		{
 			name:     "Binary file",
 			path:     binFile,
 			expected: false,
+			wantErr:  false,
+		},
+		{
+			name:     "Empty file",
+			path:     emptyFile,
+			expected: true, // Empty files are typically treated as text
 			wantErr:  false,
 		},
 		{
@@ -233,5 +293,52 @@ func TestGatherLocalFiles(t *testing.T) {
 		
 		// Content should be truncated
 		assert.Equal(t, "Conte...(truncated)", results["file1.txt"])
+	})
+
+	// Test with gitignore rules
+	t.Run("Respecting gitignore rules", func(t *testing.T) {
+		// Create a .gitignore file
+		gitignoreContent := "*.json\n"
+		gitignorePath := filepath.Join(testDir, ".gitignore")
+		err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644)
+		require.NoError(t, err)
+		
+		// Parse the gitignore file
+		gitignoreObj, err := gitignore.CompileIgnoreFile(gitignorePath)
+		require.NoError(t, err)
+		
+		// Create an ignore chain
+		ignoreChain := IgnoreChain{
+			{
+				OriginDir: testDir,
+				Matcher:   gitignoreObj,
+			},
+		}
+		
+		results, err := GatherLocalFiles(testDir, ignoreChain, 0, true)
+		assert.NoError(t, err)
+		
+		// Should only find file1.txt as file2.json is ignored by gitignore
+		assert.Len(t, results, 1)
+		assert.Contains(t, results, "file1.txt")
+		assert.NotContains(t, results, "file2.json")
+	})
+
+	// Test with non-existent directory
+	t.Run("Error handling for non-existent directory", func(t *testing.T) {
+		nonExistentDir := filepath.Join(testDir, "does-not-exist")
+		_, err := GatherLocalFiles(nonExistentDir, nil, 0, true)
+		assert.Error(t, err)
+	})
+
+	// Test with empty directory
+	t.Run("Empty directory", func(t *testing.T) {
+		emptyDir := filepath.Join(testDir, "empty")
+		err := os.Mkdir(emptyDir, 0755)
+		require.NoError(t, err)
+		
+		results, err := GatherLocalFiles(emptyDir, nil, 0, true)
+		assert.NoError(t, err)
+		assert.Empty(t, results, "Empty directory should return empty results map")
 	})
 }

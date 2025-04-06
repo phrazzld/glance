@@ -53,9 +53,17 @@ func ReadTextFile(path string, maxBytes int64) (string, error) {
 // Returns:
 //   - The truncated string with an indicator
 func TruncateContent(content string, maxBytes int64) string {
+	// If maxBytes is 0 or negative, return the full content (no truncation)
+	if maxBytes <= 0 {
+		return content
+	}
+	
+	// If content is shorter than the max, return the full content
 	if int64(len(content)) <= maxBytes {
 		return content
 	}
+	
+	// Otherwise, truncate and add indicator
 	return content[:maxBytes] + "...(truncated)"
 }
 
