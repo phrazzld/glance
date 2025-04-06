@@ -71,7 +71,7 @@
   - **AC Ref:** RFT-06
 
 ## Error Handling
-- [ ] **Define Custom Error Types**
+- [x] **Define Custom Error Types**
   - **Action:** Create custom error types (e.g., APIError) for more specific error handling
   - **Depends On:** None
   - **AC Ref:** RFT-07
