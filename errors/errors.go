@@ -5,6 +5,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"os"
 )
 
 // -----------------------------------------------------------------------------
@@ -70,6 +71,9 @@ type GlanceError interface {
 	
 	// WithSuggestion sets a suggestion for resolving the error and returns the error
 	WithSuggestion(suggestion string) GlanceError
+	
+	// WithCause sets the underlying cause of an error and returns the error
+	WithCause(cause error) GlanceError
 }
 
 // baseError is the common implementation of the GlanceError interface.
@@ -248,6 +252,110 @@ func NewValidationError(message string, cause error) GlanceError {
 			cause:     cause,
 		},
 	}
+}
+
+// -----------------------------------------------------------------------------
+// Error Wrapping Helper Functions
+// -----------------------------------------------------------------------------
+
+// WrapFileError wraps a file system related error with additional context.
+// Use this for errors from os, io, filepath, etc.
+func WrapFileError(err error, message string) GlanceError {
+	if err == nil {
+		return nil
+	}
+	
+	// If it's already a FileSystemError, maintain the type but update the message
+	var fsErr *FileSystemError
+	if errors.As(err, &fsErr) {
+		return NewFileSystemError(message, err)
+	}
+	
+	// Map common os errors to specific sentinel errors
+	if errors.Is(err, os.ErrNotExist) {
+		return &FileSystemError{
+			baseError: baseError{
+				errorType:  "FileSystem",
+				message:    message,
+				code:       ErrFileNotFound.Code(),
+				severity:   ErrorSeverityNormal,
+				cause:      err,
+				suggestion: ErrFileNotFound.Suggestion(),
+			},
+		}
+	} else if errors.Is(err, os.ErrPermission) {
+		return &FileSystemError{
+			baseError: baseError{
+				errorType:  "FileSystem",
+				message:    message,
+				code:       ErrFilePermission.Code(),
+				severity:   ErrorSeverityNormal,
+				cause:      err,
+				suggestion: ErrFilePermission.Suggestion(),
+			},
+		}
+	}
+	
+	// Default case
+	return NewFileSystemError(message, err)
+}
+
+// WrapAPIError wraps an API related error with additional context.
+// Use this for errors from API clients, HTTP requests, etc.
+func WrapAPIError(err error, message string) GlanceError {
+	if err == nil {
+		return nil
+	}
+	
+	// If it's already an APIError, maintain the type but update the message
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return NewAPIError(message, err)
+	}
+	
+	// Create a new API error
+	return NewAPIError(message, err)
+}
+
+// WrapConfigError wraps a configuration related error with additional context.
+// Use this for errors from flag parsing, config loading, etc.
+func WrapConfigError(err error, message string) GlanceError {
+	if err == nil {
+		return nil
+	}
+	
+	// If it's already a ConfigError, maintain the type but update the message
+	var cfgErr *ConfigError
+	if errors.As(err, &cfgErr) {
+		return NewConfigError(message, err)
+	}
+	
+	// Create a new config error
+	return NewConfigError(message, err)
+}
+
+// WrapValidationError wraps a validation related error with additional context.
+// Use this for errors from input validation.
+func WrapValidationError(err error, message string) GlanceError {
+	if err == nil {
+		return nil
+	}
+	
+	// If it's already a ValidationError, maintain the type but update the message
+	var valErr *ValidationError
+	if errors.As(err, &valErr) {
+		return NewValidationError(message, err)
+	}
+	
+	// Create a new validation error
+	return NewValidationError(message, err)
+}
+
+// WithCause sets the underlying cause of an error.
+// This is useful for maintaining error chains while using sentinel errors.
+func (e *baseError) WithCause(cause error) GlanceError {
+	e.cause = cause
+	return e
 }
 
 // -----------------------------------------------------------------------------

@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,6 +104,102 @@ func TestSentinelErrors(t *testing.T) {
 	// Verify sentinel errors can be detected
 	assert.True(t, errors.Is(err1, ErrAPITimeout))
 	assert.True(t, errors.Is(err2, ErrConfigMissingKey))
+}
+
+func TestWrapFileError(t *testing.T) {
+	// Test with nil error
+	nilErr := WrapFileError(nil, "test message")
+	assert.Nil(t, nilErr)
+	
+	// Create os-like errors for testing
+	notExistErr := fmt.Errorf("file not found: %w", os.ErrNotExist)
+	permErr := fmt.Errorf("permission denied: %w", os.ErrPermission)
+	
+	// Test with os.ErrNotExist
+	wrappedNotExistErr := WrapFileError(notExistErr, "could not read file")
+	assert.True(t, IsFileSystemError(wrappedNotExistErr))
+	assert.True(t, errors.Is(wrappedNotExistErr, notExistErr))
+	assert.Contains(t, wrappedNotExistErr.Error(), "could not read file")
+	
+	// Test with os.ErrPermission
+	wrappedPermErr := WrapFileError(permErr, "could not access file")
+	assert.True(t, IsFileSystemError(wrappedPermErr))
+	assert.True(t, errors.Is(wrappedPermErr, permErr))
+	assert.Contains(t, wrappedPermErr.Error(), "could not access file")
+	
+	// Test with existing FileSystemError
+	fsErr := NewFileSystemError("original error", nil)
+	wrappedFsErr := WrapFileError(fsErr, "wrapped error")
+	assert.True(t, IsFileSystemError(wrappedFsErr))
+	assert.True(t, errors.Is(wrappedFsErr, fsErr))
+}
+
+func TestWrapAPIError(t *testing.T) {
+	// Test with nil error
+	nilErr := WrapAPIError(nil, "test message")
+	assert.Nil(t, nilErr)
+	
+	// Test with standard error
+	stdErr := errors.New("standard error")
+	apiErr := WrapAPIError(stdErr, "API error")
+	assert.True(t, IsAPIError(apiErr))
+	assert.True(t, errors.Is(apiErr, stdErr))
+	assert.Contains(t, apiErr.Error(), "API error")
+	
+	// Test with existing APIError
+	existingAPIErr := NewAPIError("original API error", nil)
+	wrappedAPIErr := WrapAPIError(existingAPIErr, "wrapped API error")
+	assert.True(t, IsAPIError(wrappedAPIErr))
+	assert.True(t, errors.Is(wrappedAPIErr, existingAPIErr))
+}
+
+func TestWrapConfigError(t *testing.T) {
+	// Test with nil error
+	nilErr := WrapConfigError(nil, "test message")
+	assert.Nil(t, nilErr)
+	
+	// Test with standard error
+	stdErr := errors.New("standard error")
+	cfgErr := WrapConfigError(stdErr, "config error")
+	assert.True(t, IsConfigError(cfgErr))
+	assert.True(t, errors.Is(cfgErr, stdErr))
+	assert.Contains(t, cfgErr.Error(), "config error")
+	
+	// Test with existing ConfigError
+	existingCfgErr := NewConfigError("original config error", nil)
+	wrappedCfgErr := WrapConfigError(existingCfgErr, "wrapped config error")
+	assert.True(t, IsConfigError(wrappedCfgErr))
+	assert.True(t, errors.Is(wrappedCfgErr, existingCfgErr))
+}
+
+func TestWrapValidationError(t *testing.T) {
+	// Test with nil error
+	nilErr := WrapValidationError(nil, "test message")
+	assert.Nil(t, nilErr)
+	
+	// Test with standard error
+	stdErr := errors.New("standard error")
+	valErr := WrapValidationError(stdErr, "validation error")
+	assert.True(t, IsValidationError(valErr))
+	assert.True(t, errors.Is(valErr, stdErr))
+	assert.Contains(t, valErr.Error(), "validation error")
+	
+	// Test with existing ValidationError
+	existingValErr := NewValidationError("original validation error", nil)
+	wrappedValErr := WrapValidationError(existingValErr, "wrapped validation error")
+	assert.True(t, IsValidationError(wrappedValErr))
+	assert.True(t, errors.Is(wrappedValErr, existingValErr))
+}
+
+func TestWithCause(t *testing.T) {
+	// Test setting cause for sentinel error
+	baseErr := errors.New("original error")
+	sentinelWithCause := ErrFileNotFound.WithCause(baseErr)
+	
+	// Check error behavior
+	assert.True(t, errors.Is(sentinelWithCause, ErrFileNotFound))
+	assert.True(t, errors.Is(sentinelWithCause, baseErr))
+	assert.Contains(t, sentinelWithCause.Error(), ErrFileNotFound.Error())
 }
 
 func TestErrorFormat(t *testing.T) {
