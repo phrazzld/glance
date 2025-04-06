@@ -92,7 +92,7 @@
   - **Depends On:** Define LLM Client Interface, Create Prompt Generation Module
   - **AC Ref:** RFT-09
 
-- [ ] **Create Config Unit Tests**
+- [x] **Create Config Unit Tests**
   - **Action:** Add tests for config package to verify correct loading of settings from various sources
   - **Depends On:** Create Config Package and Struct, Implement LoadConfig Function
   - **AC Ref:** RFT-09
