@@ -43,7 +43,7 @@
   - **Depends On:** Create Filesystem Scanner
   - **AC Ref:** RFT-08
 
-- [ ] **Create Filesystem Utilities**
+- [x] **Create Filesystem Utilities**
   - **Action:** Create filesystem/utils.go with helper functions like latestModTime and shouldRegenerate
   - **Depends On:** None
   - **AC Ref:** RFT-04
