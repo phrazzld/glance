@@ -54,7 +54,7 @@
   - **Depends On:** None
   - **AC Ref:** RFT-05
 
-- [ ] **Create Prompt Generation Module**
+- [x] **Create Prompt Generation Module**
   - **Action:** Create llm/prompt.go to handle prompt template handling and generation
   - **Depends On:** None
   - **AC Ref:** RFT-05
