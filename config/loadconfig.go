@@ -58,7 +58,7 @@ func LoadConfig(args []string) (*Config, error) {
 		promptFile string
 	)
 
-	cmdFlags.BoolVar(&force, "force", false, "regenerate GLANCE.md even if it already exists")
+	cmdFlags.BoolVar(&force, "force", false, "regenerate glance.md even if it already exists")
 	cmdFlags.BoolVar(&verbose, "verbose", false, "enable verbose logging (debug level)")
 	cmdFlags.StringVar(&promptFile, "prompt-file", "", "path to custom prompt file (overrides default)")
 

@@ -59,9 +59,9 @@ The end-to-end tests in `main_test.go` cover the following key functionality:
 
 1. **Basic CLI Execution**: Verifies that the CLI can be executed without errors
 2. **Usage Information**: Checks that proper usage information is displayed when run without arguments
-3. **GLANCE.md Generation**: Tests the basic GLANCE.md file generation in a nested directory structure
-4. **Force Flag**: Verifies that the `--force` flag properly regenerates existing GLANCE.md files
-5. **Modified Files Detection**: Tests that GLANCE.md is regenerated when files in the directory are modified
+3. **glance.md Generation**: Tests the basic glance.md file generation in a nested directory structure
+4. **Force Flag**: Verifies that the `--force` flag properly regenerates existing glance.md files
+5. **Modified Files Detection**: Tests that glance.md is regenerated when files in the directory are modified
 6. **Verbose Output**: Checks that the `--verbose` flag provides additional debug information
 7. **Custom Prompt Files**: Tests using a custom prompt template file
 8. **Change Propagation**: Verifies that changes in subdirectories trigger regeneration in parent directories

@@ -141,8 +141,8 @@ func TestShouldRegenerate(t *testing.T) {
 	err := os.WriteFile(ignoreFile, []byte(ignoreContent), 0644)
 	require.NoError(t, err)
 
-	// Create a GLANCE.md file
-	glanceFile := filepath.Join(baseDir, "GLANCE.md")
+	// Create a glance.md file
+	glanceFile := filepath.Join(baseDir, "glance.md")
 	err = os.WriteFile(glanceFile, []byte("# Glance\n\nTest summary"), 0644)
 	require.NoError(t, err)
 
@@ -171,18 +171,18 @@ func TestShouldRegenerate(t *testing.T) {
 	t.Run("No need to regenerate (no newer files)", func(t *testing.T) {
 		shouldRegen, err := ShouldRegenerate(baseDir, false, ignoreChain, false)
 		assert.NoError(t, err)
-		assert.False(t, shouldRegen, "Should return false when no files are newer than GLANCE.md")
+		assert.False(t, shouldRegen, "Should return false when no files are newer than glance.md")
 	})
 
-	t.Run("No GLANCE.md file", func(t *testing.T) {
-		// Create a new directory without GLANCE.md
+	t.Run("No glance.md file", func(t *testing.T) {
+		// Create a new directory without glance.md
 		emptyDir := filepath.Join(baseDir, "empty")
 		err := os.Mkdir(emptyDir, 0755)
 		require.NoError(t, err)
 
 		shouldRegen, err := ShouldRegenerate(emptyDir, false, ignoreChain, false)
 		assert.NoError(t, err)
-		assert.True(t, shouldRegen, "Should return true when no GLANCE.md exists")
+		assert.True(t, shouldRegen, "Should return true when no glance.md exists")
 	})
 
 	t.Run("Need to regenerate (newer file)", func(t *testing.T) {
@@ -196,7 +196,7 @@ func TestShouldRegenerate(t *testing.T) {
 
 		shouldRegen, err := ShouldRegenerate(baseDir, false, ignoreChain, false)
 		assert.NoError(t, err)
-		assert.True(t, shouldRegen, "Should return true when a file is newer than GLANCE.md")
+		assert.True(t, shouldRegen, "Should return true when a file is newer than glance.md")
 	})
 
 	// Test only simple cases for ShouldRegenerate

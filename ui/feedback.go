@@ -213,7 +213,7 @@ func NewCustomProgressBar(total int, options ...ProgressBarOption) *ProgressBar 
 // NewProcessor creates a progress bar for processing a known number of items.
 func NewProcessor(total int) *ProgressBar {
 	return NewCustomProgressBar(total,
-		WithDescription("✍️ Creating GLANCE files"),
+		WithDescription("✍️ Creating glance files"),
 		WithWidth(40),
 		WithTheme(DefaultTheme),
 	)

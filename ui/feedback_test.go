@@ -194,7 +194,7 @@ func TestNewProcessor(t *testing.T) {
 	assert.NotNil(t, bar, "Progress bar should not be nil")
 	assert.Equal(t, 10, bar.total)
 	assert.NotNil(t, bar.bar, "Underlying progress bar should be initialized")
-	assert.Contains(t, bar.description, "Creating GLANCE files")
+	assert.Contains(t, bar.description, "Creating glance files")
 	assert.Contains(t, bar.description, "✍️")
 	assert.Equal(t, 40, bar.width)
 	assert.Equal(t, DefaultTheme, bar.theme)

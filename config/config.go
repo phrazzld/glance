@@ -8,10 +8,10 @@ type Config struct {
 	// APIKey is the Gemini API key used for generating content
 	APIKey string
 
-	// TargetDir is the directory to scan and generate GLANCE.md files for
+	// TargetDir is the directory to scan and generate glance.md files for
 	TargetDir string
 
-	// Force indicates whether to regenerate existing GLANCE.md files
+	// Force indicates whether to regenerate existing glance.md files
 	Force bool
 
 	// Verbose enables additional debug logging

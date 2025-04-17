@@ -17,7 +17,7 @@ type PromptData struct {
 	// Directory is the path to the directory being processed
 	Directory string
 
-	// SubGlances contains the compiled contents of subdirectory GLANCE.md files
+	// SubGlances contains the compiled contents of subdirectory glance.md files
 	SubGlances string
 
 	// FileContents contains the formatted contents of files in the directory
@@ -120,7 +120,7 @@ func FormatFileContents(fileMap map[string]string) string {
 //
 // Parameters:
 //   - dir: The directory path
-//   - subGlances: Compiled content from subdirectory GLANCE.md files
+//   - subGlances: Compiled content from subdirectory glance.md files
 //   - fileMap: A map of filenames to their content
 //
 // Returns:

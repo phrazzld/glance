@@ -58,11 +58,11 @@ func LatestModTime(dir string, ignoreChain IgnoreChain, verbose bool) (time.Time
 	return latest, err
 }
 
-// ShouldRegenerate determines if a GLANCE.md file in a directory needs to be regenerated.
+// ShouldRegenerate determines if a glance.md file in a directory needs to be regenerated.
 // Regeneration is needed if:
 // - Force is true
-// - GLANCE.md doesn't exist
-// - Any file in the directory is newer than GLANCE.md
+// - glance.md doesn't exist
+// - Any file in the directory is newer than glance.md
 //
 // Parameters:
 //   - dir: The directory to check for regeneration need
@@ -82,17 +82,17 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain, ver
 		return true, nil
 	}
 
-	// Check if GLANCE.md exists
+	// Check if glance.md exists
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
 		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("GLANCE.md not found in %s, will generate", dir)
+			logrus.Debugf("glance.md not found in %s, will generate", dir)
 		}
 		return true, nil
 	}
 
-	// Check if any file is newer than GLANCE.md
+	// Check if any file is newer than glance.md
 	latest, err := LatestModTime(dir, ignoreChain, verbose)
 	if err != nil {
 		return false, err
@@ -100,7 +100,7 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain, ver
 
 	if latest.After(glanceInfo.ModTime()) {
 		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Found newer files in %s, will regenerate GLANCE.md", dir)
+			logrus.Debugf("Found newer files in %s, will regenerate glance.md", dir)
 		}
 		return true, nil
 	}

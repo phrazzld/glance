@@ -49,8 +49,8 @@ func TestShouldIgnoreFile(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "GLANCE.md file",
-			path:     filepath.Join(testDir, "GLANCE.md"),
+			name:     "glance.md file",
+			path:     filepath.Join(testDir, "glance.md"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
 			verbose:  false,
@@ -343,8 +343,8 @@ func TestShouldIgnorePath(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "GLANCE.md file",
-			path:     filepath.Join(testDir, "GLANCE.md"),
+			name:     "glance.md file",
+			path:     filepath.Join(testDir, "glance.md"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
 			isDir:    false,

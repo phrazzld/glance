@@ -12,7 +12,7 @@ import (
 // Constants for default ignore patterns
 const (
 	// GlanceFilename is the standard filename for glance summaries
-	GlanceFilename = "GLANCE.md"
+	GlanceFilename = "glance.md"
 
 	// NodeModulesDir is a heavy directory that should be skipped by default
 	NodeModulesDir = "node_modules"
@@ -21,7 +21,7 @@ const (
 // ShouldIgnoreFile determines if a file should be ignored during processing.
 // A file is ignored if:
 // - It's a hidden file (name starts with ".")
-// - It's named GLANCE.md (to avoid processing our own output files)
+// - It's named glance.md (to avoid processing our own output files)
 // - It matches any gitignore rule in the provided chain
 //
 // Parameters:
@@ -44,10 +44,10 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain, verb
 		return true
 	}
 
-	// Always ignore GLANCE.md files (our output files)
+	// Always ignore glance.md files (our output files)
 	if filename == GlanceFilename {
 		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Ignoring GLANCE.md file: %s", path)
+			logrus.Debugf("Ignoring glance.md file: %s", path)
 		}
 		return true
 	}

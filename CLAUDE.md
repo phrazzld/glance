@@ -5,7 +5,7 @@
 - Run: `./glance [--force] [--verbose] /path/to/directory`
 - Direct run: `go run . [--force] [--verbose] /path/to/directory`
 - Flags: 
-  - `--force` (regenerate existing GLANCE.md files)
+  - `--force` (regenerate existing glance.md files)
   - `--verbose` (detailed logging)
   - `--prompt-file` (specify custom prompt template file)
 - Testing: `go test ./...` (run all tests)

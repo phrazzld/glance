@@ -2,7 +2,7 @@
 
 ## What is it?
 
-Glance is a command-line tool that recursively scans a directory tree and generates a `GLANCE.md` file in each directory. This file provides a high-level summary of the directory's contents, generated using Google's Generative AI API (Gemini).
+Glance is a command-line tool that recursively scans a directory tree and generates a `glance.md` file in each directory. This file provides a high-level summary of the directory's contents, generated using Google's Generative AI API (Gemini).
 
 ## Quick Usage
 
@@ -19,7 +19,7 @@ Glance is a command-line tool that recursively scans a directory tree and genera
    Ensure you have a valid `GEMINI_API_KEY` set in your environment or in a `.env` file.
 
 3. **Flags:**
-   - `--force` will regenerate `GLANCE.md` even if it already exists.
+   - `--force` will regenerate `glance.md` even if it already exists.
    - `--verbose` enables detailed logging output.
    - `--prompt-file` allows specifying a custom prompt template file.
 

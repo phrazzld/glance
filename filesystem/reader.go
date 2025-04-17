@@ -125,8 +125,8 @@ func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, 
 			return fs.SkipDir
 		}
 
-		// Skip directories, GLANCE.md, and hidden files
-		if d.IsDir() || d.Name() == "GLANCE.md" || strings.HasPrefix(d.Name(), ".") {
+		// Skip directories, glance.md, and hidden files
+		if d.IsDir() || d.Name() == "glance.md" || strings.HasPrefix(d.Name(), ".") {
 			return nil
 		}
 

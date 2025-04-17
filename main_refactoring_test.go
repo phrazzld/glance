@@ -59,7 +59,7 @@ func TestMainWithConfig(t *testing.T) {
 	// Command should succeed
 	require.NoError(t, err, "Glance command failed with output: %s", output)
 
-	// Verify GLANCE.md files were created
-	mainGlanceFile := filepath.Join(testProjectDir, "GLANCE.md")
-	assert.FileExists(t, mainGlanceFile, "GLANCE.md should exist in test directory")
+	// Verify glance.md files were created
+	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	assert.FileExists(t, mainGlanceFile, "glance.md should exist in test directory")
 }

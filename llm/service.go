@@ -118,7 +118,7 @@ func NewService(client Client, options ...ServiceOption) (*Service, error) {
 //   - ctx: The context for the operation
 //   - dir: The directory path being processed
 //   - fileMap: A map of file names to their contents
-//   - subGlances: The combined contents of subdirectory GLANCE.md files
+//   - subGlances: The combined contents of subdirectory glance.md files
 //
 // Returns:
 //   - The generated markdown content

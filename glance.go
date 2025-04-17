@@ -62,13 +62,13 @@ func main() {
 	}
 	defer llmClient.Close()
 
-	// Scan directories and process them to generate GLANCE.md files
+	// Scan directories and process them to generate glance.md files
 	dirs, ignoreChains, err := scanDirectories(cfg)
 	if err != nil {
 		logrus.Fatalf("🚫 Directory scan failed: %v - Check file permissions and disk space", err)
 	}
 
-	// Process directories and generate GLANCE.md files
+	// Process directories and generate glance.md files
 	results := processDirectories(dirs, ignoreChains, cfg, llmService)
 
 	// Print summary of results
@@ -152,9 +152,9 @@ func scanDirectories(cfg *config.Config) ([]string, map[string][]*gitignore.GitI
 	return dirsList, dirToIgnoreChain, nil
 }
 
-// processDirectories generates GLANCE.md files for each directory in the list
+// processDirectories generates glance.md files for each directory in the list
 func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitignore.GitIgnore, cfg *config.Config, llmService *llm.Service) []result {
-	logrus.Info("🧠 Preparing to generate all GLANCE.md files... Getting ready to make your code shine!")
+	logrus.Info("🧠 Preparing to generate all glance.md files... Getting ready to make your code shine!")
 
 	// Create progress bar
 	bar := ui.NewProcessor(len(dirsList))
@@ -166,7 +166,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 	for _, d := range dirsList {
 		ignoreChain := dirToIgnoreChain[d]
 
-		// Check if we need to regenerate the GLANCE.md file
+		// Check if we need to regenerate the glance.md file
 		forceDir, errCheck := shouldRegenerate(d, cfg.Force, ignoreChain)
 		if errCheck != nil && cfg.Verbose {
 			logrus.Warnf("⏱️ Couldn't check modification time for %s: %v", d, errCheck)
@@ -189,7 +189,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 	}
 
 	fmt.Println()
-	logrus.Infof("🎯 All done! GLANCE.md files have been generated for your codebase up to: %s", cfg.TargetDir)
+	logrus.Infof("🎯 All done! glance.md files have been generated for your codebase up to: %s", cfg.TargetDir)
 
 	return finalResults
 }
@@ -198,7 +198,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgnore, cfg *config.Config, llmService *llm.Service) result {
 	r := result{dir: dir}
 
-	glancePath := filepath.Join(dir, "GLANCE.md")
+	glancePath := filepath.Join(dir, "glance.md")
 	fileExists := false
 
 	// Check if the file exists (and remember the result)
@@ -206,17 +206,17 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 		fileExists = true
 	}
 
-	// Skip if GLANCE.md exists and we're not forcing regeneration
+	// Skip if glance.md exists and we're not forcing regeneration
 	if fileExists && !forceDir && !cfg.Force {
 		if cfg.Verbose {
-			logrus.Debugf("⏩ Skipping %s (GLANCE.md already exists and looks fresh)", dir)
+			logrus.Debugf("⏩ Skipping %s (glance.md already exists and looks fresh)", dir)
 		}
 		r.success = true
 		r.attempts = 0 // Explicitly mark that we didn't attempt to regenerate
 		return r
 	}
 
-	// Gather data for GLANCE.md generation
+	// Gather data for glance.md generation
 	subdirs, err := readSubdirectories(dir, ignoreChain)
 	if err != nil {
 		r.err = err
@@ -251,7 +251,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 
 	// Write the generated content to file
 	if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
-		r.err = fmt.Errorf("failed writing GLANCE.md to %s: %w", dir, werr)
+		r.err = fmt.Errorf("failed writing glance.md to %s: %w", dir, werr)
 		return r
 	}
 
@@ -380,11 +380,11 @@ func reverseSlice(s []string) {
 // file collection and processing
 // -----------------------------------------------------------------------------
 
-// gatherSubGlances merges the contents of existing subdirectory GLANCE.md files.
+// gatherSubGlances merges the contents of existing subdirectory glance.md files.
 func gatherSubGlances(subdirs []string) (string, error) {
 	var combined []string
 	for _, sd := range subdirs {
-		data, err := os.ReadFile(filepath.Join(sd, "GLANCE.md"))
+		data, err := os.ReadFile(filepath.Join(sd, "glance.md"))
 		if err == nil {
 			combined = append(combined, strings.ToValidUTF8(string(data), "�"))
 		}
@@ -420,7 +420,7 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 	return subdirs, nil
 }
 
-// gatherLocalFiles reads immediate files in a directory (excluding GLANCE.md, hidden files, etc.).
+// gatherLocalFiles reads immediate files in a directory (excluding glance.md, hidden files, etc.).
 func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileBytes int64, verbose bool) (map[string]string, error) {
 	files := make(map[string]string)
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
@@ -431,7 +431,7 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileByt
 		if d.IsDir() && path != dir {
 			return fs.SkipDir
 		}
-		if d.IsDir() || d.Name() == "GLANCE.md" || strings.HasPrefix(d.Name(), ".") {
+		if d.IsDir() || d.Name() == "glance.md" || strings.HasPrefix(d.Name(), ".") {
 			return nil
 		}
 
@@ -502,7 +502,7 @@ func shouldRegenerate(dir string, globalForce bool, ignoreChain []*gitignore.Git
 		return true, nil
 	}
 
-	glancePath := filepath.Join(dir, "GLANCE.md")
+	glancePath := filepath.Join(dir, "glance.md")
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
 		return true, nil

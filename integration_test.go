@@ -93,7 +93,7 @@ func createTestProjectStructure(t *testing.T, root string) {
 // setupMockLLMClient creates a mock LLM client that can be used for testing
 func setupMockLLMClient() *MockClient {
 	mockClient := new(MockClient)
-	mockClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).Return("Generated GLANCE content", nil)
+	mockClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).Return("Generated glance content", nil)
 	mockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
 	mockClient.On("Close").Return()
 	return mockClient
@@ -111,13 +111,13 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 	testDir, cleanup := setupIntegrationTest(t)
 	defer cleanup()
 
-	// 1. Test with force=false - shouldn't regenerate existing GLANCE.md
+	// 1. Test with force=false - shouldn't regenerate existing glance.md
 	t.Run("Respects Force flag for regeneration", func(t *testing.T) {
-		// Create a GLANCE.md file with known content and timestamp
-		glancePath := filepath.Join(testDir, "GLANCE.md")
+		// Create a glance.md file with known content and timestamp
+		glancePath := filepath.Join(testDir, "glance.md")
 		initialContent := "Initial content - should not be replaced"
 		err := os.WriteFile(glancePath, []byte(initialContent), 0644)
-		require.NoError(t, err, "Failed to create initial GLANCE.md file")
+		require.NoError(t, err, "Failed to create initial glance.md file")
 
 		// Get the initial modification time
 		initialStat, err := os.Stat(glancePath)
@@ -131,7 +131,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
 			WithTargetDir(testDir).
-			WithForce(false) // Should not overwrite existing GLANCE.md
+			WithForce(false) // Should not overwrite existing glance.md
 
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
@@ -151,7 +151,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 			isRootDir := (d == testDir)
 			
 			if isRootDir {
-				// Root dir should be skipped since GLANCE.md exists and force=false
+				// Root dir should be skipped since glance.md exists and force=false
 				resultsList = append(resultsList, result{
 					dir:      d,
 					attempts: 0,
@@ -171,28 +171,28 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		for _, r := range resultsList {
 			if r.dir == testDir {
 				assert.True(t, r.success, "Root directory should be processed successfully")
-				assert.Equal(t, 0, r.attempts, "Should not have attempted to regenerate existing GLANCE.md")
+				assert.Equal(t, 0, r.attempts, "Should not have attempted to regenerate existing glance.md")
 			}
 		}
 
-		// Verify GLANCE.md was not modified
+		// Verify glance.md was not modified
 		currentStat, err := os.Stat(glancePath)
 		require.NoError(t, err)
-		assert.Equal(t, initialModTime, currentStat.ModTime(), "GLANCE.md should not have been modified")
+		assert.Equal(t, initialModTime, currentStat.ModTime(), "glance.md should not have been modified")
 
 		// Verify content was not changed
 		content, err := os.ReadFile(glancePath)
 		require.NoError(t, err)
-		assert.Equal(t, initialContent, string(content), "GLANCE.md content should not have changed")
+		assert.Equal(t, initialContent, string(content), "glance.md content should not have changed")
 	})
 
-	// 2. Test with force=true - should regenerate GLANCE.md even if it exists
+	// 2. Test with force=true - should regenerate glance.md even if it exists
 	t.Run("Force flag regenerates existing files", func(t *testing.T) {
-		// Create a GLANCE.md file with known content and timestamp
-		glancePath := filepath.Join(testDir, "GLANCE.md")
+		// Create a glance.md file with known content and timestamp
+		glancePath := filepath.Join(testDir, "glance.md")
 		initialContent := "Initial content - should be replaced"
 		err := os.WriteFile(glancePath, []byte(initialContent), 0644)
-		require.NoError(t, err, "Failed to create initial GLANCE.md file")
+		require.NoError(t, err, "Failed to create initial glance.md file")
 
 		// Get the initial modification time
 		initialStat, err := os.Stat(glancePath)
@@ -206,7 +206,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
 			WithTargetDir(testDir).
-			WithForce(true) // Should overwrite existing GLANCE.md
+			WithForce(true) // Should overwrite existing glance.md
 
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
@@ -229,20 +229,20 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 			if r.dir == testDir {
 				rootProcessed = true
 				assert.True(t, r.success, "Root directory should be processed successfully")
-				assert.Equal(t, 1, r.attempts, "Should have attempted to regenerate GLANCE.md")
+				assert.Equal(t, 1, r.attempts, "Should have attempted to regenerate glance.md")
 			}
 		}
 		assert.True(t, rootProcessed, "Root directory should have been processed")
 
-		// Verify GLANCE.md was modified
+		// Verify glance.md was modified
 		currentStat, err := os.Stat(glancePath)
 		require.NoError(t, err)
-		assert.NotEqual(t, initialModTime, currentStat.ModTime(), "GLANCE.md should have been modified")
+		assert.NotEqual(t, initialModTime, currentStat.ModTime(), "glance.md should have been modified")
 
 		// Verify content was changed
 		content, err := os.ReadFile(glancePath)
 		require.NoError(t, err)
-		assert.NotEqual(t, initialContent, string(content), "GLANCE.md content should have changed")
+		assert.NotEqual(t, initialContent, string(content), "glance.md content should have changed")
 	})
 }
 
@@ -252,7 +252,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 
 // TestFileSystemLLMIntegration verifies the integration between the filesystem
 // package and the LLM package, particularly the flow of scanning files and
-// generating GLANCE.md content.
+// generating glance.md content.
 func TestFileSystemLLMIntegration(t *testing.T) {
 	// Create test environment
 	testDir, cleanup := setupIntegrationTest(t)
@@ -268,7 +268,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 			Run(func(args mock.Arguments) {
 				capturedPrompt = args.String(1)
 			}).
-			Return("Generated GLANCE content", nil)
+			Return("Generated glance content", nil)
 		validatingMockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
 		validatingMockClient.On("Close").Return()
 
@@ -292,9 +292,9 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Verify results
 		assert.True(t, len(results) > 0, "Should have processed at least one directory")
 
-		// Verify at least one GLANCE.md was created
-		glancePath := filepath.Join(testDir, "GLANCE.md")
-		assert.FileExists(t, glancePath, "GLANCE.md should exist in root directory")
+		// Verify at least one glance.md was created
+		glancePath := filepath.Join(testDir, "glance.md")
+		assert.FileExists(t, glancePath, "glance.md should exist in root directory")
 
 		// Verify that file content was properly passed to the LLM
 		assert.Contains(t, capturedPrompt, "main.go", "Prompt should include main.go file content")
@@ -325,7 +325,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 			Run(func(args mock.Arguments) {
 				capturedPrompt = args.String(1)
 			}).
-			Return("Generated GLANCE content", nil)
+			Return("Generated glance content", nil)
 		validatingMockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
 		validatingMockClient.On("Close").Return()
 
@@ -353,8 +353,8 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 
 		// Since we now correctly check for gitignore patterns with trailing slash matching,
 		// this file should not exist in an ignored directory
-		ignoredGlanceFile := filepath.Join(ignoreDir, "GLANCE.md")
-		assert.NoFileExists(t, ignoredGlanceFile, "GLANCE.md should not exist in ignored directory")
+		ignoredGlanceFile := filepath.Join(ignoreDir, "glance.md")
+		assert.NoFileExists(t, ignoredGlanceFile, "glance.md should not exist in ignored directory")
 	})
 }
 
@@ -437,7 +437,7 @@ func TestConfigLLMIntegration(t *testing.T) {
 			Run(func(args mock.Arguments) {
 				capturedPrompt = args.String(1)
 			}).
-			Return("Generated GLANCE content", nil)
+			Return("Generated glance content", nil)
 		validatingMockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
 		validatingMockClient.On("Close").Return()
 

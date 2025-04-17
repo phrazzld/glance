@@ -1,2 +1,5 @@
 .env
 glance
+glance.md
+*/glance.md
+.DS_Store
