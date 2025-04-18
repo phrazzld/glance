@@ -70,7 +70,7 @@
     - **Type:** Security
     - **Priority:** P0
 
-- [ ] **T012:** Document secure golangci-lint installation in GITHUB_ACTIONS.md
+- [x] **T012:** Document secure golangci-lint installation in GITHUB_ACTIONS.md
     - **Action:** Update documentation to explain the secure installation method for golangci-lint.
     - **Depends On:** [T011]
     - **Type:** Chore

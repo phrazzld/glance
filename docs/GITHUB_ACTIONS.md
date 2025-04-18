@@ -13,6 +13,7 @@ This document provides comprehensive details about the GitHub Actions workflows 
 7. [Workflow Triggers](#workflow-triggers)
 8. [Troubleshooting](#troubleshooting)
 9. [Advanced Usage](#advanced-usage)
+    - [Secure Tool Installation](#secure-tool-installation)
 
 ## Overview
 
@@ -194,14 +195,14 @@ This workflow runs all configured pre-commit hooks to enforce code quality stand
 - **Environment:**
   - Go 1.24
   - Python 3.10
-  - golangci-lint v1.57.0
+  - golangci-lint v1.57.0 (installed via pre-commit)
 
 ### Steps
 
-1. Set up Go, Python, and golangci-lint
+1. Set up Go and Python environments
 2. Check out repository code
 3. Install pre-commit
-4. Run pre-commit hooks on all files
+4. Run pre-commit hooks on all files (including golangci-lint hook)
 
 ### Example Output
 
@@ -310,6 +311,63 @@ To get more detailed information from workflow runs:
 3. Check the "Annotations" tab in the GitHub Actions workflow run
 
 ## Advanced Usage
+
+### Secure Tool Installation
+
+We follow security best practices for installing tools in our GitHub Actions workflows:
+
+#### golangci-lint Installation Methods
+
+There are two secure methods for installing golangci-lint in GitHub Actions workflows:
+
+1. **Pre-commit Hook Installation (Recommended for `precommit.yml`)**
+
+   The pre-commit framework automatically installs the golangci-lint tool when the hook runs. This method:
+   - Uses pre-commit's secure installation mechanism
+   - Ensures version consistency with the `.pre-commit-config.yaml` file
+   - Eliminates the need for manual installation steps
+
+   Example configuration in `.pre-commit-config.yaml`:
+   ```yaml
+   - repo: https://github.com/golangci/golangci-lint
+     rev: v1.57.0
+     hooks:
+       - id: golangci-lint
+         name: golangci-lint
+         entry: golangci-lint run
+         types: [go]
+         language: system
+         pass_filenames: false
+         args: ["--config=.golangci.yml", "--timeout=2m"]
+   ```
+
+2. **Official GitHub Action (Recommended for `lint.yml`)**
+
+   For dedicated linting workflows, we use the official golangci-lint GitHub Action:
+   ```yaml
+   - name: Install golangci-lint
+     uses: golangci/golangci-lint-action@v4
+     with:
+       version: v1.57.0
+       args: --config=.golangci.yml
+       only-new-issues: true
+   ```
+
+   This method:
+   - Uses the officially maintained action
+   - Has built-in caching for faster execution
+   - Provides detailed output formatting
+   - Offers additional features like "only-new-issues"
+
+#### Security Considerations
+
+We avoid using `curl | sh` patterns for tool installation because:
+- They execute arbitrary code from the internet
+- They bypass security checks and verification
+- They introduce potential supply chain attack vectors
+- They may download unexpected or compromised code if the source is compromised
+
+Using the methods above helps maintain a secure CI/CD pipeline while ensuring consistent tool behavior across workflows.
 
 ### Skipping Workflows
 
