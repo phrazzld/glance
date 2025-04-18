@@ -62,7 +62,7 @@
     - **Depends On:** [T010]
     - **AC Ref:** Success Criteria 3, 4
 
-- [ ] **T013:** Add pre-commit usage guidelines to DEVELOPMENT_PHILOSOPHY.md
+- [x] **T013:** Add pre-commit usage guidelines to DEVELOPMENT_PHILOSOPHY.md
     - **Action:** Add a section to DEVELOPMENT_PHILOSOPHY.md explaining the importance of pre-commit hooks in maintaining code quality and enforcing standards.
     - **Depends On:** [T010]
     - **AC Ref:** Success Criteria 3

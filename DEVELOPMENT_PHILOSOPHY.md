@@ -131,6 +131,42 @@ These are concrete rules for writing readable, consistent, maintainable, and les
     * **Custom Checks:** Tooling may include custom checks (e.g., via pre-commit hooks) to enforce specific standards like file length (e.g., warn > 500 lines, fail > 1000 lines - requiring refactoring).
 * **Rationale:** Catches errors early, enforces consistency, improves readability, reduces debate, ensures diffs show logic changes. Supports *Automation* and *Explicit is Better than Implicit*.
 
+## 1.1 Pre-commit Hooks Workflow
+
+Pre-commit hooks are a critical part of our quality assurance process, serving as the first automated check in our development workflow.
+
+* **Pre-commit Hooks are Mandatory:**
+    * All developers *must* install and use pre-commit hooks in their local development environment.
+    * Hooks verify code quality, formatting, and basic correctness before code is committed.
+    * The same checks run in CI pipelines, but catching issues locally provides faster feedback.
+
+* **Hook Implementation:**
+    * We use the [pre-commit framework](https://pre-commit.com) to manage hooks consistently across projects.
+    * Hooks are configured in `.pre-commit-config.yaml` at the project root.
+    * Hook configurations are version-controlled and shared across the team.
+    * Setup scripts are provided to simplify installation for new team members.
+
+* **Working with Hooks:**
+    * **Expected Workflow:** Write code → Run hooks locally (manually or via commit) → Fix issues → Commit clean code.
+    * **Handle Failures Properly:** When hooks fail, address the underlying issues rather than trying to work around them.
+    * **No Bypassing:** Do not use `--no-verify` to bypass hooks. This defeats their purpose and causes CI failures.
+    * **Performance Considerations:** Hooks are optimized for speed, but occasional longer-running checks may be necessary for thorough validation.
+    * **Contributing:** If you identify a useful check that could be automated, propose it as a new hook.
+
+* **Benefits:**
+    * Ensures consistent code style and quality across the team.
+    * Prevents common issues from reaching code review or production.
+    * Reduces the need for reviewers to comment on basic formatting issues.
+    * Serves as executable documentation of our coding standards.
+    * Catches issues early when they are simplest to fix.
+
+* **Relationship to CI/CD:**
+    * Pre-commit hooks are the local equivalent of CI checks.
+    * The same standards applied locally by hooks are enforced in the CI pipeline.
+    * Passing hooks doesn't guarantee CI success, but makes it much more likely.
+
+For specific pre-commit hook setup instructions, refer to project-specific documentation such as `docs/PRECOMMIT.md`.
+
 ## 2. Leverage Types Diligently: Express Intent Clearly
 
 * **Standard:** Use the static type system fully and precisely to model data, define signatures, and establish contracts.
