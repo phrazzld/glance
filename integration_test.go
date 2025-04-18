@@ -145,11 +145,11 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		// For this test, we'll create a custom version of processDirectories that respects force=false
 		// This ensures test compatibility with our strict expectations
 		var resultsList []result
-		
+
 		for _, d := range dirs {
 			chain := ignoreChains[d]
 			isRootDir := (d == testDir)
-			
+
 			if isRootDir {
 				// Root dir should be skipped since glance.md exists and force=false
 				resultsList = append(resultsList, result{

@@ -33,7 +33,7 @@ This structure ensures that prompts produce consistent, high-quality results reg
 
 ## Relationship to Claude Commands
 
-These prompts correspond to the slash commands in the `/claude-commands` directory. They provide the content templates that are used when those commands are invoked. 
+These prompts correspond to the slash commands in the `/claude-commands` directory. They provide the content templates that are used when those commands are invoked.
 
 When a slash command is executed (e.g., `/prime`), the Claude Code CLI uses the corresponding prompt template from this directory to structure the interaction.
 

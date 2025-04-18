@@ -89,7 +89,7 @@ The Glance project includes the following hooks:
 
 ### Code Quality & Formatting
 - `go-fmt`: Ensures code follows Go formatting standards
-- `go-imports`: Fixes import ordering and formatting 
+- `go-imports`: Fixes import ordering and formatting
 - `go-vet`: Examines code for suspicious constructs
 - `golangci-lint`: Comprehensive linter that combines many Go linters
 

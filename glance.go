@@ -289,14 +289,14 @@ func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitI
 
 		// load .gitignore in current.path, if exists
 		localIgnore, _ := loadGitignore(current.path)
-		
+
 		// Create a copy of the parent chain to avoid modifying it
 		var combinedChain []*gitignore.GitIgnore
 		if len(current.ignoreChain) > 0 {
 			combinedChain = make([]*gitignore.GitIgnore, len(current.ignoreChain))
 			copy(combinedChain, current.ignoreChain)
 		}
-		
+
 		// Add the local .gitignore if it exists
 		if localIgnore != nil {
 			combinedChain = append(combinedChain, localIgnore)
@@ -322,7 +322,7 @@ func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitI
 
 			fullChildPath := filepath.Join(current.path, name)
 			rel, _ := filepath.Rel(root, fullChildPath)
-			
+
 			// Check if this directory should be ignored by any gitignore rules
 			if isIgnored(rel, combinedChain) {
 				if logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -330,7 +330,7 @@ func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitI
 				}
 				continue
 			}
-			
+
 			queue = append(queue, queueItem{
 				path:        fullChildPath,
 				ignoreChain: combinedChain,
