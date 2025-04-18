@@ -31,7 +31,7 @@
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
 
-- [ ] **T007:** Configure general file formatting hooks
+- [x] **T007:** Configure general file formatting hooks
     - **Action:** Add hooks for trailing whitespace, end-of-file newlines, and other general formatting standards.
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1

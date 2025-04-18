@@ -6,9 +6,42 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-      # Basic file formatting hooks will be added here in T007
+      # General file formatting hooks
       - id: trailing-whitespace
+        name: Remove trailing whitespace
+        description: This hook removes trailing whitespace from all files
+        args: [--markdown-linebreak-ext=md]
+        
       - id: end-of-file-fixer
+        name: Fix end of files
+        description: Ensures files end with a newline
+        
+      - id: mixed-line-ending
+        name: Normalize line endings
+        description: Replaces line endings with the UNIX 'LF' line endings
+        args: [--fix=lf]
+        
+      - id: check-yaml
+        name: Check YAML syntax
+        description: Validates all YAML files
+        
+      - id: check-json
+        name: Check JSON syntax
+        description: Validates all JSON files
+        
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        description: Ensures merge conflict strings are not included in source
+        
+      - id: check-executables-have-shebangs
+        name: Check executables
+        description: Ensures all executables have shebangs
+
+      - id: pretty-format-json
+        name: Format JSON files
+        description: Formats JSON files consistently
+        args: [--autofix, --no-sort-keys]
+        exclude: package-lock.json
 
   # Go-specific hooks
   - repo: https://github.com/dnephin/pre-commit-golang
