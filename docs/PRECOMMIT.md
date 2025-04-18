@@ -30,9 +30,13 @@ brew install pre-commit
 # Using Homebrew
 brew install golangci-lint
 
-# Using Go
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.0
+# Using Go (use the version specified in .pre-commit-config.yaml)
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 ```
+
+> **Note:** For version consistency, check the current version in `.pre-commit-config.yaml`
+> and ensure you're using the same version as specified in the `rev:` field under the
+> golangci-lint repo configuration.
 
 3. Install the git hook scripts:
 

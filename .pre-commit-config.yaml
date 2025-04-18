@@ -127,8 +127,10 @@ repos:
         exclude: '^vendor/|^precommit-tests/'
 
   # Consolidated Linting hooks - using a single golangci-lint instance
+  # This is the source of truth for the golangci-lint version across the project
+  # When updating this version, also update it in .github/workflows/lint.yml
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.57.0
+    rev: v1.57.0  # Definitive version - all other golangci-lint versions should match this
     hooks:
       - id: golangci-lint
         name: golangci-lint
@@ -137,7 +139,7 @@ repos:
         types: [go]
         language: system
         pass_filenames: false
-        args: ["--config=.golangci.yml", "--timeout=2m"]
+        args: ["--config=.golangci.yml", "--timeout=2m"]  # timeout must match the setting in .golangci.yml
         exclude: '^vendor/|^precommit-tests/'
 
   # Security-focused hooks - skip test files

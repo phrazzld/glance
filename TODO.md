@@ -94,13 +94,14 @@
     - **Type:** Chore
     - **Priority:** P2
 
-- [ ] **T016:** Remove redundant golangci-lint configuration/versions
+- [x] **T016:** Remove redundant golangci-lint configuration/versions
     - **Action:** Eliminate duplicated version specifications or configuration for golangci-lint across workflow files.
     - **Depends On:** [T014, T015]
     - **Type:** Chore
     - **Priority:** P2
 
 ### Clarifications & Assumptions
-- [ ] **Issue:** Decision needed on standard golangci-lint invocation method
+- [x] **Issue:** Decision needed on standard golangci-lint invocation method
     - **Context:** Task T014 requires deciding whether to standardize on pre-commit hooks or direct golangci-lint invocation across all environments
     - **Blocking?:** Yes (for T015, T016)
+    - **Resolution:** Standardized approach documented in docs/LINTING.md - using pre-commit hooks for local development and official GitHub Action for CI

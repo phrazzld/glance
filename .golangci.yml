@@ -3,6 +3,7 @@
 
 run:
   # Timeout for running linters, increased from default but reduced from 5m
+  # Must be synchronized with the timeout arg in .pre-commit-config.yaml
   timeout: 2m
 
   # Don't run golangci-lint on tests by default to speed up
