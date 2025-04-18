@@ -18,7 +18,7 @@ The standard GitHub Actions directory structure requires:
 - YAML files within `workflows` that define specific CI/CD workflows
 
 The existing structure appears to follow this pattern correctly with:
-- `.github/` directory present 
+- `.github/` directory present
 - `.github/workflows/` subdirectory present
 - At least one workflow file: `precommit.yml`
 

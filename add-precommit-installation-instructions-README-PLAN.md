@@ -14,7 +14,7 @@ The existing README.md already has a basic section on pre-commit hooks, but it n
 ## Implementation Plan
 
 1. Review current README.md section on pre-commit hooks (lines 75-93)
-2. Review existing docs/PRECOMMIT.md for detailed information 
+2. Review existing docs/PRECOMMIT.md for detailed information
 3. Enhance the README.md section with:
    - More comprehensive installation instructions for different platforms
    - Explanation of available hooks and what they do

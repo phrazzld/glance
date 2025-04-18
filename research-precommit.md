@@ -69,7 +69,7 @@ Go 1.23+ introduced several changes that affect tooling and linters:
 3. **Go 1.23-specific Features**:
    - Support for range-over-function
    - Improved type inference
-   - Loop variable shadowing changes 
+   - Loop variable shadowing changes
    - Error wrapping enhancements
 
 4. **Recommended Linter Settings**:

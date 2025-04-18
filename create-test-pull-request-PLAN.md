@@ -14,11 +14,11 @@ Create a test pull request with mixed good/bad code to verify GitHub Actions wor
      - Introduce a Go formatting issue (missing or extra spacing)
      - Add a linting error (unused variable, inefficient code)
      - Create a file with trailing whitespace
-   
+
    - **For testing the test workflow:**
      - Add a failing test case
      - Add a test with a compilation error
-   
+
    - **For testing the build workflow:**
      - Add code that builds successfully but with warnings
      - Add a README update (to test path-ignore functionality)
