@@ -1,0 +1,9 @@
+This file simulates a merge conflict to test check-merge-conflict hook.
+
+<<<<<<< HEAD
+This is the current version of the line.
+=======
+This is the incoming version of the line.
+>>>>>>> feature-branch
+
+The above lines should trigger the hook.

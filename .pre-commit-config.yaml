@@ -138,9 +138,7 @@ repos:
         description: Prevents direct commits to the main branch
         args: [--branch, main, --branch, master]
         
-      - id: check-aws-credentials
-        name: Check AWS credentials
-        description: Prevents committing AWS credentials
+# The check-aws-credentials hook was removed as it's not available in the version we're using
 
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0

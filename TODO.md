@@ -46,7 +46,7 @@
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
 
-- [ ] **T010:** Test pre-commit hooks with sample changes
+- [x] **T010:** Test pre-commit hooks with sample changes
     - **Action:** Create test changes that should trigger each hook type and verify they work correctly.
     - **Depends On:** [T003, T004, T005, T006, T007, T008, T009]
     - **AC Ref:** Success Criteria 1

@@ -1,0 +1,2 @@
+This file doesn't end with a newline
+to test the end-of-file-fixer hook.

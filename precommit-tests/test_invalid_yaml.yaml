@@ -1,0 +1,5 @@
+# This file has invalid YAML to test check-yaml hook
+key1: value1
+  indentation: wrong
+key2: value2:
+  missing: colon
