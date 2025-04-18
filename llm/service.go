@@ -55,7 +55,7 @@ func (o *ServiceOptions) WithVerbose(verbose bool) *ServiceOptions {
 func DefaultServiceOptions() *ServiceOptions {
 	return &ServiceOptions{
 		MaxRetries: 3,
-		ModelName:  "gemini-2.0-flash",
+		ModelName:  "gemini-2.5-flash-preview-04-17",
 		Verbose:    false,
 	}
 }

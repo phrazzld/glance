@@ -47,7 +47,7 @@ type ClientOptions struct {
 // DefaultClientOptions returns a ClientOptions instance with sensible defaults.
 func DefaultClientOptions() *ClientOptions {
 	return &ClientOptions{
-		ModelName:  "gemini-2.0-flash",
+		ModelName:  "gemini-2.5-flash-preview-04-17",
 		MaxRetries: 3,
 		Timeout:    60, // 60 seconds
 	}
@@ -84,7 +84,7 @@ type GeminiClient struct {
 // NewGeminiClient creates a new client for the Google Gemini API.
 //
 // Parameters:
-//   - apiKey: The API key for authenticating with the Gemini API
+//   - apiKey: The API key for authenticating with the Gemini API  // pragma: allowlist secret
 //   - options: Configuration options for the client
 //
 // Returns:

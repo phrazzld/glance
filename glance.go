@@ -105,7 +105,7 @@ func setupLogging(verbose bool) {
 func setupLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	// Create client options
 	clientOptions := llm.DefaultClientOptions().
-		WithModelName("gemini-2.0-flash").
+		WithModelName("gemini-2.5-flash-preview-04-17").
 		WithMaxRetries(cfg.MaxRetries).
 		WithTimeout(60)
 
