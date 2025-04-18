@@ -57,7 +57,7 @@
     - **AC Ref:** Success Criteria 1, 4
 
 ## Documentation Updates for Precommit Hooks
-- [ ] **T012:** Add pre-commit installation instructions to README.md
+- [x] **T012:** Add pre-commit installation instructions to README.md
     - **Action:** Update README.md with clear instructions on how to install the pre-commit framework and configure the hooks.
     - **Depends On:** [T010]
     - **AC Ref:** Success Criteria 3, 4
