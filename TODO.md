@@ -11,7 +11,7 @@
     - **Depends On:** [T001]
     - **AC Ref:** Success Criteria 1
 
-- [ ] **T003:** Configure Go-specific formatting hooks
+- [x] **T003:** Configure Go-specific formatting hooks
     - **Action:** Add go-fmt hook to the pre-commit config to enforce Go formatting standards.
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1

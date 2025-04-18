@@ -14,8 +14,20 @@ repos:
   - repo: https://github.com/dnephin/pre-commit-golang
     rev: v0.5.1
     hooks:
-      # Placeholder for Go-specific hooks
+      # Go formatting hooks
       - id: go-fmt
+        name: go fmt
+        description: Run gofmt on files
+        language: system
+        pass_filenames: true
+        files: \.go$
+      - id: go-imports
+        name: go imports
+        description: Run goimports on files
+        language: system
+        pass_filenames: true
+        files: \.go$
+        args: ["-w", "-local", "github.com/phrazzld/glance"]
 
   # Security-focused hooks
   - repo: https://github.com/Yelp/detect-secrets
