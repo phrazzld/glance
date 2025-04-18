@@ -41,7 +41,7 @@
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
 
-- [ ] **T009:** Configure security-focused hooks
+- [x] **T009:** Configure security-focused hooks
     - **Action:** Add hooks to detect secrets, credentials, or other sensitive information in commits.
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1

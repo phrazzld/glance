@@ -126,8 +126,35 @@ repos:
         verbose: true
 
   # Security-focused hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: detect-private-key
+        name: Detect private keys
+        description: Checks for the existence of private keys in committed files
+        
+      - id: no-commit-to-branch
+        name: Prevent commits to main branch
+        description: Prevents direct commits to the main branch
+        args: [--branch, main, --branch, master]
+        
+      - id: check-aws-credentials
+        name: Check AWS credentials
+        description: Prevents committing AWS credentials
+
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
-      # Placeholder for security hooks
       - id: detect-secrets
+        name: Detect secrets
+        description: Detects secrets and credentials in code to prevent accidental commits
+        args: ['--baseline', '.secrets.baseline']
+        exclude: |
+          (?x)^(
+            .*/test-fixtures/.*|
+            .*_test.go|
+            .*/tests/.*|
+            .*/testdata/.*|
+            .*\.md|
+            \.pre-commit-config\.yaml
+          )$
