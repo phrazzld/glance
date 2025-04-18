@@ -49,24 +49,19 @@ jobs:
       - name: Build binary
         run: |
           # Set output filename based on OS
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            BINARY_NAME="glance.exe"
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            go build -v -o "glance.exe" -ldflags="-s -w" .
           else
-            BINARY_NAME="glance"
+            go build -v -o "glance" -ldflags="-s -w" .
           fi
-          
-          # Build with optimizations
-          go build -v -o "$BINARY_NAME" -ldflags="-s -w" .
-        shell: bash # Use bash for all platforms for consistency
 
       - name: Verify binary exists
-        run: |
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            if [ ! -f "glance.exe" ]; then exit 1; fi
-          else
-            if [ ! -f "glance" ]; then exit 1; fi
-          fi
-        shell: bash
+        if: runner.os == 'Windows'
+        run: if (-Not (Test-Path "glance.exe")) { exit 1 }
+
+      - name: Verify binary exists
+        if: runner.os != 'Windows'
+        run: if [ ! -f "glance" ]; then exit 1; fi
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4

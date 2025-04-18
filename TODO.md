@@ -76,7 +76,7 @@
     - **Type:** Chore
     - **Priority:** P2
 
-- [ ] **T013:** Remove explicit shell: bash from build.yml workflow
+- [x] **T013:** Remove explicit shell: bash from build.yml workflow
     - **Action:** Remove the `shell: bash` directive from `.github/workflows/build.yml` to fix Windows CI builds.
     - **Depends On:** None
     - **Type:** Bugfix
