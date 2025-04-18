@@ -91,7 +91,7 @@ The Glance project includes the following hooks:
 - `go-fmt`: Ensures code follows Go formatting standards
 - `go-imports`: Fixes import ordering and formatting
 - `go-vet`: Examines code for suspicious constructs
-- `golangci-lint`: Comprehensive linter that combines many Go linters
+- `golangci-lint`: Comprehensive linter that combines many Go linters (see [LINTING.md](LINTING.md) for standardization details)
 
 ### Testing
 - `go-unit-tests`: Runs unit tests to ensure they pass (including long-running tests)

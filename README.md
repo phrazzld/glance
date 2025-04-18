@@ -102,7 +102,7 @@ Glance uses pre-commit hooks to ensure code quality and consistency. These hooks
 #### What Pre-commit Hooks Do
 
 - Ensure code follows Go formatting standards (`go fmt`, `go imports`)
-- Run static analysis to catch potential bugs (`go vet`, `golangci-lint`)
+- Run static analysis to catch potential bugs (`go vet`, `golangci-lint` - see [docs/LINTING.md](docs/LINTING.md))
 - Verify tests pass before committing (`go test`)
 - Fix common issues like trailing whitespace and line endings
 - Prevent accidentally committing secrets or sensitive data

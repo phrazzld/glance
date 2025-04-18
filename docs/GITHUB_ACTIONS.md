@@ -318,9 +318,9 @@ We follow security best practices for installing tools in our GitHub Actions wor
 
 #### golangci-lint Installation Methods
 
-There are two secure methods for installing golangci-lint in GitHub Actions workflows:
+We have standardized on specific methods for installing and running golangci-lint. See [LINTING.md](LINTING.md) for the complete standardization policy. In summary:
 
-1. **Pre-commit Hook Installation (Recommended for `precommit.yml`)**
+1. **Pre-commit Hook Installation (Standard for Local Development)**
 
    The pre-commit framework automatically installs the golangci-lint tool when the hook runs. This method:
    - Uses pre-commit's secure installation mechanism
@@ -341,7 +341,7 @@ There are two secure methods for installing golangci-lint in GitHub Actions work
          args: ["--config=.golangci.yml", "--timeout=2m"]
    ```
 
-2. **Official GitHub Action (Recommended for `lint.yml`)**
+2. **Official GitHub Action (Standard for CI Workflows)**
 
    For dedicated linting workflows, we use the official golangci-lint GitHub Action:
    ```yaml

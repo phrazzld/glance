@@ -82,7 +82,7 @@
     - **Type:** Bugfix
     - **Priority:** P1
 
-- [ ] **T014:** Decide and document standardized golangci-lint invocation method
+- [x] **T014:** Decide and document standardized golangci-lint invocation method
     - **Action:** Choose and document whether to standardize on pre-commit or direct invocation for golangci-lint.
     - **Depends On:** None
     - **Type:** Chore
