@@ -112,8 +112,8 @@
     - **Type:** Bugfix
     - **Priority:** P0
 
-- [ ] **T019:** Align CI Workflow golangci-lint Version
-    - **Action:** Update `.github/workflows/lint.yml` to use the same golangci-lint version specified in `.pre-commit-config.yaml` (v1.57.0) and ensure it uses the correct configuration file.
+- [x] **T019:** Align CI Workflow golangci-lint Version
+    - **Action:** Update `.github/workflows/lint.yml` to use the same golangci-lint version specified in `.pre-commit-config.yaml` (v1.57.0) and ensure it uses the correct configuration file with matching timeout settings.
     - **Depends On:** [T018]
     - **Type:** Bugfix
     - **Priority:** P0

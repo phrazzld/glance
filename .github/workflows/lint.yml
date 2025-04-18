@@ -44,8 +44,10 @@ jobs:
       - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
-          version: v1.57.0  # Keep synchronized with version in .pre-commit-config.yaml
-          args: --config=.golangci.yml
+          # IMPORTANT: This version must match exactly the one in .pre-commit-config.yaml
+          # This is the single source of truth for the golangci-lint version
+          version: v1.57.0  # Must match 'rev:' in .pre-commit-config.yaml's golangci-lint hook
+          args: --config=.golangci.yml --timeout=2m  # Use same config and timeout as in .golangci.yml
           only-new-issues: true
 
   additional-checks:
