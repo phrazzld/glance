@@ -93,7 +93,7 @@
     - **Depends On:** [T015, T016, T017]
     - **AC Ref:** Success Criteria 2
 
-- [ ] **T019:** Add status badges to README.md
+- [x] **T019:** Add status badges to README.md
     - **Action:** Add GitHub Actions workflow status badges to README.md to display build, test, and linting status.
     - **Depends On:** [T018]
     - **AC Ref:** Success Criteria 2, 3

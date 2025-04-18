@@ -1,5 +1,10 @@
 # Glance README
 
+[![Pre-commit Checks](https://github.com/phrazzld/glance/actions/workflows/precommit.yml/badge.svg)](https://github.com/phrazzld/glance/actions/workflows/precommit.yml)
+[![Go Tests](https://github.com/phrazzld/glance/actions/workflows/test.yml/badge.svg)](https://github.com/phrazzld/glance/actions/workflows/test.yml)
+[![Go Linting](https://github.com/phrazzld/glance/actions/workflows/lint.yml/badge.svg)](https://github.com/phrazzld/glance/actions/workflows/lint.yml)
+[![Go Build](https://github.com/phrazzld/glance/actions/workflows/build.yml/badge.svg)](https://github.com/phrazzld/glance/actions/workflows/build.yml)
+
 ## What is it?
 
 Glance is a command-line tool that recursively scans a directory tree and generates a `glance.md` file in each directory. This file provides a high-level summary of the directory's contents, generated using Google's Generative AI API (Gemini).
