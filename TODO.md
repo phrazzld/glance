@@ -36,7 +36,7 @@
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
 
-- [ ] **T008:** Configure file size limitation hooks
+- [x] **T008:** Configure file size limitation hooks
     - **Action:** Add hooks to check for excessively large files as per project standards.
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
