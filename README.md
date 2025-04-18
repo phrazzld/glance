@@ -141,6 +141,12 @@ pre-commit run go-fmt --all-files
 
 For more details on our pre-commit setup, available hooks, configuration, and troubleshooting, see [docs/PRECOMMIT.md](/docs/PRECOMMIT.md).
 
+### GitHub Actions Workflows
+
+Glance uses GitHub Actions for continuous integration and deployment. Our workflows automatically test, lint, and build the project on every push and pull request.
+
+For detailed information about our GitHub Actions setup, including workflow configurations, triggers, and troubleshooting tips, see [docs/GITHUB_ACTIONS.md](/docs/GITHUB_ACTIONS.md).
+
 ## Dependencies
 
 - [github.com/briandowns/spinner](https://github.com/briandowns/spinner) – Spinner animation.

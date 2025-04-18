@@ -104,7 +104,7 @@
     - **Depends On:** [T018]
     - **AC Ref:** Success Criteria 2
 
-- [ ] **T021:** Document GitHub Actions workflow details
+- [x] **T021:** Document GitHub Actions workflow details
     - **Action:** Document the GitHub Actions workflow configurations and what they check for, possibly in the repository wiki or a dedicated document.
     - **Depends On:** [T020]
     - **AC Ref:** Success Criteria 3
