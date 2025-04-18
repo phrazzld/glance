@@ -24,19 +24,28 @@ pip install pre-commit
 brew install pre-commit
 ```
 
-2. Install golangci-lint:
+2. **Note about golangci-lint installation:**
+
+The pre-commit configuration now uses `language: golang` for golangci-lint, which means:
+
+- You don't need to manually install golangci-lint; pre-commit will manage it for you
+- This ensures the exact version specified in `.pre-commit-config.yaml` is used
+- The installation is isolated from your system-wide Go tools
+
+If you previously installed golangci-lint manually, you can continue to use it for direct invocation, but pre-commit will use its own managed version:
 
 ```bash
+# Optional - only if you want to run golangci-lint outside of pre-commit
 # Using Homebrew
 brew install golangci-lint
 
-# Using Go (use the version specified in .pre-commit-config.yaml)
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+# Using Go (make sure to use the version specified in .pre-commit-config.yaml)
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.0
 ```
 
-> **Note:** For version consistency, check the current version in `.pre-commit-config.yaml`
-> and ensure you're using the same version as specified in the `rev:` field under the
-> golangci-lint repo configuration.
+> **Note:** For version consistency, always check the current version in `.pre-commit-config.yaml`
+> and use the same version if you install it manually. The `rev:` field under the golangci-lint
+> repo configuration is the single source of truth for the version.
 
 3. Install the git hook scripts:
 
@@ -95,7 +104,11 @@ The Glance project includes the following hooks:
 - `go-fmt`: Ensures code follows Go formatting standards
 - `go-imports`: Fixes import ordering and formatting
 - `go-vet`: Examines code for suspicious constructs
-- `golangci-lint`: Comprehensive linter that combines many Go linters (see [LINTING.md](LINTING.md) for standardization details)
+- `golangci-lint`: Comprehensive linter that combines many Go linters
+  - Uses the modern configuration format with explicit `version: "2"` in `.golangci.yml`
+  - Pre-commit manages installation with `language: golang` for better reproducibility
+  - Timeout and configuration are synchronized between pre-commit and CI environments
+  - See [LINTING.md](LINTING.md) for complete standardization details
 
 ### Testing
 - `go-unit-tests`: Runs unit tests to ensure they pass (including long-running tests)

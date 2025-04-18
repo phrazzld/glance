@@ -118,7 +118,7 @@
     - **Type:** Bugfix
     - **Priority:** P0
 
-- [ ] **T020:** Update Linting Documentation
+- [x] **T020:** Update Linting Documentation
     - **Action:** Update `docs/LINTING.md` to explain that modern golangci-lint doesn't require a `version:` field, and update `docs/PRECOMMIT.md` to emphasize that pre-commit manages golangci-lint installation when using `language: golang`.
     - **Depends On:** [T019]
     - **Type:** Documentation

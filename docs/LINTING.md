@@ -52,18 +52,20 @@ golangci-lint is configured in `.pre-commit-config.yaml`:
 
 ```yaml
 - repo: https://github.com/golangci/golangci-lint
-  rev: v1.57.0
+  rev: v1.57.0  # Definitive version - all other golangci-lint versions should match this
   hooks:
     - id: golangci-lint
       name: golangci-lint
       description: Fast Go linters runner that uses .golangci.yml config
       entry: golangci-lint run
       types: [go]
-      language: system
+      language: golang  # Pre-commit manages installation for better reproducibility
       pass_filenames: false
-      args: ["--config=.golangci.yml", "--timeout=2m"]
+      args: ["--config=.golangci.yml", "--timeout=2m"]  # timeout must match the setting in .golangci.yml
       exclude: '^vendor/|^precommit-tests/'
 ```
+
+> **Important**: Using `language: golang` allows pre-commit to manage the golangci-lint installation, ensuring consistent versions across all developer environments. This provides better reproducibility compared to the system-installed version.
 
 ### CI Pipeline (GitHub Action)
 
@@ -73,20 +75,42 @@ golangci-lint is configured in `.github/workflows/lint.yml`:
 - name: Install golangci-lint
   uses: golangci/golangci-lint-action@v4
   with:
-    version: v1.57.0
-    args: --config=.golangci.yml
+    # IMPORTANT: This version must match exactly the one in .pre-commit-config.yaml
+    version: v1.57.0  # Must match 'rev:' in .pre-commit-config.yaml's golangci-lint hook
+    args: --config=.golangci.yml --timeout=2m  # Use same config and timeout as in .golangci.yml
     only-new-issues: true
 ```
 
-## Version Consistency
+## Configuration and Version Consistency
+
+### Configuration Format
+
+The golangci-lint configuration in `.golangci.yml` follows the modern structure:
+
+1. **Modern Configuration Format**: Using `version: "2"` for compatibility with golangci-lint 1.50.0+
+   - Previous versions of golangci-lint (pre-1.50.0) used a legacy format without a version field
+   - The modern format requires explicitly setting `version: "2"` for clarity and forward compatibility
+
+2. **Top-level Sections**: The configuration is organized with the following top-level sections:
+   - `run:` - For execution settings like timeout, include/exclude paths
+   - `linters:` - For enabling/disabling specific linters
+   - `linters-settings:` - For configuring individual linter behavior
+   - `issues:` - For controlling how issues are reported and filtered
+
+### Version Consistency
 
 To ensure consistency across environments:
 
 1. The golangci-lint version should be specified and kept synchronized between:
-   - `.pre-commit-config.yaml` (in the `rev:` field)
-   - `.github/workflows/lint.yml` (in the `version:` field)
+   - `.pre-commit-config.yaml` (in the `rev:` field) - this is the single source of truth
+   - `.github/workflows/lint.yml` (in the `version:` field) - must match the pre-commit config
 
 2. When updating golangci-lint, both locations must be updated to the same version
+
+3. The timeout setting should be consistent in:
+   - `.golangci.yml` (in the `run.timeout` field)
+   - `.pre-commit-config.yaml` (in the `args` array)
+   - `.github/workflows/lint.yml` (in the `args` field)
 
 ## Migration Plan
 
