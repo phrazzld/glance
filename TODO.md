@@ -4,7 +4,10 @@
 
 ## Tasks
 
-No active tasks.
+- [~] [T032] Fix golangci-lint CI failures in GitHub Actions workflow
+  - Action: Update the GitHub Actions workflow configuration in `.github/workflows/lint.yml` to fix compatibility issues between golangci-lint and Go 1.24. Change the go-version to '1.23' and switch from the official golangci-lint action to a direct installation approach.
+  - Depends On: None
+  - AC Ref: None
 
 - [x] [T029] Disable Windows builds in CI
   - Action: Update the build workflow file (`.github/workflows/build.yml`) to exclude Windows-specific build jobs. Remove or comment out the Windows build matrix entries.
