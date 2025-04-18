@@ -109,7 +109,7 @@
     - **Depends On:** [T020]
     - **AC Ref:** Success Criteria 3
 
-- [ ] **T022:** Create developer setup script (optional)
+- [x] **T022:** Create developer setup script (optional)
     - **Action:** Create a script to help developers set up all necessary tooling, including pre-commit hooks, to simplify onboarding.
     - **Depends On:** [T011, T018]
     - **AC Ref:** Success Criteria 4

@@ -77,6 +77,24 @@ Glance is organized into several packages:
 
 ## Developer Setup
 
+### Quick Setup (Recommended)
+
+We provide a comprehensive setup script that will configure your entire development environment:
+
+```bash
+./scripts/setup-dev-environment.sh
+```
+
+This script will:
+- Verify Go and Git installations
+- Configure Git settings if needed
+- Install and configure pre-commit hooks
+- Install the GitHub CLI (optional)
+- Set up a local environment file
+- Verify Go modules
+- Build the project
+- Provide next steps
+
 ### Pre-commit Hooks
 
 Glance uses pre-commit hooks to ensure code quality and consistency. These hooks automatically check your code before each commit to catch issues early.
@@ -90,9 +108,11 @@ Glance uses pre-commit hooks to ensure code quality and consistency. These hooks
 - Prevent accidentally committing secrets or sensitive data
 - Block large files and other unwanted content from the repository
 
-#### Installation
+#### Manual Installation
 
-**Option 1: Use our setup script (recommended)**
+If you prefer to set up only the pre-commit hooks manually:
+
+**Option 1: Use our pre-commit setup script**
 ```bash
 ./scripts/setup-precommit.sh
 ```
