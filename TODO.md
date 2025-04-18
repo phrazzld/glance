@@ -78,12 +78,12 @@
     - **Depends On:** [T014]
     - **AC Ref:** Success Criteria 2
 
-- [ ] **T016:** Create lint workflow file
+- [x] **T016:** Create lint workflow file
     - **Action:** Create lint.yml workflow to run linting tools. Configure triggers, environment, and lint commands.
     - **Depends On:** [T014]
     - **AC Ref:** Success Criteria 2
 
-- [ ] **T017:** Create build workflow file
+- [x] **T017:** Create build workflow file
     - **Action:** Create build.yml workflow to verify the build process. Configure triggers, environment, and build commands.
     - **Depends On:** [T014]
     - **AC Ref:** Success Criteria 2

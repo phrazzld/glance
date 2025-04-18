@@ -1,0 +1,67 @@
+name: Go Build
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }} / Go ${{ matrix.go-version }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ['1.23', '1.24']
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Get dependencies
+        run: go mod download
+
+      - name: Build binary
+        run: |
+          # Set output filename based on OS
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            BINARY_NAME="glance.exe"
+          else
+            BINARY_NAME="glance"
+          fi
+          
+          # Build with optimizations
+          go build -v -o "$BINARY_NAME" -ldflags="-s -w" .
+        shell: bash # Use bash for all platforms for consistency
+
+      - name: Verify binary exists
+        run: |
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            if [ ! -f "glance.exe" ]; then exit 1; fi
+          else
+            if [ ! -f "glance" ]; then exit 1; fi
+          fi
+        shell: bash
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: glance-${{ matrix.os }}-go${{ matrix.go-version }}
+          path: |
+            glance
+            glance.exe
+          if-no-files-found: ignore # Some combinations won't produce both files

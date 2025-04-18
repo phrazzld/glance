@@ -1,0 +1,66 @@
+name: Go Linting
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [master]
+
+jobs:
+  golangci-lint:
+    name: Run golangci-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.57.0
+          args: --config=.golangci.yml
+          only-new-issues: true
+
+  additional-checks:
+    name: Run additional static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Go Vet
+        run: go vet ./...
+
+      - name: Go Mod Verify
+        run: go mod verify
+
+      - name: Check Go mod tidiness
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum || (echo "go.mod or go.sum not tidy - run 'go mod tidy' locally" && exit 1)
+
+      - name: Check for misspellings
+        run: |
+          go install github.com/client9/misspell/cmd/misspell@latest
+          $(go env GOPATH)/bin/misspell -error -locale US .
