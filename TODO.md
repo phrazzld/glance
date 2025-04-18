@@ -99,7 +99,7 @@
     - **AC Ref:** Success Criteria 2, 3
 
 ## Testing and Integration
-- [ ] **T020:** Create test pull request
+- [x] **T020:** Create test pull request
     - **Action:** Create a test pull request with mixed good/bad code to verify GitHub Actions workflows run correctly and identify issues appropriately.
     - **Depends On:** [T018]
     - **AC Ref:** Success Criteria 2
