@@ -68,12 +68,12 @@
     - **AC Ref:** Success Criteria 3
 
 ## GitHub Actions Setup
-- [ ] **T014:** Create GitHub Actions directory structure
+- [x] **T014:** Create GitHub Actions directory structure
     - **Action:** Create the .github/workflows/ directory structure in the project repository.
     - **Depends On:** None
     - **AC Ref:** Success Criteria 2
 
-- [ ] **T015:** Create test workflow file
+- [x] **T015:** Create test workflow file
     - **Action:** Create test.yml workflow to run tests on multiple Go versions. Configure triggers, environment, and test commands.
     - **Depends On:** [T014]
     - **AC Ref:** Success Criteria 2
