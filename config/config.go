@@ -71,7 +71,7 @@ func NewDefaultConfig() *Config {
 func (c *Config) WithAPIKey(apiKey string) *Config {
 	// Create a copy of the config to ensure immutability
 	newConfig := *c
-	newConfig.APIKey = apiKey
+	newConfig.APIKey = apiKey // pragma: allowlist secret
 	return &newConfig
 }
 
