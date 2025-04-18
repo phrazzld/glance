@@ -21,7 +21,7 @@
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
 
-- [ ] **T005:** Configure Go-specific linting hooks
+- [x] **T005:** Configure Go-specific linting hooks
     - **Action:** Add golangci-lint hook with appropriate configuration based on project needs.
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1

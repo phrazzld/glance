@@ -38,6 +38,26 @@ repos:
         files: \.go$
         args: ["./..."]
         verbose: true
+        
+      # Go linting hooks from dnephin repo
+      - id: golangci-lint
+        name: go-repo linter
+        description: Run golangci-lint through the pre-commit-golang repo
+        args: ["--config=.golangci.yml", "--new-from-rev=HEAD~1"]
+
+  # Linting hooks
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.57.0
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        description: Fast Go linters runner that uses .golangci.yml config
+        language: system
+        entry: golangci-lint run
+        types: [go]
+        pass_filenames: false
+        args: ["--fix", "--timeout=5m"]
+        verbose: true
 
   # Security-focused hooks
   - repo: https://github.com/Yelp/detect-secrets
