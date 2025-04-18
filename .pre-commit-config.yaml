@@ -44,6 +44,29 @@ repos:
         name: go-repo linter
         description: Run golangci-lint through the pre-commit-golang repo
         args: ["--config=.golangci.yml", "--new-from-rev=HEAD~1"]
+        
+      # Go test hooks
+      - id: go-unit-tests
+        name: go test
+        description: Run Go unit tests
+        language: system
+        files: \.go$
+        pass_filenames: false
+        args: ["-race", "-v", "./..."]
+        
+      - id: go-mod-tidy
+        name: go mod tidy
+        description: Run go mod tidy to ensure go.mod is up to date
+        language: system
+        pass_filenames: false
+        
+      - id: go-build
+        name: go build
+        description: Ensure code compiles without errors
+        language: system
+        files: \.go$
+        pass_filenames: false
+        args: ["-o", "/dev/null", "./..."]
 
   # Linting hooks
   - repo: https://github.com/golangci/golangci-lint

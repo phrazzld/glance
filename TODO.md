@@ -26,7 +26,7 @@
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
 
-- [ ] **T006:** Configure Go-specific test hooks
+- [x] **T006:** Configure Go-specific test hooks
     - **Action:** Add go-test hook to run unit tests during the pre-commit phase.
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
