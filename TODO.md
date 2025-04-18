@@ -6,7 +6,7 @@
     - **Depends On:** None
     - **AC Ref:** Success Criteria 1, 4
 
-- [ ] **T002:** Create initial .pre-commit-config.yaml file
+- [x] **T002:** Create initial .pre-commit-config.yaml file
     - **Action:** Create a .pre-commit-config.yaml file in the project root with basic configuration structure.
     - **Depends On:** [T001]
     - **AC Ref:** Success Criteria 1

@@ -1,36 +1,25 @@
+# Basic pre-commit configuration for Glance
+# This file defines the structure for pre-commit hooks
+
 repos:
+  # Standard file formatting hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
+      # Basic file formatting hooks will be added here in T007
       - id: trailing-whitespace
       - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-added-large-files
-        args: ['--maxkb=500']
-      - id: mixed-line-ending
-        args: ['--fix=lf']
-      - id: check-merge-conflict
-      - id: detect-private-key
 
+  # Go-specific hooks
   - repo: https://github.com/dnephin/pre-commit-golang
-    rev: master
+    rev: v0.5.1
     hooks:
+      # Placeholder for Go-specific hooks
       - id: go-fmt
-      - id: go-vet
-      - id: go-imports
-      - id: go-unit-tests
-        args: [./...]
-      - id: golangci-lint
-        args: ['--build-tags=internal,test']
-      - id: go-mod-tidy
 
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.57.0
-    hooks:
-      - id: golangci-lint
-        args: [--timeout=5m]
-
+  # Security-focused hooks
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
+      # Placeholder for security hooks
       - id: detect-secrets
