@@ -4,7 +4,7 @@
 - Build: `go build -o glance`
 - Run: `./glance [--force] [--verbose] /path/to/directory`
 - Direct run: `go run . [--force] [--verbose] /path/to/directory`
-- Flags: 
+- Flags:
   - `--force` (regenerate existing glance.md files)
   - `--verbose` (detailed logging)
   - `--prompt-file` (specify custom prompt template file)

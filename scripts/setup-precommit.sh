@@ -8,7 +8,7 @@ echo "Setting up pre-commit hooks for Glance..."
 # Check if pre-commit is installed
 if ! command -v pre-commit &> /dev/null; then
     echo "pre-commit not found. Attempting to install..."
-    
+
     # Try pip installation
     if command -v pip &> /dev/null; then
         pip install pre-commit
@@ -28,7 +28,7 @@ fi
 # Check if golangci-lint is installed
 if ! command -v golangci-lint &> /dev/null; then
     echo "golangci-lint not found. Attempting to install..."
-    
+
     # Try brew installation
     if command -v brew &> /dev/null; then
         brew install golangci-lint
