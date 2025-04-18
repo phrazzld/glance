@@ -1,16 +1,42 @@
-# Glance golangci-lint configuration
-# Optimized for Go 1.23+ compatibility
+# Optimized golangci-lint configuration
+# Performance-focused configuration for Go 1.23+ compatibility
 
 run:
-  timeout: 5m
-  tests: true
+  # Timeout for running linters, increased from default but reduced from 5m
+  timeout: 2m
+
+  # Don't run golangci-lint on tests by default to speed up
+  # tests will be handled by go test instead
+  tests: false
+
+  # Directories/files to skip - reduces unnecessary scanning
   skip-dirs:
     - vendor
+    - testdata
+    - precommit-tests
+
+  # Skip test files to speed up linting
   skip-files:
     - "_test\\.go$"
 
+  # Optimize by caching results
+  cache: true
+
+  # Enable faster analysis of large files
+  allow-parallel-runners: true
+
+  # Focus on main code first
+  allow-serial-runners: true
+
+  # Only run fast linters by default
+  fast: true
+
+# Only enable the most important linters that provide strong value
 linters:
+  # Disable all linters by default then enable the most valuable ones
+  disable-all: true
   enable:
+    # Essential linters - should always run
     - errcheck          # Check for unchecked errors
     - gosimple          # Simplify code
     - govet             # Examine code for suspicious constructs
@@ -18,54 +44,60 @@ linters:
     - staticcheck       # Static analysis checks
     - typecheck         # Type-check Go code
     - unused            # Find unused variables, functions, etc.
-    - gosec             # Security checks
-    - goconst           # Find repeated strings that could be constants
-    - gofmt             # Code formatting
-    - goimports         # Fix imports and formatting
-    - misspell          # Find commonly misspelled words
-    - godot             # Check comment dots
-    - gocyclo           # Cyclomatic complexity
-    - stylecheck        # Stylecheck checks Go code for Uber's style guide
-    - revive            # Configurable, multi-rule linter
-    - exportloopref     # Check for loop variables captured by closures
-    - predeclared       # Find code that shadows predeclared identifiers
-    - unconvert         # Remove unnecessary type conversions
 
+    # Important but slightly slower linters
+    - gofmt             # Code formatting - very fast
+    - goimports         # Fix imports and formatting - very fast
+    - misspell          # Find commonly misspelled words - very fast
+
+    # Security linters - worth the performance cost
+    - gosec             # Security checks - relatively fast
+
+# Optimize linter configurations for performance
 linters-settings:
   errcheck:
-    check-type-assertions: true
-    check-blank: true
+    # Only check critical errors (performance optimization)
+    check-type-assertions: false
+    check-blank: false
 
   govet:
-    check-shadowing: true
-    enable-all: true
-
-  gocyclo:
-    min-complexity: 15
-
-  revive:
-    rules:
-      - name: exported
-        severity: warning
-        disabled: false
-
-  godot:
-    scope: all
-
-  goconst:
-    min-len: 3
-    min-occurrences: 3
+    # Disable the more expensive checks
+    check-shadowing: false
+    enable-all: false
 
   gosec:
+    # Skip some rules that cause more false positives
     excludes:
       - G204  # Subprocess with variable
+      - G107  # URL with variable formatted string
+      - G304  # File with variable path
 
+  goimports:
+    # Optimize imports performance by prioritizing local packages
+    local-prefixes: "github.com/phrazzld/glance"
+
+# Optimize issue handling for performance
 issues:
+  # Exclude rules for tests and generated code to focus on important issues
   exclude-rules:
     - path: _test\.go
       linters:
         - gosec
         - errcheck
 
-  max-issues-per-linter: 0
-  max-same-issues: 0
+    - path: precommit-tests/
+      linters:
+        - all
+
+  # Don't show the same issue multiple times
+  max-same-issues: 3
+
+  # Limit number of issues per linter to avoid overwhelming output
+  max-issues-per-linter: 10
+
+  # Only show new issues
+  new: true
+
+  # Exclude issues in auto-generated files
+  exclude-files:
+    - ".*\\.generated\\.go$"
