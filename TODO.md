@@ -64,7 +64,7 @@
     - **Priority:** P2
 
 ## CI/CD Configuration
-- [ ] **T011:** Remove insecure curl|sh install from precommit.yml
+- [x] **T011:** Remove insecure curl|sh install from precommit.yml
     - **Action:** Remove `curl | sh` golangci-lint installation in `.github/workflows/precommit.yml` and rely on pre-commit's framework for installation.
     - **Depends On:** None
     - **Type:** Security

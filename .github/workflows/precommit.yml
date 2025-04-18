@@ -39,10 +39,7 @@ jobs:
           python-version: '3.10'
           cache: pip
 
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.57.0
-          golangci-lint --version
+      # golangci-lint is installed automatically by pre-commit
 
       - name: Install pre-commit
         run: |
