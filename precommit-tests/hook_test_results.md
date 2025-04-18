@@ -2,7 +2,7 @@
 
 This document contains the results of testing each pre-commit hook with specifically crafted test files.
 
-Tests run on: Fri Apr 18 17:31:40 JST 2025
+Tests run on: Fri Apr 18 22:08:18 JST 2025
 
 ## Testing: go-fmt
 
@@ -12,12 +12,7 @@ Tests run on: Fri Apr 18 17:31:40 JST 2025
 
 **Results:**
 ```
-go fmt...................................................................Failed
-- hook id: go-fmt
-- exit code: 1
-
-Executable `run-go-fmt.sh` not found
-
+go fmt...............................................(no files to check)Skipped
 ```
 
 ## Testing: go-imports
@@ -28,12 +23,7 @@ Executable `run-go-fmt.sh` not found
 
 **Results:**
 ```
-go imports...............................................................Failed
-- hook id: go-imports
-- exit code: 1
-
-Executable `run-go-imports.sh` not found
-
+go imports...........................................(no files to check)Skipped
 ```
 
 ## Testing: go-vet
@@ -44,13 +34,7 @@ Executable `run-go-imports.sh` not found
 
 **Results:**
 ```
-go vet...................................................................Failed
-- hook id: go-vet
-- duration: 0s
-- exit code: 1
-
-Executable `run-go-vet.sh` not found
-
+go vet...............................................(no files to check)Skipped
 ```
 
 ## Testing: golangci-lint
@@ -61,21 +45,7 @@ Executable `run-go-vet.sh` not found
 
 **Results:**
 ```
-go-repo linter...........................................................Failed
-- hook id: golangci-lint
-- exit code: 3
-
-Error: can't load config: unsupported version of the configuration: "" See https://golangci-lint.run/product/migration-guide for migration instructions
-Failed executing command with error: can't load config: unsupported version of the configuration: "" See https://golangci-lint.run/product/migration-guide for migration instructions
-
-golangci-lint............................................................Failed
-- hook id: golangci-lint
-- duration: 0.05s
-- exit code: 3
-
-Error: can't load config: unsupported version of the configuration: "" See https://golangci-lint.run/product/migration-guide for migration instructions
-Failed executing command with error: can't load config: unsupported version of the configuration: "" See https://golangci-lint.run/product/migration-guide for migration instructions
-
+golangci-lint........................................(no files to check)Skipped
 ```
 
 ## Testing: go-unit-tests
@@ -86,12 +56,7 @@ Failed executing command with error: can't load config: unsupported version of t
 
 **Results:**
 ```
-go test..................................................................Failed
-- hook id: go-unit-tests
-- exit code: 1
-
-Executable `run-go-unit-tests.sh` not found
-
+go test..............................................(no files to check)Skipped
 ```
 
 ## Testing: go-build
@@ -102,12 +67,7 @@ Executable `run-go-unit-tests.sh` not found
 
 **Results:**
 ```
-go build.................................................................Failed
-- hook id: go-build
-- exit code: 1
-
-Executable `run-go-build.sh` not found
-
+go build.............................................(no files to check)Skipped
 ```
 
 ## Testing: trailing-whitespace
@@ -118,7 +78,9 @@ Executable `run-go-build.sh` not found
 
 **Results:**
 ```
-Remove trailing whitespace...............................................Passed
+Remove trailing whitespace...............................................Failed
+- hook id: trailing-whitespace
+- files were modified by this hook
 ```
 
 ## Testing: end-of-file-fixer
@@ -131,10 +93,7 @@ Remove trailing whitespace...............................................Passed
 ```
 Fix end of files.........................................................Failed
 - hook id: end-of-file-fixer
-- exit code: 1
-
-Fixing precommit-tests/test_end_of_file.txt
-
+- files were modified by this hook
 ```
 
 ## Testing: mixed-line-ending
@@ -147,10 +106,7 @@ Fixing precommit-tests/test_end_of_file.txt
 ```
 Normalize line endings...................................................Failed
 - hook id: mixed-line-ending
-- exit code: 1
-
-precommit-tests/test_mixed_line_ending.txt: fixed mixed line endings
-
+- files were modified by this hook
 ```
 
 ## Testing: check-yaml
@@ -161,13 +117,7 @@ precommit-tests/test_mixed_line_ending.txt: fixed mixed line endings
 
 **Results:**
 ```
-Check YAML syntax........................................................Failed
-- hook id: check-yaml
-- exit code: 1
-
-mapping values are not allowed here
-  in "precommit-tests/test_invalid_yaml.yaml", line 3, column 14
-
+Check YAML syntax....................................(no files to check)Skipped
 ```
 
 ## Testing: check-json
@@ -178,12 +128,7 @@ mapping values are not allowed here
 
 **Results:**
 ```
-Check JSON syntax........................................................Failed
-- hook id: check-json
-- exit code: 1
-
-precommit-tests/test_invalid_json.json: Failed to json decode (Expecting ',' delimiter: line 5 column 3 (char 65))
-
+Check JSON syntax....................................(no files to check)Skipped
 ```
 
 ## Testing: check-merge-conflict
@@ -194,7 +139,7 @@ precommit-tests/test_invalid_json.json: Failed to json decode (Expecting ',' del
 
 **Results:**
 ```
-Check for merge conflicts................................................Passed
+Check for merge conflicts............................(no files to check)Skipped
 ```
 
 ## Testing: detect-secrets
@@ -205,32 +150,7 @@ Check for merge conflicts................................................Passed
 
 **Results:**
 ```
-[INFO] Installing environment for https://github.com/Yelp/detect-secrets.
-[INFO] Once installed this environment will be reused.
-[INFO] This may take a few minutes...
-Detect secrets...........................................................Failed
-- hook id: detect-secrets
-- exit code: 1
-
-ERROR: Potential secrets about to be committed to git repo!
-
-Secret Type: Base64 High Entropy String
-Location:    precommit-tests/test_secrets.txt:3
-
-Secret Type: Secret Keyword
-Location:    precommit-tests/test_secrets.txt:3
-
-Secret Type: AWS Access Key
-Location:    precommit-tests/test_secrets.txt:4
-
-Possible mitigations:
-  - For information about putting your secrets in a safer place, please ask in
-    #security
-  - Mark false positives with an inline `pragma: allowlist secret` comment
-
-If a secret has already been committed, visit
-https://help.github.com/articles/removing-sensitive-data-from-a-repository
-
+Detect secrets.......................................(no files to check)Skipped
 ```
 
 ## Testing: detect-private-key
@@ -241,12 +161,7 @@ https://help.github.com/articles/removing-sensitive-data-from-a-repository
 
 **Results:**
 ```
-Detect private keys......................................................Failed
-- hook id: detect-private-key
-- exit code: 1
-
-Private key found: precommit-tests/test_private_key.txt
-
+Detect private keys..................................(no files to check)Skipped
 ```
 
 ## Testing: check-added-large-files
@@ -257,7 +172,7 @@ Private key found: precommit-tests/test_private_key.txt
 
 **Results:**
 ```
-Check for large files....................................................Passed
+Check for large files................................(no files to check)Skipped
 ```
 
 ## Testing: check-case-conflict
@@ -268,6 +183,23 @@ Check for large files....................................................Passed
 
 **Results:**
 ```
-Check for case conflicts.................................................Passed
+Check for case conflicts.............................(no files to check)Skipped
 ```
 
+## Testing: check-case-conflict
+
+**File:** caseconflict.txt
+
+**Description:** Tests check-case-conflict hook with lowercase variant
+
+**Results:**
+```
+Check for case conflicts.................................................Failed
+- hook id: check-case-conflict
+- exit code: 1
+- files were modified by this hook
+
+Case-insensitivity conflict found: precommit-tests/CaseConflict.txt
+Case-insensitivity conflict found: precommit-tests/caseconflict.txt
+
+```

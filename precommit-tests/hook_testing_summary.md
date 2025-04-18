@@ -6,16 +6,18 @@ This document summarizes the results of testing the pre-commit hooks configured 
 
 ## Testing Environment
 
-- **Date:** April 18, 2025
+- **Date:** April 18, 2025 (Updated)
 - **Project:** Glance
-- **Test Framework:** Custom test script (`run_tests.sh`)
+- **Test Framework:** Enhanced test script (`run_tests.sh`) with proper file staging
 - **Test Files:** Located in `precommit-tests/` directory
 
 ## Testing Process
 
 1. Created test files that intentionally violate the rules enforced by each hook
-2. Ran each hook against its corresponding test file
-3. Documented the hook's behavior and whether it correctly identified the issue
+2. Properly staged files with `git add --force` to ensure hooks can detect issues
+3. Ran each hook against its corresponding test file
+4. Documented the hook's behavior and whether it correctly identified the issue
+5. Restored test files to their original state after testing
 
 ## Results Summary
 
@@ -50,6 +52,12 @@ During testing, we identified and resolved the following issues:
 2. **Issue:** Some hooks required specific installation or configuration adjustments
    **Resolution:** Updated the configuration to ensure all hooks function correctly
 
+3. **Issue:** Some hooks weren't detecting issues because files weren't properly staged
+   **Resolution:** Enhanced test script to properly stage files with `git add --force` and clean up afterwards
+
+4. **Issue:** Case conflict tests required both conflicting files to be present simultaneously
+   **Resolution:** Updated script to create temporary lowercase variant during testing
+
 ## Recommendations
 
 Based on the testing results, we recommend:
@@ -57,6 +65,8 @@ Based on the testing results, we recommend:
 1. Keep the current hook configuration, which successfully enforces all required standards
 2. Consider adding additional specialized hooks as project requirements evolve
 3. Re-run these tests after any significant changes to the pre-commit configuration
+4. Use the updated test script with proper staging to ensure accurate results
+5. Consider adding a test for the no-commit-to-branch hook to complete test coverage
 
 ## Conclusion
 

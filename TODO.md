@@ -1,7 +1,7 @@
 # TODO
 
 ## Pre-commit & CI Tests
-- [ ] **T001:** Update pre-commit test results documentation
+- [x] **T001:** Update pre-commit test results documentation
     - **Action:** Run `./precommit-tests/run_tests.sh` with proper environment and update `hook_test_results.md` and `hook_testing_summary.md` with current, accurate results.
     - **Depends On:** None
     - **Type:** Chore

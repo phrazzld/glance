@@ -29,15 +29,31 @@ test_file() {
     echo '```' >> "$RESULTS_FILE"
 
     if [ -f "$file" ]; then
+        # Create a backup of the original file
+        cp "$file" "${file}.bak" 2>/dev/null || true
+
         # Stage the file with force to ensure it's in the git index
         # This is necessary for hooks that check staged content
-        git add --force "$file" >> "$RESULTS_FILE" 2>&1 || true
+        cd "$ROOT_DIR"
+        git add --force "$file" 2>/dev/null
 
-        # Run the pre-commit hook on the file
+        # Run the pre-commit hook on the file - don't output git messages to results
         pre-commit run "$hook" --files "$file" >> "$RESULTS_FILE" 2>&1 || true
 
-        # Unstage the file to clean up
-        git reset HEAD "$file" >> "$RESULTS_FILE" 2>&1 || true
+        # Unstage the file to clean up - don't output reset messages to results file
+        git reset HEAD "$file" 2>/dev/null
+
+        # Restore original file if modified
+        if [ -f "${file}.bak" ]; then
+            # Detect if hook modified the file
+            if ! cmp -s "$file" "${file}.bak"; then
+                echo "File was modified by hook. Showing original -> modified changes:" >> "$RESULTS_FILE"
+                diff -u "${file}.bak" "$file" >> "$RESULTS_FILE" 2>&1 || true
+            fi
+
+            # Restore the original test file for future runs
+            mv "${file}.bak" "$file" 2>/dev/null
+        fi
     else
         echo "File not found: $file" >> "$RESULTS_FILE"
     fi
@@ -76,12 +92,29 @@ echo "" >> "$RESULTS_FILE"
 echo "**Results:**" >> "$RESULTS_FILE"
 echo '```' >> "$RESULTS_FILE"
 cd "$ROOT_DIR"
+# Create a backup of the original file
+cp "$TEST_DIR/test_secrets.txt" "$TEST_DIR/test_secrets.txt.bak" 2>/dev/null || true
+
 # Stage the file with force to ensure it's in the git index
-git add --force "$TEST_DIR/test_secrets.txt" >> "$RESULTS_FILE" 2>&1 || true
+git add --force "$TEST_DIR/test_secrets.txt" 2>/dev/null
+
 # Run the hook
 pre-commit run detect-secrets --files "$TEST_DIR/test_secrets.txt" >> "$RESULTS_FILE" 2>&1 || true
+
 # Unstage the file to clean up
-git reset HEAD "$TEST_DIR/test_secrets.txt" >> "$RESULTS_FILE" 2>&1 || true
+git reset HEAD "$TEST_DIR/test_secrets.txt" 2>/dev/null
+
+# Restore original file if modified
+if [ -f "$TEST_DIR/test_secrets.txt.bak" ]; then
+    # Detect if hook modified the file
+    if ! cmp -s "$TEST_DIR/test_secrets.txt" "$TEST_DIR/test_secrets.txt.bak"; then
+        echo "File was modified by hook. Showing original -> modified changes:" >> "$RESULTS_FILE"
+        diff -u "$TEST_DIR/test_secrets.txt.bak" "$TEST_DIR/test_secrets.txt" >> "$RESULTS_FILE" 2>&1 || true
+    fi
+
+    # Restore the original test file for future runs
+    mv "$TEST_DIR/test_secrets.txt.bak" "$TEST_DIR/test_secrets.txt" 2>/dev/null
+fi
 echo '```' >> "$RESULTS_FILE"
 echo "" >> "$RESULTS_FILE"
 test_file "$TEST_DIR/test_private_key.txt" "detect-private-key" "Tests detect-private-key hook with fake private key"
