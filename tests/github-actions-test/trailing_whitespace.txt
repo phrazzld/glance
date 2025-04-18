@@ -1,0 +1,3 @@
+This file has trailing whitespace.
+The spaces at the end of this line should trigger the pre-commit hook.
+Another line with trailing whitespace.
