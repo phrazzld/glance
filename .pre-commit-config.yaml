@@ -28,6 +28,16 @@ repos:
         pass_filenames: true
         files: \.go$
         args: ["-w", "-local", "github.com/phrazzld/glance"]
+      
+      # Go code analysis hooks
+      - id: go-vet
+        name: go vet
+        description: Run go vet on packages to analyze code for suspicious constructs
+        language: system
+        pass_filenames: false
+        files: \.go$
+        args: ["./..."]
+        verbose: true
 
   # Security-focused hooks
   - repo: https://github.com/Yelp/detect-secrets

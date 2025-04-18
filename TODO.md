@@ -16,7 +16,7 @@
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
 
-- [ ] **T004:** Configure Go-specific code analysis hooks
+- [x] **T004:** Configure Go-specific code analysis hooks
     - **Action:** Add go-vet hook to the pre-commit config to detect suspicious code patterns.
     - **Depends On:** [T002]
     - **AC Ref:** Success Criteria 1
