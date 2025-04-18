@@ -15,14 +15,16 @@ run:
   tests: false
 
   # Directories/files to skip - reduces unnecessary scanning
-  skip-dirs:
-    - vendor
-    - testdata
-    - precommit-tests
+  # Deprecated: skip-dirs (moved to issues.exclude-dirs below)
+  # skip-dirs:
+  #   - vendor
+  #   - testdata
+  #   - precommit-tests
 
   # Skip test files to speed up linting
-  skip-files:
-    - "_test\\.go$"
+  # Deprecated: skip-files (moved to issues.exclude-files below)
+  # skip-files:
+  #   - "_test\\.go$"
 
   # Optimize by caching results
   cache: true
@@ -99,6 +101,13 @@ issues:
   # Only show new issues
   new: true
 
-  # Exclude issues in auto-generated files
+  # Exclude directories from linting
+  exclude-dirs:
+    - vendor
+    - testdata
+    - precommit-tests
+
+  # Exclude files from linting (moved from run.skip-files)
   exclude-files:
     - ".*\\.generated\\.go$"
+    - "_test\\.go$"
