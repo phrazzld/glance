@@ -40,10 +40,11 @@ jobs:
           go-version: '1.24'
           cache: true
 
+      # Use the official GitHub Action as per our standardized approach in docs/LINTING.md
       - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
-          version: v1.57.0
+          version: v1.57.0  # Keep synchronized with version in .pre-commit-config.yaml
           args: --config=.golangci.yml
           only-new-issues: true
 

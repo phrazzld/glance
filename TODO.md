@@ -88,7 +88,7 @@
     - **Type:** Chore
     - **Priority:** P2
 
-- [ ] **T015:** Update lint.yml workflow based on standardized invocation
+- [x] **T015:** Update lint.yml workflow based on standardized invocation
     - **Action:** Modify `.github/workflows/lint.yml` to use the chosen standardized invocation method.
     - **Depends On:** [T014]
     - **Type:** Chore
