@@ -88,7 +88,7 @@
     - **Depends On:** [T014]
     - **AC Ref:** Success Criteria 2
 
-- [ ] **T018:** Configure workflow triggers
+- [x] **T018:** Configure workflow triggers
     - **Action:** Configure each workflow to run on appropriate events (push to main, pull requests, schedules if needed).
     - **Depends On:** [T015, T016, T017]
     - **AC Ref:** Success Criteria 2

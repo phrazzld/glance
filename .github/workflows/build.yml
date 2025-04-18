@@ -1,13 +1,24 @@
 name: Go Build
 
+# Trigger configuration:
+# - On push to master branch (ignoring documentation changes)
+# - On pull requests to master branch
 on:
   push:
     branches: [master]
     paths-ignore:
       - '**.md'
       - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
   pull_request:
     branches: [master]
+
+# Prevent multiple identical workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

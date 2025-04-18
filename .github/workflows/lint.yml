@@ -1,13 +1,27 @@
 name: Go Linting
 
+# Trigger configuration:
+# - On push to master branch (ignoring documentation changes)
+# - On pull requests to master branch
+# - Monthly dependency check (1st of each month at 01:00 UTC)
 on:
   push:
     branches: [master]
     paths-ignore:
       - '**.md'
       - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
   pull_request:
     branches: [master]
+  schedule:
+    - cron: '0 1 1 * *'  # Monthly on the 1st at 01:00 UTC
+
+# Prevent multiple identical workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   golangci-lint:
