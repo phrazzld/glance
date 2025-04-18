@@ -18,7 +18,7 @@ test_file() {
     local file="$1"
     local hook="$2"
     local description="$3"
-    
+
     echo "## Testing: $hook" >> "$RESULTS_FILE"
     echo "" >> "$RESULTS_FILE"
     echo "**File:** $(basename "$file")" >> "$RESULTS_FILE"
@@ -27,13 +27,21 @@ test_file() {
     echo "" >> "$RESULTS_FILE"
     echo "**Results:**" >> "$RESULTS_FILE"
     echo '```' >> "$RESULTS_FILE"
-    
+
     if [ -f "$file" ]; then
+        # Stage the file with force to ensure it's in the git index
+        # This is necessary for hooks that check staged content
+        git add --force "$file" >> "$RESULTS_FILE" 2>&1 || true
+
+        # Run the pre-commit hook on the file
         pre-commit run "$hook" --files "$file" >> "$RESULTS_FILE" 2>&1 || true
+
+        # Unstage the file to clean up
+        git reset HEAD "$file" >> "$RESULTS_FILE" 2>&1 || true
     else
         echo "File not found: $file" >> "$RESULTS_FILE"
     fi
-    
+
     echo '```' >> "$RESULTS_FILE"
     echo "" >> "$RESULTS_FILE"
 }
@@ -67,7 +75,13 @@ echo "**Description:** Tests detect-secrets hook with fake API keys" >> "$RESULT
 echo "" >> "$RESULTS_FILE"
 echo "**Results:**" >> "$RESULTS_FILE"
 echo '```' >> "$RESULTS_FILE"
-cd "$ROOT_DIR" && pre-commit run detect-secrets --files "$TEST_DIR/test_secrets.txt" >> "$RESULTS_FILE" 2>&1 || true
+cd "$ROOT_DIR"
+# Stage the file with force to ensure it's in the git index
+git add --force "$TEST_DIR/test_secrets.txt" >> "$RESULTS_FILE" 2>&1 || true
+# Run the hook
+pre-commit run detect-secrets --files "$TEST_DIR/test_secrets.txt" >> "$RESULTS_FILE" 2>&1 || true
+# Unstage the file to clean up
+git reset HEAD "$TEST_DIR/test_secrets.txt" >> "$RESULTS_FILE" 2>&1 || true
 echo '```' >> "$RESULTS_FILE"
 echo "" >> "$RESULTS_FILE"
 test_file "$TEST_DIR/test_private_key.txt" "detect-private-key" "Tests detect-private-key hook with fake private key"
@@ -80,8 +94,13 @@ if [ -x "$TEST_DIR/generate_large_file.sh" ]; then
     test_file "$TEST_DIR/test_large_file.txt" "check-added-large-files" "Tests check-added-large-files hook with a 6MB file"
 fi
 
-# Test case conflict
+# Test case conflict - create a temporary case-conflicting file
+touch "$TEST_DIR/caseconflict.txt"
+echo "This is a lowercase version to create a conflict" > "$TEST_DIR/caseconflict.txt"
 test_file "$TEST_DIR/CaseConflict.txt" "check-case-conflict" "Tests check-case-conflict hook with case conflicts"
+test_file "$TEST_DIR/caseconflict.txt" "check-case-conflict" "Tests check-case-conflict hook with lowercase variant"
+# Clean up the temporary file
+rm -f "$TEST_DIR/caseconflict.txt"
 
 echo "Tests completed. Results saved to $RESULTS_FILE"
 echo "To view results: cat $RESULTS_FILE"

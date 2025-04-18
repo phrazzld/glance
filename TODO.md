@@ -7,7 +7,7 @@
     - **Type:** Chore
     - **Priority:** P1
 
-- [ ] **T002:** Fix staging in pre-commit test script
+- [x] **T002:** Fix staging in pre-commit test script
     - **Action:** Add `git add --force <test-file>` and cleanup steps in `run_tests.sh` to make test hooks fail properly for merge conflicts, large files, and case conflicts.
     - **Depends On:** None
     - **Type:** Bugfix
