@@ -126,21 +126,24 @@ repos:
         args: ["-o", "/dev/null", "./..."]
         exclude: '^vendor/|^precommit-tests/'
 
-  # Consolidated Linting hooks - using a single golangci-lint instance
-  # This is the source of truth for the golangci-lint version across the project
-  # When updating this version, also update it in .github/workflows/lint.yml
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.57.0  # Definitive version - all other golangci-lint versions should match this
-    hooks:
-      - id: golangci-lint
-        name: golangci-lint
-        description: Fast Go linters runner that uses .golangci.yml config
-        entry: golangci-lint run
-        types: [go]
-        language: golang  # Better reproducibility as pre-commit manages the installation
-        pass_filenames: false
-        args: ["--config=.golangci.yml", "--timeout=2m"]  # timeout must match the setting in .golangci.yml
-        exclude: '^vendor/|^precommit-tests/'
+  # NOTE: golangci-lint hook is now disabled in pre-commit because:
+  # 1. We run golangci-lint in a separate workflow (.github/workflows/lint.yml)
+  # 2. Running it in both places caused CI failures due to version compatibility issues
+  # 3. The separate golangci-lint workflow provides more detailed output
+
+  # Original configuration (commented out):
+  # - repo: https://github.com/golangci/golangci-lint
+  #   rev: v1.57.0  # Definitive version - all other golangci-lint versions should match this
+  #   hooks:
+  #     - id: golangci-lint
+  #       name: golangci-lint
+  #       description: Fast Go linters runner that uses .golangci.yml config
+  #       entry: golangci-lint run
+  #       types: [go]
+  #       language: golang  # Better reproducibility as pre-commit manages the installation
+  #       pass_filenames: false
+  #       args: ["--config=.golangci.yml", "--timeout=2m"]  # timeout must match the setting in .golangci.yml
+  #       exclude: '^vendor/|^precommit-tests/'
 
   # Security-focused hooks - skip test files
   - repo: https://github.com/pre-commit/pre-commit-hooks
