@@ -94,7 +94,7 @@
     - **Type:** Chore
     - **Priority:** P2
 
-- [ ] **T016:** Remove redundant golangci-lint configuration/versions
+- [x] **T016:** Remove redundant golangci-lint configuration/versions
     - **Action:** Eliminate duplicated version specifications or configuration for golangci-lint across workflow files. (Restructured into T017-T022)
     - **Depends On:** [T014, T015]
     - **Type:** Chore
@@ -130,7 +130,7 @@
     - **Type:** Chore
     - **Priority:** P0
 
-- [ ] **T022:** Complete T016
+- [x] **T022:** Complete T016
     - **Action:** Verify all redundant golangci-lint configurations/versions are removed, and mark T016 as completed.
     - **Depends On:** [T021]
     - **Type:** Chore
