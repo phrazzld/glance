@@ -94,7 +94,7 @@ The Glance project includes the following hooks:
 - `golangci-lint`: Comprehensive linter that combines many Go linters
 
 ### Testing
-- `go-unit-tests`: Runs unit tests to ensure they pass
+- `go-unit-tests`: Runs unit tests to ensure they pass (including long-running tests)
 - `go-mod-tidy`: Ensures the go.mod file is up to date
 
 ### File Hygiene
@@ -116,6 +116,28 @@ The Glance project includes the following hooks:
 1. **Hook installation failed**: Make sure you have the latest pre-commit version
 2. **golangci-lint errors**: Check that you're using a version compatible with Go 1.23+
 3. **Slow performance**: Consider adjusting timeout settings in `.golangci.yml`
+
+## Testing Strategy
+
+### Consistent Test Environments
+
+The `go-unit-tests` hook runs all tests, including long-running tests. Previously, this hook used the `-short` flag which skipped tests that checked themselves with `testing.Short()`. This flag has been removed to ensure:
+
+1. **Environment consistency**: The same tests run in both local pre-commit checks and CI environments
+2. **Preventing CI surprises**: Tests that pass locally will also pass in CI, avoiding situations where developers push code that passes pre-commit but fails in CI
+3. **Complete validation**: All tests validate your changes before commit, not just a subset
+
+While removing the `-short` flag may increase the time it takes for pre-commit hooks to run, the trade-off for reliability and consistency is worthwhile. The `go-unit-tests` hook still uses the `-race` flag to detect race conditions.
+
+### Advanced Testing Options
+
+If you need to skip pre-commit hooks for a quick commit in an emergency, you can use:
+
+```bash
+git commit -m "Your commit message" --no-verify
+```
+
+However, this should be used sparingly and followed by a proper commit that passes all hooks.
 
 ### Getting Help
 

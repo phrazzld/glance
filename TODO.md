@@ -19,7 +19,7 @@
     - **Type:** Bugfix
     - **Priority:** P1
 
-- [ ] **T004:** Document removal of `-short` flag in PRECOMMIT.md
+- [x] **T004:** Document removal of `-short` flag in PRECOMMIT.md
     - **Action:** Update docs to explain the change and rationale for consistent local/CI testing.
     - **Depends On:** [T003]
     - **Type:** Chore
