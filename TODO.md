@@ -13,7 +13,7 @@
     - **Type:** Bugfix
     - **Priority:** P1
 
-- [ ] **T003:** Remove `-short` flag from go-unit-tests pre-commit hook
+- [x] **T003:** Remove `-short` flag from go-unit-tests pre-commit hook
     - **Action:** Edit `.pre-commit-config.yaml` to remove `-short` flag from the `go-unit-tests` hook for consistency with CI.
     - **Depends On:** None
     - **Type:** Bugfix

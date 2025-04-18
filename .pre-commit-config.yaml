@@ -106,7 +106,7 @@ repos:
         language: system
         types: [go]
         pass_filenames: false
-        args: ["-race", "-short", "./..."]
+        args: ["-race", "./..."]
         exclude: '^vendor/|^precommit-tests/'
 
       - id: go-mod-tidy
