@@ -137,7 +137,7 @@ repos:
         description: Fast Go linters runner that uses .golangci.yml config
         entry: golangci-lint run
         types: [go]
-        language: system
+        language: golang  # Better reproducibility as pre-commit manages the installation
         pass_filenames: false
         args: ["--config=.golangci.yml", "--timeout=2m"]  # timeout must match the setting in .golangci.yml
         exclude: '^vendor/|^precommit-tests/'

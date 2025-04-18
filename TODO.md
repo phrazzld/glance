@@ -106,7 +106,7 @@
     - **Type:** Bugfix
     - **Priority:** P0
 
-- [ ] **T018:** Update `.pre-commit-config.yaml` for golangci-lint
+- [x] **T018:** Update `.pre-commit-config.yaml` for golangci-lint
     - **Action:** Modify the golangci-lint hook in `.pre-commit-config.yaml` to set `rev:` to `v1.57.0` as the single source of truth for the version and change `language:` from `system` to `golang` for better reproducibility.
     - **Depends On:** [T017]
     - **Type:** Bugfix
