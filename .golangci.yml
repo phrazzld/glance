@@ -1,0 +1,71 @@
+# Glance golangci-lint configuration
+# Optimized for Go 1.23+ compatibility
+
+run:
+  timeout: 5m
+  tests: true
+  skip-dirs:
+    - vendor
+  skip-files:
+    - "_test\\.go$"
+
+linters:
+  enable:
+    - errcheck          # Check for unchecked errors
+    - gosimple          # Simplify code
+    - govet             # Examine code for suspicious constructs
+    - ineffassign       # Detect unused assignments
+    - staticcheck       # Static analysis checks
+    - typecheck         # Type-check Go code
+    - unused            # Find unused variables, functions, etc.
+    - gosec             # Security checks
+    - goconst           # Find repeated strings that could be constants
+    - gofmt             # Code formatting
+    - goimports         # Fix imports and formatting
+    - misspell          # Find commonly misspelled words
+    - godot             # Check comment dots
+    - gocyclo           # Cyclomatic complexity
+    - stylecheck        # Stylecheck checks Go code for Uber's style guide
+    - revive            # Configurable, multi-rule linter
+    - exportloopref     # Check for loop variables captured by closures
+    - predeclared       # Find code that shadows predeclared identifiers
+    - unconvert         # Remove unnecessary type conversions
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    check-shadowing: true
+    enable-all: true
+
+  gocyclo:
+    min-complexity: 15
+
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+
+  godot:
+    scope: all
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gosec:
+    excludes:
+      - G204  # Subprocess with variable
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+        - errcheck
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
