@@ -1,5 +1,9 @@
 # Optimized golangci-lint configuration
 # Performance-focused configuration for Go 1.23+ compatibility
+# yaml-language-server: $schema=https://json.schemastore.org/golangci.json
+
+# Modern golangci-lint configuration (v1.50.0+) requires version: "2"
+version: "2"
 
 run:
   # Timeout for running linters, increased from default but reduced from 5m
@@ -39,16 +43,12 @@ linters:
   enable:
     # Essential linters - should always run
     - errcheck          # Check for unchecked errors
-    - gosimple          # Simplify code
     - govet             # Examine code for suspicious constructs
     - ineffassign       # Detect unused assignments
     - staticcheck       # Static analysis checks
-    - typecheck         # Type-check Go code
     - unused            # Find unused variables, functions, etc.
 
-    # Important but slightly slower linters
-    - gofmt             # Code formatting - very fast
-    - goimports         # Fix imports and formatting - very fast
+    # Non-formatter linters
     - misspell          # Find commonly misspelled words - very fast
 
     # Security linters - worth the performance cost

@@ -1,4 +1,0 @@
-This file has mixed line endings
-to test the mixed-line-ending hook.
-This line uses LF ending.
-This line uses CRLF ending.

@@ -29,12 +29,20 @@ type queueItem struct {
 // ListDirsWithIgnores performs a BFS from the root directory, collecting subdirectories
 // and merging each directory's .gitignore with its parent's chain.
 //
+// This is the consolidated BFS implementation that handles all directory scanning use cases
+// in the application. It uses the shared ignore functions to determine which directories
+// should be included or excluded during traversal.
+//
+// Parameters:
+//   - root: The starting directory for the BFS traversal
+//
 // Returns:
 //   - A slice of directory paths
 //   - A map of directory path -> chain of ignore rules
 //   - An error, if any occurred during directory traversal
 func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) {
 	var dirsList []string
+	verbose := logrus.IsLevelEnabled(logrus.DebugLevel)
 
 	// BFS queue
 	queue := []queueItem{
@@ -53,52 +61,22 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 		if current.path == root {
 			dirsList = append(dirsList, current.path)
 		} else {
-			// For non-root directories, check if they should be ignored
-			shouldInclude := true
-
-			// Check if this directory is ignored by any rule in its parents' chain
-			for _, rule := range current.ignoreChain {
-				// Skip rules from directories that are not ancestors of the current path
-				if !strings.HasPrefix(current.path, rule.OriginDir) {
-					continue
-				}
-
-				// Get the path relative to the rule's origin
-				relPath, err := filepath.Rel(rule.OriginDir, current.path)
-				if err != nil {
-					if logrus.IsLevelEnabled(logrus.DebugLevel) {
-						logrus.Debugf("Error calculating relative path for %s from %s: %v",
-							current.path, rule.OriginDir, err)
-					}
-					continue
-				}
-
-				// Convert to slash path for consistent matching
-				relPath = filepath.ToSlash(relPath)
-
-				// For directories, we need to test both with and without trailing slash
-				// because gitignore patterns like "dir/" only match "dir/" and not "dir"
-				if rule.Matcher.MatchesPath(relPath) || rule.Matcher.MatchesPath(relPath+"/") {
-					shouldInclude = false
-					if logrus.IsLevelEnabled(logrus.DebugLevel) {
-						logrus.Debugf("Skipping directory %s: matched by gitignore rule from %s",
-							current.path, rule.OriginDir)
-					}
-					break
-				}
-			}
-
-			if shouldInclude {
+			// For non-root directories, use the shared ignore functions to check
+			// if the directory should be included
+			if !ShouldIgnoreDir(current.path, filepath.Dir(current.path), current.ignoreChain, verbose) {
 				dirsList = append(dirsList, current.path)
 			} else {
 				// Skip this directory - don't process its children
+				if verbose {
+					logrus.Debugf("Skipping directory %s: matched by ignore rules", current.path)
+				}
 				continue
 			}
 		}
 
 		// Load .gitignore in the current directory, if it exists
 		localIgnore, err := LoadGitignore(current.path)
-		if err != nil && logrus.IsLevelEnabled(logrus.DebugLevel) {
+		if err != nil && verbose {
 			logrus.Debugf("Error loading .gitignore from %s: %v", current.path, err)
 		}
 
@@ -130,16 +108,21 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 			if !e.IsDir() {
 				continue
 			}
-			name := e.Name()
 
-			// Skip hidden directories and node_modules by default
-			if strings.HasPrefix(name, ".") || name == "node_modules" {
+			name := e.Name()
+			fullChildPath := filepath.Join(current.path, name)
+
+			// Use the helper function to check for hidden dirs and node_modules
+			// This is an optimization to avoid creating queue items for directories
+			// we know will be excluded
+			if strings.HasPrefix(name, ".") || name == NodeModulesDir {
+				if verbose {
+					logrus.Debugf("Skipping hidden/node_modules directory: %s", fullChildPath)
+				}
 				continue
 			}
 
-			fullChildPath := filepath.Join(current.path, name)
-
-			// Add the child directory to the queue for processing
+			// Queue the directory for processing
 			// It will be checked against ignore rules in the next iteration
 			queue = append(queue, queueItem{
 				path:        fullChildPath,
@@ -170,4 +153,53 @@ func LoadGitignore(dir string) (*gitignore.GitIgnore, error) {
 		return nil, err
 	}
 	return g, nil
+}
+
+// ExtractGitignoreMatchers converts an IgnoreChain to a slice of GitIgnore matchers.
+// This is a helper function for compatibility with code that uses the old-style
+// slice of GitIgnore pointers.
+//
+// Parameters:
+//   - chain: The IgnoreChain to convert
+//
+// Returns:
+//   - A slice of GitIgnore pointers
+func ExtractGitignoreMatchers(chain IgnoreChain) []*gitignore.GitIgnore {
+	if len(chain) == 0 {
+		return nil
+	}
+
+	matchers := make([]*gitignore.GitIgnore, 0, len(chain))
+	for _, rule := range chain {
+		matchers = append(matchers, rule.Matcher)
+	}
+	return matchers
+}
+
+// CreateIgnoreChain converts a slice of GitIgnore matchers to an IgnoreChain.
+// This is a helper function for compatibility with code that uses the old-style
+// slice of GitIgnore pointers.
+//
+// Parameters:
+//   - matchers: The slice of GitIgnore pointers to convert
+//   - originDir: The origin directory for all matchers in the chain
+//
+// Returns:
+//   - An IgnoreChain with the given matchers
+func CreateIgnoreChain(matchers []*gitignore.GitIgnore, originDir string) IgnoreChain {
+	if len(matchers) == 0 {
+		return IgnoreChain{}
+	}
+
+	chain := make(IgnoreChain, 0, len(matchers))
+	for _, matcher := range matchers {
+		if matcher == nil {
+			continue
+		}
+		chain = append(chain, IgnoreRule{
+			OriginDir: originDir,
+			Matcher:   matcher,
+		})
+	}
+	return chain
 }

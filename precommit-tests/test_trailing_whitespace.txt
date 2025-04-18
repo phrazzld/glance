@@ -1,3 +1,0 @@
-This file has trailing whitespace
-to test the trailing-whitespace hook.
-Each line ends with spaces.

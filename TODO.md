@@ -26,7 +26,7 @@
     - **Priority:** P2
 
 ## Filesystem Refactoring
-- [ ] **T005:** Refactor filesystem.ListDirsWithIgnores for consolidation
+- [x] **T005:** Refactor filesystem.ListDirsWithIgnores for consolidation
     - **Action:** Enhance `filesystem.ListDirsWithIgnores` to handle all BFS use cases currently covered by both implementations.
     - **Depends On:** None
     - **Type:** Refactor
@@ -94,9 +94,45 @@
     - **Type:** Chore
     - **Priority:** P2
 
-- [x] **T016:** Remove redundant golangci-lint configuration/versions
-    - **Action:** Eliminate duplicated version specifications or configuration for golangci-lint across workflow files.
+- [ ] **T016:** Remove redundant golangci-lint configuration/versions
+    - **Action:** Eliminate duplicated version specifications or configuration for golangci-lint across workflow files. (Restructured into T017-T022)
     - **Depends On:** [T014, T015]
+    - **Type:** Chore
+    - **Priority:** P2
+
+- [x] **T017:** Update `.golangci.yml` Configuration Format
+    - **Action:** Modify `.golangci.yml` to use the modern structure with top-level `run:`, `linters:`, and `issues:` sections. Set explicit `version: "2"` for modern format compatibility. Configure the initial set of enabled linters and verify `run.timeout` is set to `2m`.
+    - **Depends On:** []
+    - **Type:** Bugfix
+    - **Priority:** P0
+
+- [ ] **T018:** Update `.pre-commit-config.yaml` for golangci-lint
+    - **Action:** Modify the golangci-lint hook in `.pre-commit-config.yaml` to set `rev:` to `v1.57.0` as the single source of truth for the version and change `language:` from `system` to `golang` for better reproducibility.
+    - **Depends On:** [T017]
+    - **Type:** Bugfix
+    - **Priority:** P0
+
+- [ ] **T019:** Align CI Workflow golangci-lint Version
+    - **Action:** Update `.github/workflows/lint.yml` to use the same golangci-lint version specified in `.pre-commit-config.yaml` (v1.57.0) and ensure it uses the correct configuration file.
+    - **Depends On:** [T018]
+    - **Type:** Bugfix
+    - **Priority:** P0
+
+- [ ] **T020:** Update Linting Documentation
+    - **Action:** Update `docs/LINTING.md` to explain that modern golangci-lint doesn't require a `version:` field, and update `docs/PRECOMMIT.md` to emphasize that pre-commit manages golangci-lint installation when using `language: golang`.
+    - **Depends On:** [T019]
+    - **Type:** Documentation
+    - **Priority:** P1
+
+- [ ] **T021:** Verify Pre-commit and CI Linting Pass
+    - **Action:** Run `pre-commit run golangci-lint --all-files` locally and verify that the golangci-lint hooks pass with the updated configuration.
+    - **Depends On:** [T020]
+    - **Type:** Chore
+    - **Priority:** P0
+
+- [ ] **T022:** Complete T016
+    - **Action:** Verify all redundant golangci-lint configurations/versions are removed, and mark T016 as completed.
+    - **Depends On:** [T021]
     - **Type:** Chore
     - **Priority:** P2
 
