@@ -97,7 +97,7 @@
         1. Unnecessary suppressions removed, code passes static analysis
     - **depends‑on:** [T036, T038, T044]
 
-- [ ] **T041 · chore · p2: create SECURITY_SUPPRESSIONS.md document**
+- [x] **T041 · chore · p2: create SECURITY_SUPPRESSIONS.md document**
     - **context:** CR-03: Address excessive `#nosec` suppressions
     - **action:**
         1. Create document explaining security decisions
@@ -216,12 +216,3 @@
     - **done‑when:**
         1. README correctly states MIT license
     - **depends‑on:** none
-
-## clarifications & assumptions
-- [ ] **issue:** Determine all locations accepting external file paths for validation
-    - **context:** CR-08, step 1
-    - **blocking?:** yes
-
-- [ ] **issue:** Confirm all file write operations for permission standardization
-    - **context:** CR-09, step 4
-    - **blocking?:** no
