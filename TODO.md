@@ -116,7 +116,7 @@
         1. Complete mapping document of duplicated functions
     - **depends‑on:** none
 
-- [ ] **T043 · refactor · p1: replace duplicated logic with filesystem package calls**
+- [x] **T043 · refactor · p1: replace duplicated logic with filesystem package calls**
     - **context:** CR-04: Eliminate duplicate filesystem logic
     - **action:**
         1. Update `glance.go` to use `filesystem` package functions

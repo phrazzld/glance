@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -254,7 +253,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 		r.err = fmt.Errorf("invalid glance.md path for %s: %w", dir, pathErr)
 		return r
 	}
-	
+
 	// Write the generated content to file using the validated path
 	if werr := os.WriteFile(validatedPath, []byte(summary), 0o600); werr != nil { // #nosec G306 -- Changed to 0600 for security & path validated
 		r.err = fmt.Errorf("failed writing glance.md to %s: %w", dir, werr)
@@ -275,104 +274,37 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 
 // listAllDirsWithIgnores performs a BFS from `root`, collecting subdirectories
 // and merging each directory's .gitignore with its parent's chain.
+// This function now uses filesystem.ListDirsWithIgnores with type conversion for backward compatibility.
 func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitIgnore, error) {
-	var dirsList []string
-
-	// BFS queue
-	queue := []queueItem{
-		{path: root, ignoreChain: nil},
+	// Use the filesystem package function to get the directories and ignore chains
+	dirsList, dirToIgnoreChain, err := filesystem.ListDirsWithIgnores(root)
+	if err != nil {
+		return nil, nil, err
 	}
-
-	// map of directory -> chain of .gitignore objects
-	dirToChain := make(map[string][]*gitignore.GitIgnore)
-	dirToChain[root] = nil
-
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-
-		dirsList = append(dirsList, current.path)
-
-		// load .gitignore in current.path, if exists
-		localIgnore, _ := loadGitignore(current.path)
-
-		// Create a copy of the parent chain to avoid modifying it
-		var combinedChain []*gitignore.GitIgnore
-		if len(current.ignoreChain) > 0 {
-			combinedChain = make([]*gitignore.GitIgnore, len(current.ignoreChain))
-			copy(combinedChain, current.ignoreChain)
-		}
-
-		// Add the local .gitignore if it exists
-		if localIgnore != nil {
-			combinedChain = append(combinedChain, localIgnore)
-		}
-
-		dirToChain[current.path] = combinedChain
-
-		entries, err := os.ReadDir(current.path)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		for _, e := range entries {
-			if !e.IsDir() {
-				continue
-			}
-			name := e.Name()
-
-			// skip hidden or heavy directories
-			if strings.HasPrefix(name, ".") || name == "node_modules" {
-				continue
-			}
-
-			fullChildPath := filepath.Join(current.path, name)
-			rel, _ := filepath.Rel(root, fullChildPath)
-
-			// Check if this directory should be ignored by any gitignore rules
-			if isIgnored(rel, combinedChain) {
-				if logrus.IsLevelEnabled(logrus.DebugLevel) {
-					logrus.Debugf("skipping %s because of .gitignore match", rel)
-				}
-				continue
-			}
-
-			queue = append(queue, queueItem{
-				path:        fullChildPath,
-				ignoreChain: combinedChain,
-			})
-		}
+	
+	// Convert IgnoreChain to []*gitignore.GitIgnore for backward compatibility
+	dirToChain := make(map[string][]*gitignore.GitIgnore, len(dirToIgnoreChain))
+	for dir, ignoreChain := range dirToIgnoreChain {
+		dirToChain[dir] = filesystem.ExtractGitignoreMatchers(ignoreChain)
 	}
-
+	
 	return dirsList, dirToChain, nil
 }
 
 // loadGitignore parses the .gitignore file in a directory.
+// This is now a wrapper around filesystem.LoadGitignore to maintain backward compatibility.
 func loadGitignore(dir string) (*gitignore.GitIgnore, error) {
-	path := filepath.Join(dir, ".gitignore")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, nil
-	}
-	g, err := gitignore.CompileIgnoreFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return g, nil
+	return filesystem.LoadGitignore(dir)
 }
 
 // isIgnored checks a path against a chain of .gitignore patterns.
+// This function now uses filesystem.MatchesGitignore with appropriate type conversion.
 func isIgnored(rel string, chain []*gitignore.GitIgnore) bool {
-	for _, ig := range chain {
-		if ig == nil {
-			continue
-		}
-		// For directories, test both with and without trailing slash
-		// as gitignore patterns like "dir/" only match "dir/" and not "dir"
-		if ig.MatchesPath(rel) || ig.MatchesPath(rel+"/") {
-			return true
-		}
-	}
-	return false
+	// Convert raw gitignore chain to IgnoreChain
+	ignoreChain := filesystem.CreateIgnoreChain(chain, "")
+	
+	// Use the filesystem package function that provides more comprehensive matching
+	return filesystem.MatchesGitignore(rel, "", ignoreChain, true)
 }
 
 // reverseSlice reverses a slice of directory paths in-place.
@@ -387,7 +319,7 @@ func reverseSlice(s []string) {
 // -----------------------------------------------------------------------------
 
 // gatherSubGlances merges the contents of existing subdirectory glance.md files.
-// It validates all file paths to prevent path traversal vulnerabilities.
+// This implementation enhances the original by using filesystem.ReadTextFile.
 func gatherSubGlances(subdirs []string) (string, error) {
 	var combined []string
 	for _, sd := range subdirs {
@@ -397,7 +329,7 @@ func gatherSubGlances(subdirs []string) (string, error) {
 			logrus.Warnf("Skipping invalid subdirectory for glance.md collection: %v", err)
 			continue
 		}
-		
+
 		// Construct and validate the glance.md path
 		glancePath := filepath.Join(validDir, "glance.md")
 		validPath, err := filesystem.ValidateFilePath(glancePath, validDir, true, true)
@@ -405,19 +337,19 @@ func gatherSubGlances(subdirs []string) (string, error) {
 			logrus.Debugf("Skipping invalid glance.md path: %v", err)
 			continue
 		}
-		
-		// Read the validated file path
-		// #nosec G304 -- Reading validated glance.md files from subdirectories is core functionality
-		data, err := os.ReadFile(validPath)
+
+		// Use filesystem.ReadTextFile instead of os.ReadFile
+		// This provides better validation and UTF-8 handling
+		content, err := filesystem.ReadTextFile(validPath, 0, validDir)
 		if err == nil {
-			combined = append(combined, strings.ToValidUTF8(string(data), "�"))
+			combined = append(combined, content)
 		}
 	}
 	return strings.Join(combined, "\n\n"), nil
 }
 
 // readSubdirectories lists immediate subdirectories in a directory, skipping hidden or ignored ones.
-// It validates the directory path to prevent path traversal vulnerabilities.
+// This implementation uses filesystem package functions with appropriate filtering.
 func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]string, error) {
 	// Validate the directory path first
 	validDir, err := filesystem.ValidateDirPath(dir, "", true, true)
@@ -425,20 +357,29 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 		return nil, fmt.Errorf("invalid directory path: %w", err)
 	}
 	
+	// Convert raw gitignore chain to IgnoreChain
+	fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, dir)
+	
+	// Read directory entries
 	entries, err := os.ReadDir(validDir)
 	if err != nil {
 		return nil, err
 	}
+	
+	// Filter for immediate subdirectories only
 	var subdirs []string
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
 		}
+		
 		name := e.Name()
-		if strings.HasPrefix(name, ".") || name == "node_modules" {
+		fullPath := filepath.Join(validDir, name)
+		
+		// Use the filesystem package for directory filtering
+		if filesystem.ShouldIgnoreDir(fullPath, validDir, fsIgnoreChain, logrus.IsLevelEnabled(logrus.DebugLevel)) {
 			continue
 		}
-		fullPath := filepath.Join(validDir, name)
 		
 		// Validate the subdirectory path
 		validPath, err := filesystem.ValidateDirPath(fullPath, validDir, true, true)
@@ -447,85 +388,20 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 			continue
 		}
 		
-		rel, _ := filepath.Rel(validDir, validPath)
-		if isIgnored(rel, ignoreChain) {
-			if logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("🙈 Ignoring subdirectory (matched .gitignore pattern): %s", rel)
-			}
-			continue
-		}
-		subdirs = append(subdirs, fullPath)
+		subdirs = append(subdirs, validPath)
 	}
 	return subdirs, nil
 }
 
 // gatherLocalFiles reads immediate files in a directory (excluding glance.md, hidden files, etc.).
-// It validates all file paths to prevent path traversal vulnerabilities.
+// This function now uses filesystem.GatherLocalFiles with appropriate type conversion.
 func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileBytes int64, verbose bool) (map[string]string, error) {
-	// Validate the base directory first
-	validDir, err := filesystem.ValidateDirPath(dir, "", true, true)
-	if err != nil {
-		return nil, fmt.Errorf("invalid directory path for file gathering: %w", err)
-	}
+	// Convert raw gitignore chain to IgnoreChain
+	// We need to set the origin directory correctly for proper relative path calculations
+	fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, dir)
 	
-	files := make(map[string]string)
-	err = filepath.WalkDir(validDir, func(path string, d fs.DirEntry, werr error) error {
-		if werr != nil {
-			return werr
-		}
-		// skip subdirectories (beyond the current dir)
-		if d.IsDir() && path != validDir {
-			return fs.SkipDir
-		}
-		if d.IsDir() || d.Name() == "glance.md" || strings.HasPrefix(d.Name(), ".") {
-			return nil
-		}
-
-		// Validate the file path
-		validPath, pathErr := filesystem.ValidateFilePath(path, validDir, true, true)
-		if pathErr != nil {
-			if verbose {
-				logrus.Debugf("Skipping invalid file path: %v", pathErr)
-			}
-			return nil
-		}
-
-		rel, _ := filepath.Rel(validDir, validPath)
-		if isIgnored(rel, ignoreChain) {
-			if verbose {
-				logrus.Debugf("ignoring file via .gitignore chain: %s", rel)
-			}
-			return nil
-		}
-
-		// Now use our filesystem package functions for reading files and checking content type
-		isText, errCheck := filesystem.IsTextFile(validPath, validDir)
-		if errCheck != nil && verbose {
-			logrus.Debugf("error checking if file is text: %s => %v", validPath, errCheck)
-		}
-		if !isText {
-			if verbose {
-				logrus.Debugf("📊 Skipping binary/non-text file: %s", validPath)
-			}
-			return nil
-		}
-		
-		// Read the file with validation
-		contentStr, err := filesystem.ReadTextFile(validPath, maxFileBytes, validDir)
-		if err != nil {
-			if verbose {
-				logrus.Debugf("Error reading file %s: %v", validPath, err)
-			}
-			return nil
-		}
-		
-		files[rel] = contentStr
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return files, nil
+	// Use the filesystem package function that provides more comprehensive validation and handling
+	return filesystem.GatherLocalFiles(dir, fsIgnoreChain, maxFileBytes, verbose)
 }
 
 // Note: We now use filesystem.IsTextFile instead of this local function
@@ -535,65 +411,30 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileByt
 // regeneration logic and utilities
 // -----------------------------------------------------------------------------
 
+// shouldRegenerate determines if a glance.md file needs to be regenerated.
+// This function now uses filesystem.ShouldRegenerate with appropriate type conversion.
 func shouldRegenerate(dir string, globalForce bool, ignoreChain []*gitignore.GitIgnore) (bool, error) {
-	if globalForce {
-		return true, nil
-	}
-
-	glancePath := filepath.Join(dir, "glance.md")
-	glanceInfo, err := os.Stat(glancePath)
-	if err != nil {
-		return true, nil
-	}
-
-	latest, err := latestModTime(dir, ignoreChain)
-	if err != nil {
-		return false, err
-	}
-
-	if latest.After(glanceInfo.ModTime()) {
-		return true, nil
-	}
-	return false, nil
+	// Convert raw gitignore chain to IgnoreChain
+	fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, "")
+	
+	// Use the filesystem package function that provides more comprehensive handling
+	return filesystem.ShouldRegenerate(dir, globalForce, fsIgnoreChain, logrus.IsLevelEnabled(logrus.DebugLevel))
 }
 
+// latestModTime finds the most recent modification time in a directory.
+// This function now uses filesystem.LatestModTime with appropriate type conversion.
 func latestModTime(dir string, ignoreChain []*gitignore.GitIgnore) (time.Time, error) {
-	var latest time.Time
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
-		if werr != nil {
-			return werr
-		}
-		if d.IsDir() && path != dir {
-			name := d.Name()
-			if strings.HasPrefix(name, ".") || name == "node_modules" {
-				return filepath.SkipDir
-			}
-			rel, _ := filepath.Rel(dir, path)
-			if isIgnored(rel, ignoreChain) {
-				return filepath.SkipDir
-			}
-		}
-		info, errStat := d.Info()
-		if errStat != nil {
-			return nil
-		}
-		if info.ModTime().After(latest) {
-			latest = info.ModTime()
-		}
-		return nil
-	})
-	return latest, err
+	// Convert raw gitignore chain to IgnoreChain
+	fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, "")
+	
+	// Use the filesystem package function that provides more comprehensive handling
+	return filesystem.LatestModTime(dir, fsIgnoreChain, logrus.IsLevelEnabled(logrus.DebugLevel))
 }
 
+// bubbleUpParents marks parent directories for regeneration.
+// This is now a wrapper around filesystem.BubbleUpParents to maintain backward compatibility.
 func bubbleUpParents(dir, root string, needs map[string]bool) {
-	for {
-		parent := filepath.Dir(dir)
-		if parent == dir || len(parent) < len(root) {
-			break
-		}
-		needs[parent] = true
-		dir = parent
-	}
+	filesystem.BubbleUpParents(dir, root, needs)
 }
 
 // -----------------------------------------------------------------------------
