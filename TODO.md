@@ -153,7 +153,7 @@
     - **depends‑on:** [T045]
 
 ## llm
-- [ ] **T047 · feature · p2: add PromptTemplate to ServiceOptions**
+- [x] **T047 · feature · p2: add PromptTemplate to ServiceOptions**
     - **context:** CR-06: Fix LLM template handling
     - **action:**
         1. Add `PromptTemplate` field to `llm.ServiceOptions` struct
