@@ -41,14 +41,12 @@ jobs:
           cache: true
 
       # Use the official GitHub Action as per our standardized approach in docs/LINTING.md
-      # Using direct install approach for consistent version management
       - name: Install and run golangci-lint
-        run: |
-          # Install golangci-lint 2.1.1 to match local development environment
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.1.1
-
-          # Run golangci-lint with verbose output for better debugging
-          $(go env GOPATH)/bin/golangci-lint run --config=.golangci.yml --timeout=2m --verbose
+        uses: golangci/golangci-lint-action@v4
+        with:
+          # Using v1.57.0 as the target version until standardized in T032
+          version: v1.57.0
+          args: --config=.golangci.yml --timeout=2m --verbose
 
   additional-checks:
     name: Run additional static checks

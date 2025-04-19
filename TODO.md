@@ -1,7 +1,7 @@
 # todo
 
 ## ci/cd workflows
-- [ ] **T031 · chore · p0: replace insecure curl|sh install with github action**
+- [x] **T031 · chore · p0: replace insecure curl|sh install with github action**
     - **context:** CR-01: Secure CI: Replace `curl | sh` with GitHub Action
     - **action:**
         1. Remove `curl | sh` golangci-lint install step from `.github/workflows/lint.yml`
