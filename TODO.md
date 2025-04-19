@@ -107,7 +107,7 @@
     - **depends‑on:** [T040]
 
 ## filesystem
-- [ ] **T042 · refactor · p1: identify duplicate filesystem functions**
+- [x] **T042 · refactor · p1: identify duplicate filesystem functions**
     - **context:** CR-04: Eliminate duplicate filesystem logic
     - **action:**
         1. List all functions in `glance.go` duplicated in `filesystem/`
