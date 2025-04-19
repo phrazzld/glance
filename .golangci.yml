@@ -1,6 +1,5 @@
 # Optimized golangci-lint configuration for v2.1.2
 # Performance-focused configuration for Go 1.23+ compatibility
-# yaml-language-server: $schema=https://json.schemastore.org/golangci.json
 
 # Modern golangci-lint v2.x configuration
 version: "2"
@@ -35,8 +34,3 @@ issues:
   max-issues-per-linter: 10
   # Only show new issues
   new: true
-  # Exclude common false positives
-  exclude:
-    # Exclude gosec issues in test files
-    - "G304: Use of unescaped backslash in pattern used in path.Glob"
-    - "_test.go:"

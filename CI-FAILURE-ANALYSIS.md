@@ -84,14 +84,24 @@ This indicates incompatibilities between our .golangci.yml configuration and gol
 
 2. The schema changed significantly in v2.x, and our configuration was using properties that worked in v1.x but not in v2.x.
 
-### Solution for the Second Issue
+### Second Attempt: Further Compatibility Issues
 
-Update the .golangci.yml file to use only configuration properties compatible with golangci-lint v2.1.2:
+After our first update to the configuration, we encountered another error:
 
-1. Simplify the configuration structure
-2. Remove unsupported properties and sections
-3. Reorganize how we exclude issues using the compatible `issues.exclude` property
-4. Keep the essential linter enables and configuration
+```
+jsonschema: "issues" does not validate with "/properties/issues/additionalProperties": additional properties 'exclude' not allowed
+```
+
+This indicates that even our attempted fix used properties not compatible with v2.1.2.
+
+### Solution for the Configuration Issues
+
+To resolve all configuration compatibility issues, we needed to:
+
+1. Create a minimal configuration with only known-compatible properties
+2. Remove all custom excludes/includes and complex configuration
+3. Keep only the essential linter enables and basic configuration
+4. Test progressively to see which features are actually supported
 
 ## Additional Notes
 

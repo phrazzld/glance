@@ -60,7 +60,7 @@
         1. Complete audit with status of each suppression
     - **depends‑on:** none
 
-- [ ] **T037 · feature · p1: identify locations requiring path validation**
+- [x] **T037 · feature · p1: identify locations requiring path validation**
     - **context:** CR-08: Implement file path validation
     - **action:**
         1. Identify all code locations accepting file paths from external sources (CLI, config, env)
