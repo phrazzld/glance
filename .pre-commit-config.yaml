@@ -133,19 +133,19 @@ repos:
   # 2. .github/workflows/lint.yml (version parameter in golangci-lint-action)
   # 3. Documentation in docs/LINTING.md and other relevant docs
 
-  # The hook is currently commented out but will be re-enabled in T035
-  # - repo: https://github.com/golangci/golangci-lint
-  #   rev: v2.1.2  # Definitive version - all other golangci-lint versions should match this
-  #   hooks:
-  #     - id: golangci-lint
-  #       name: golangci-lint
-  #       description: Fast Go linters runner that uses .golangci.yml config
-  #       entry: golangci-lint run
-  #       types: [go]
-  #       language: golang  # Better reproducibility as pre-commit manages the installation
-  #       pass_filenames: false
-  #       args: ["--config=.golangci.yml", "--timeout=2m"]  # timeout must match the setting in .golangci.yml
-  #       exclude: '^vendor/|^precommit-tests/'
+  # Re-enabled in T035 - this hook ensures consistent linting across all environments
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.1.2  # Definitive version - all other golangci-lint versions should match this
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        description: Fast Go linters runner that uses .golangci.yml config
+        entry: golangci-lint run
+        types: [go]
+        language: golang  # Better reproducibility as pre-commit manages the installation
+        pass_filenames: false
+        args: ["--config=.golangci.yml", "--timeout=2m"]  # timeout must match the setting in .golangci.yml
+        exclude: '^vendor/|^precommit-tests/'
 
   # Security-focused hooks - skip test files
   - repo: https://github.com/pre-commit/pre-commit-hooks

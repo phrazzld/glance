@@ -39,7 +39,7 @@
         1. All documentation consistently references the same version
     - **depends‑on:** [T032]
 
-- [ ] **T035 · chore · p1: re-enable pre-commit golangci-lint hook**
+- [x] **T035 · chore · p1: re-enable pre-commit golangci-lint hook**
     - **context:** CR-07: Re-enable pre-commit linter
     - **action:**
         1. Edit `.pre-commit-config.yaml` to uncomment the golangci-lint hook
