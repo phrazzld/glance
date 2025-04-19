@@ -1,36 +1,25 @@
-# Glance - Claude Guide
+# CLAUDE.md
 
-## Build & Run Commands
-- Build: `go build -o glance`
-- Run: `./glance [--force] [--verbose] /path/to/directory`
-- Direct run: `go run . [--force] [--verbose] /path/to/directory`
-- Flags:
-  - `--force` (regenerate existing glance.md files)
-  - `--verbose` (detailed logging)
-  - `--prompt-file` (specify custom prompt template file)
-- Testing: `go test ./...` (run all tests)
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Environment Setup
-- Required: Set `GEMINI_API_KEY` in environment or `.env` file
-- Optional: Create `.env` file in project root
+## Build/Test/Lint Commands
+
+* **Run all tests:** `go test ./...`
+* **Run specific test:** `go test -run=TestName ./package` (e.g., `go test -run=TestLoadPromptTemplate .`)
+* **Run tests with race detection:** `go test -race ./...`
+* **Run golangci-lint:** `golangci-lint run --config=.golangci.yml --timeout=2m`
+* **Format code:** `go fmt ./...`
+* **Run pre-commit hooks:** `pre-commit run --all-files`
 
 ## Code Style Guidelines
-- Language: Go 1.23+ with proper error handling via returns
-- Logging: Use logrus with appropriate levels (debug/info/warn)
-- File Structure: Keep code organized by functionality with clear comments
-- Naming: Use camelCase for vars/functions, PascalCase for exported items
-- Error Handling: Use custom error types and wrap errors with context
-- Template Strings: Use text/template for prompt generation and configuration
 
-## Package Structure
-- `config`: Configuration handling (flags, env vars, defaults)
-- `errors`: Custom error types and error handling utilities
-- `filesystem`: Directory scanning and file operations
-- `llm`: LLM client interface and Gemini implementation
-- `ui`: User interface components (spinners, progress bars)
+* **Simplicity First:** Seek the simplest correct solution. Eliminate unnecessary complexity.
+* **Modularity:** Build small, focused components with clear interfaces following package-by-feature structure.
+* **Design for Testability:** Structure code for easy automated testing without mocking internal collaborators.
+* **Error Handling:** Use the project's error package for consistent, structured error handling with context.
+* **Naming:** Use descriptive names with standard Go conventions (CamelCase for exported, camelCase for private).
+* **Documentation:** Code should be self-documenting. Comments explain rationale (why), not how.
+* **NEVER suppress linter warnings/errors** - fix the root cause instead.
+* **Conventional Commits:** All commit messages must follow the spec for automated versioning.
 
-## Architecture Notes
-- Directory traversal: BFS approach with .gitignore awareness
-- File processing: Skip binary/non-text files, limit large files to 5MB
-- Retry mechanism: Multiple attempts for API calls with exponential backoff
-- Error handling: Structured error types with context and suggestions
+Remember to adhere to all principles outlined in the Development Philosophy. Quality gates require passing all pre-commit hooks and CI checks. Do not bypass hooks with `--no-verify`.

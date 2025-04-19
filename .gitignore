@@ -3,3 +3,10 @@ glance
 glance.md
 */glance.md
 .DS_Store
+architect_output/
+CODE_REVIEW.md
+
+# Symlinked documentation files
+DEVELOPMENT_PHILOSOPHY.md
+DEVELOPMENT_PHILOSOPHY_APPENDIX_GO.md
+docs/prompts
