@@ -42,13 +42,13 @@ jobs:
 
       # Use the official GitHub Action as per our standardized approach in docs/LINTING.md
       - name: Install and run golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v7
         with:
           # IMPORTANT: This version MUST match the one in .pre-commit-config.yaml
           # See docs/LINTING.md for details on version standardization
           version: v2.1.2
-          # Always use the standard configuration file
-          args: --config=.golangci.yml --timeout=2m --verbose
+          # Only include necessary arguments - the action handles paths and output format
+          args: --timeout=2m --verbose
 
   additional-checks:
     name: Run additional static checks
