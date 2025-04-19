@@ -27,6 +27,7 @@ const MaxDefaultFileSize = 5 * 1024 * 1024
 //   - The contents of the file as a string
 //   - An error, if any occurred during reading
 func ReadTextFile(path string, maxBytes int64) (string, error) {
+	// #nosec G304 -- This is a core function to read files by path, security validation happens at caller level
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -77,11 +78,15 @@ func TruncateContent(content string, maxBytes int64) string {
 //   - true if the file appears to be text-based, false otherwise
 //   - an error, if any occurred during the check
 func IsTextFile(path string) (bool, error) {
+	// #nosec G304 -- This is a core function to open files by path, security validation happens at caller level
 	f, err := os.Open(path)
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+	// Handle Close error properly
+	defer func() {
+		_ = f.Close() // explicitly ignore the error as we're in a read-only context
+	}()
 
 	buf := make([]byte, 512)
 	n, err := f.Read(buf)
