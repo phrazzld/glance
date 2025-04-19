@@ -28,6 +28,10 @@ type ServiceOptions struct {
 
 	// Verbose enables detailed logging for LLM operations
 	Verbose bool
+
+	// PromptTemplate is the template string to use for generating prompts
+	// If empty, the service will load the template from a file or use the default
+	PromptTemplate string
 }
 
 // WithMaxRetries returns a new ServiceOptions with the specified max retries value.
@@ -51,12 +55,20 @@ func (o *ServiceOptions) WithVerbose(verbose bool) *ServiceOptions {
 	return &newOpts
 }
 
+// WithPromptTemplate returns a new ServiceOptions with the specified prompt template.
+func (o *ServiceOptions) WithPromptTemplate(template string) *ServiceOptions {
+	newOpts := *o
+	newOpts.PromptTemplate = template
+	return &newOpts
+}
+
 // DefaultServiceOptions returns a ServiceOptions instance with sensible defaults.
 func DefaultServiceOptions() *ServiceOptions {
 	return &ServiceOptions{
-		MaxRetries: 3,
-		ModelName:  "gemini-2.5-flash-preview-04-17",
-		Verbose:    false,
+		MaxRetries:     3,
+		ModelName:      "gemini-2.5-flash-preview-04-17",
+		Verbose:        false,
+		PromptTemplate: "",
 	}
 }
 
