@@ -1,106 +1,67 @@
-# CI Failure Audit for PR #3 - Add pre-commit hooks and GitHub Actions workflows
+# CI Failure Audit for PR #3
 
-## Overview
-Pull Request #3 titled "Add pre-commit hooks and GitHub Actions workflows" experienced multiple CI failures. While most of the CI checks were passing, there were issues with the "pre-commit" check and Windows builds. This audit analyzes the failures and documents the implemented solutions.
+## PR Details
+- **PR Title:** Add pre-commit hooks and GitHub Actions workflows
+- **Branch:** add-precommit-and-github-actions
+- **Status:** Failed
 
-## Initial Failure Details
+## Failed Checks
+| Check | Status | Duration | Link |
+|-------|--------|----------|------|
+| Run golangci-lint | FAILED | 1m1s | [View Details](https://github.com/phrazzld/glance/actions/runs/14537551604/job/40788884861) |
 
-### Failed Check 1: Pre-commit Python Setup
-- **Workflow**: Pre-commit Checks
-- **Job**: pre-commit
-- **Status**: FAILURE
-- **Run ID**: 14536894125
-- **Job ID**: 40786958096
+## Successful Checks
+- Build on macos-latest / Go 1.23 ✅
+- Build on macos-latest / Go 1.24 ✅
+- Build on ubuntu-latest / Go 1.23 ✅
+- Build on ubuntu-latest / Go 1.24 ✅
+- Run additional static checks ✅
+- Test on Go 1.23 ✅
+- Test on Go 1.24 ✅
+- pre-commit ✅
 
-### Error Analysis
-The failure occurred during the Python setup phase of the pre-commit workflow. Specifically, the workflow was looking for Python requirement files but couldn't find them:
+## Failure Investigation
 
-```
-##[error]No file in /home/runner/work/glance/glance matched to [**/requirements.txt or **/pyproject.toml], make sure you have checked out the target repository
-```
+### Analysis
 
-This indicated that the workflow expected to find Python dependency files (either `requirements.txt` or `pyproject.toml`) to set up the Python environment properly, but these files were missing in the repository.
+1. The `golangci-lint` check is failing in the CI environment but passes locally with the same configuration.
 
-### Root Cause
-The pre-commit workflow in `.github/workflows/precommit.yml` was configured to use Python with pip caching:
+2. Recent commit history shows an attempt to fix golangci-lint compatibility issues:
+   - Most recent commit: "Fix golangci-lint compatibility issues with Go 1.24"
+   - Previous commits include "Disable golangci-lint in pre-commit" and "Update golangci-lint config"
 
-```yaml
-- name: Set up Python
-  uses: actions/setup-python@v5
-  with:
-    python-version: '3.10'
-    cache: pip
-```
+3. Local environment details:
+   - Go version: go1.24.2 darwin/arm64
+   - golangci-lint version: 2.1.1 (built with go1.24.2)
+   - Local golangci-lint run succeeds with the same configuration
 
-When `cache: pip` is specified, the action looks for Python dependency files to determine what to cache. Since these files didn't exist in the repository, the action failed.
+4. CI workflow details:
+   - The workflow installs golangci-lint v1.57.0 specifically
+   - CI is configured to use Go 1.23 for linting (for "better compatibility")
 
-## Follow-up Failure Details
+### Potential Issues
 
-After fixing the initial issue, two additional problems were discovered:
+1. **Version Mismatch**: The CI environment uses golangci-lint v1.57.0 while locally we're using v2.1.1, which could explain the difference in behavior.
 
-### Failed Check 2: Missing goimports Tool
-The pre-commit workflow failed because the `goimports` tool was not available:
+2. **Configuration Compatibility**: The `.golangci.yml` configuration may have options that work with newer versions but cause issues with v1.57.0. Several configuration options are marked as "deprecated" in comments.
 
-```
-go imports...............................................................Failed
-- hook id: go-imports
-- exit code: 1
+3. **Go Version Differences**: The workflow explicitly uses Go 1.23 for linting while the local environment uses Go 1.24.2. This version difference could cause compatibility issues with golangci-lint.
 
-Executable `goimports` not found
-```
+### Recommended Actions
 
-### Failed Check 3: Secret Detection
-The pre-commit workflow's secret detection was flagging a false positive:
+1. **Update CI Configuration**:
+   - Update the golangci-lint version in CI to match the version used locally (v2.1.1)
+   - OR align the local development environment with the CI environment
 
-```
-Detect secrets...........................................................Failed
-- hook id: detect-secrets
-- exit code: 1
+2. **Fix Configuration Issues**:
+   - Review the `.golangci.yml` file to remove any deprecated options
+   - Ensure configuration is compatible with the golangci-lint version used in CI
 
-ERROR: Potential secrets about to be committed to git repo!
+3. **Standardize Go Versions**:
+   - Consider using the same Go version for both local development and CI
+   - Update documentation to specify exact version requirements
 
-Secret Type: Secret Keyword
-Location:    config/config.go:74
-```
+4. **Additional Logging**:
+   - Add more verbose output to the CI workflow to better diagnose failures
 
-## Complete Solution Implemented
-
-I implemented the following changes to fix all issues:
-
-1. **Added a `requirements.txt` file** to the repository root with the necessary dependency for pre-commit:
-   ```
-   pre-commit>=3.0.0
-   ```
-
-2. **Updated the GitHub Actions workflow** to use the new requirements file:
-   ```yaml
-   - name: Install pre-commit
-     run: |
-       python -m pip install --upgrade pip
-       pip install -r requirements.txt
-       pre-commit --version
-   ```
-
-3. **Added Go tools installation** to the workflow to ensure `goimports` is available:
-   ```yaml
-   - name: Install Go tools
-     run: |
-       go install golang.org/x/tools/cmd/goimports@latest
-   ```
-
-4. **Suppressed the false positive secret detection** in the config file:
-   ```go
-   newConfig.APIKey = apiKey // pragma: allowlist secret
-   ```
-
-## Status of Checks After Fix
-
-After implementing these fixes, the pre-commit hooks passed successfully in the local environment. These changes should resolve the CI failures on the PR.
-
-## Lessons Learned
-
-1. Ensure all required tools for CI checks are explicitly installed in the workflow
-2. When using `actions/setup-python@v5` with `cache: pip`, always include a requirements file
-3. Use appropriate annotations (like `// pragma: allowlist secret`) to handle false positives in security scanning
-
-The implementation follows the standards defined in the repository's development philosophy, focusing on maintainability, automation, and security.
+The most straightforward solution is likely updating the golangci-lint version in the CI workflow to match what's working locally (v2.1.1).
