@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	_ "github.com/joho/godotenv" // Used by the config package for loading environment variables
 	gitignore "github.com/sabhiram/go-gitignore"
@@ -30,11 +29,7 @@ type result struct {
 	err      error
 }
 
-// queueItem is used for BFS directory scanning.
-type queueItem struct {
-	path        string
-	ignoreChain []*gitignore.GitIgnore
-}
+// No need for queueItem anymore as we're using the filesystem package for directory scanning
 
 // Removed the promptData struct - this is now part of the llm package
 
@@ -165,7 +160,9 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 		ignoreChain := dirToIgnoreChain[d]
 
 		// Check if we need to regenerate the glance.md file
-		forceDir, errCheck := shouldRegenerate(d, cfg.Force, ignoreChain)
+		// Convert ignoreChain to filesystem.IgnoreChain for ShouldRegenerate
+		fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, "")
+		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, fsIgnoreChain, cfg.Verbose)
 		if errCheck != nil && cfg.Verbose {
 			logrus.Warnf("⏱️ Couldn't check modification time for %s: %v", d, errCheck)
 		}
@@ -182,7 +179,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 
 		// Bubble up parent's regeneration flag if needed
 		if r.success && r.attempts > 0 && forceDir {
-			bubbleUpParents(d, cfg.TargetDir, needsRegen)
+			filesystem.BubbleUpParents(d, cfg.TargetDir, needsRegen)
 		}
 	}
 
@@ -291,21 +288,7 @@ func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitI
 	return dirsList, dirToChain, nil
 }
 
-// loadGitignore parses the .gitignore file in a directory.
-// This is now a wrapper around filesystem.LoadGitignore to maintain backward compatibility.
-func loadGitignore(dir string) (*gitignore.GitIgnore, error) {
-	return filesystem.LoadGitignore(dir)
-}
-
-// isIgnored checks a path against a chain of .gitignore patterns.
-// This function now uses filesystem.MatchesGitignore with appropriate type conversion.
-func isIgnored(rel string, chain []*gitignore.GitIgnore) bool {
-	// Convert raw gitignore chain to IgnoreChain
-	ignoreChain := filesystem.CreateIgnoreChain(chain, "")
-	
-	// Use the filesystem package function that provides more comprehensive matching
-	return filesystem.MatchesGitignore(rel, "", ignoreChain, true)
-}
+// Removed loadGitignore and isIgnored functions - now using filesystem package directly
 
 // reverseSlice reverses a slice of directory paths in-place.
 func reverseSlice(s []string) {
@@ -411,31 +394,8 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileByt
 // regeneration logic and utilities
 // -----------------------------------------------------------------------------
 
-// shouldRegenerate determines if a glance.md file needs to be regenerated.
-// This function now uses filesystem.ShouldRegenerate with appropriate type conversion.
-func shouldRegenerate(dir string, globalForce bool, ignoreChain []*gitignore.GitIgnore) (bool, error) {
-	// Convert raw gitignore chain to IgnoreChain
-	fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, "")
-	
-	// Use the filesystem package function that provides more comprehensive handling
-	return filesystem.ShouldRegenerate(dir, globalForce, fsIgnoreChain, logrus.IsLevelEnabled(logrus.DebugLevel))
-}
-
-// latestModTime finds the most recent modification time in a directory.
-// This function now uses filesystem.LatestModTime with appropriate type conversion.
-func latestModTime(dir string, ignoreChain []*gitignore.GitIgnore) (time.Time, error) {
-	// Convert raw gitignore chain to IgnoreChain
-	fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, "")
-	
-	// Use the filesystem package function that provides more comprehensive handling
-	return filesystem.LatestModTime(dir, fsIgnoreChain, logrus.IsLevelEnabled(logrus.DebugLevel))
-}
-
-// bubbleUpParents marks parent directories for regeneration.
-// This is now a wrapper around filesystem.BubbleUpParents to maintain backward compatibility.
-func bubbleUpParents(dir, root string, needs map[string]bool) {
-	filesystem.BubbleUpParents(dir, root, needs)
-}
+// Removed shouldRegenerate, latestModTime, and bubbleUpParents functions
+// Now using filesystem package functions directly
 
 // -----------------------------------------------------------------------------
 // utility functions

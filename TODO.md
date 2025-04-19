@@ -125,7 +125,7 @@
         1. `glance.go` calls the `filesystem` package for filesystem operations
     - **depends‑on:** [T042]
 
-- [ ] **T044 · refactor · p1: remove old filesystem code from glance.go**
+- [x] **T044 · refactor · p1: remove old filesystem code from glance.go**
     - **context:** CR-04: Eliminate duplicate filesystem logic
     - **action:**
         1. Delete obsolete functions from `glance.go`
