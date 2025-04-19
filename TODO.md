@@ -133,7 +133,7 @@
         1. No duplicate implementations remain in `glance.go`
     - **depends‑on:** [T043]
 
-- [ ] **T045 · test · p2: update tests after filesystem refactoring**
+- [x] **T045 · test · p2: update tests after filesystem refactoring**
     - **context:** CR-04: Eliminate duplicate filesystem logic
     - **action:**
         1. Update tests to target canonical implementations

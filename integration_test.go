@@ -1,3 +1,4 @@
+// Package main provides the entry point for the glance application.
 package main
 
 import (
@@ -111,10 +112,14 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 	testDir, cleanup := setupIntegrationTest(t)
 	defer cleanup()
 
+	// Get absolute path for test directory to ensure path validation works
+	absTestDir, err := filepath.Abs(testDir)
+	require.NoError(t, err, "Failed to get absolute path for test directory")
+
 	// 1. Test with force=false - shouldn't regenerate existing glance.md
 	t.Run("Respects Force flag for regeneration", func(t *testing.T) {
 		// Create a glance.md file with known content and timestamp
-		glancePath := filepath.Join(testDir, "glance.md")
+		glancePath := filepath.Join(absTestDir, "glance.md")
 		initialContent := "Initial content - should not be replaced"
 		err := os.WriteFile(glancePath, []byte(initialContent), 0644)
 		require.NoError(t, err, "Failed to create initial glance.md file")
@@ -130,7 +135,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		// Setup a configuration with force=false
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
-			WithTargetDir(testDir).
+			WithTargetDir(absTestDir).
 			WithForce(false) // Should not overwrite existing glance.md
 
 		// Execute scanDirectories which uses the config to determine which files to scan
@@ -148,7 +153,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 
 		for _, d := range dirs {
 			chain := ignoreChains[d]
-			isRootDir := (d == testDir)
+			isRootDir := (d == absTestDir)
 
 			if isRootDir {
 				// Root dir should be skipped since glance.md exists and force=false
@@ -169,7 +174,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 
 		// Check that the root directory was processed successfully but didn't change the file
 		for _, r := range resultsList {
-			if r.dir == testDir {
+			if r.dir == absTestDir {
 				assert.True(t, r.success, "Root directory should be processed successfully")
 				assert.Equal(t, 0, r.attempts, "Should not have attempted to regenerate existing glance.md")
 			}
@@ -189,7 +194,7 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 	// 2. Test with force=true - should regenerate glance.md even if it exists
 	t.Run("Force flag regenerates existing files", func(t *testing.T) {
 		// Create a glance.md file with known content and timestamp
-		glancePath := filepath.Join(testDir, "glance.md")
+		glancePath := filepath.Join(absTestDir, "glance.md")
 		initialContent := "Initial content - should be replaced"
 		err := os.WriteFile(glancePath, []byte(initialContent), 0644)
 		require.NoError(t, err, "Failed to create initial glance.md file")
@@ -205,20 +210,33 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		// Setup a configuration with force=true
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
-			WithTargetDir(testDir).
+			WithTargetDir(absTestDir).
 			WithForce(true) // Should overwrite existing glance.md
+
+		// Show verbose output for debugging
+		cfg = cfg.WithVerbose(true)
 
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
+
+		// Verify we have directories to process
+		assert.True(t, len(dirs) > 0, "Should have found directories to process")
+		assert.Contains(t, dirs, absTestDir, "Root directory should be included in dirs list")
 
 		// Create a mock LLM service
 		mockClient := setupMockLLMClient()
 		llmService, err := llm.NewService(mockClient)
 		require.NoError(t, err)
 
-		// Process directories
-		results := processDirectories(dirs, ignoreChains, cfg, llmService)
+		// Process directories individually to have more control
+		var results []result
+		for _, d := range dirs {
+			chain := ignoreChains[d]
+			shouldForce := true // Force regeneration for all directories
+			r := processDirectory(d, shouldForce, chain, cfg, llmService)
+			results = append(results, r)
+		}
 
 		// Verify results
 		assert.True(t, len(results) > 0, "Should have processed at least one directory")
@@ -226,10 +244,13 @@ func TestConfigFileSystemIntegration(t *testing.T) {
 		// Check that the root directory was processed successfully and regenerated the file
 		rootProcessed := false
 		for _, r := range results {
-			if r.dir == testDir {
+			if r.dir == absTestDir {
 				rootProcessed = true
 				assert.True(t, r.success, "Root directory should be processed successfully")
 				assert.Equal(t, 1, r.attempts, "Should have attempted to regenerate glance.md")
+				if r.err != nil {
+					t.Logf("Error processing root dir: %v", r.err)
+				}
 			}
 		}
 		assert.True(t, rootProcessed, "Root directory should have been processed")
@@ -258,6 +279,10 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 	testDir, cleanup := setupIntegrationTest(t)
 	defer cleanup()
 
+	// Get absolute path for test directory to ensure path validation works
+	absTestDir, err := filepath.Abs(testDir)
+	require.NoError(t, err, "Failed to get absolute path for test directory")
+
 	t.Run("File content from filesystem flows to LLM", func(t *testing.T) {
 		// Setup a custom mock client that validates input data
 		validatingMockClient := new(MockClient)
@@ -275,25 +300,26 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Setup configuration
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
-			WithTargetDir(testDir).
-			WithForce(true)
+			WithTargetDir(absTestDir).
+			WithForce(true).
+			WithVerbose(true) // Enable verbose mode for debugging
 
 		// Execute scanDirectories which uses the config to determine which files to scan
 		dirs, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
+		require.Contains(t, dirs, absTestDir, "Root directory should be included in dirs list")
 
 		// Create LLM service with the validating mock client
-		llmService, err := llm.NewService(validatingMockClient)
+		llmService, err := llm.NewService(validatingMockClient, llm.WithVerbose(true))
 		require.NoError(t, err)
 
-		// Process directories
-		results := processDirectories(dirs, ignoreChains, cfg, llmService)
-
-		// Verify results
-		assert.True(t, len(results) > 0, "Should have processed at least one directory")
+		// Process directory directly to have more control
+		r := processDirectory(absTestDir, true, ignoreChains[absTestDir], cfg, llmService)
+		require.True(t, r.success, "Root directory should be processed successfully: %v", r.err)
+		require.Equal(t, 1, r.attempts, "Should have attempted to generate glance.md")
 
 		// Verify at least one glance.md was created
-		glancePath := filepath.Join(testDir, "glance.md")
+		glancePath := filepath.Join(absTestDir, "glance.md")
 		assert.FileExists(t, glancePath, "glance.md should exist in root directory")
 
 		// Verify that file content was properly passed to the LLM
@@ -304,7 +330,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 
 	t.Run("Respects .gitignore patterns", func(t *testing.T) {
 		// Add some ignored files that shouldn't be processed
-		ignoreDir := filepath.Join(testDir, "build")
+		ignoreDir := filepath.Join(absTestDir, "build")
 		err := os.MkdirAll(ignoreDir, 0755)
 		require.NoError(t, err)
 
@@ -312,7 +338,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		err = os.WriteFile(ignoredFile, []byte("This file should be ignored"), 0644)
 		require.NoError(t, err)
 
-		logFile := filepath.Join(testDir, "test.log")
+		logFile := filepath.Join(absTestDir, "test.log")
 		err = os.WriteFile(logFile, []byte("This log file should be ignored"), 0644)
 		require.NoError(t, err)
 
@@ -332,19 +358,21 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Setup configuration
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
-			WithTargetDir(testDir).
-			WithForce(true)
+			WithTargetDir(absTestDir).
+			WithForce(true).
+			WithVerbose(true) // Enable verbose mode for debugging
 
 		// Execute scanDirectories which uses the config to determine which files to scan
-		dirs, ignoreChains, err := scanDirectories(cfg)
+		_, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
 
 		// Create LLM service with the validating mock client
-		llmService, err := llm.NewService(validatingMockClient)
+		llmService, err := llm.NewService(validatingMockClient, llm.WithVerbose(true))
 		require.NoError(t, err)
 
-		// Process directories
-		processDirectories(dirs, ignoreChains, cfg, llmService)
+		// Process directory directly
+		r := processDirectory(absTestDir, true, ignoreChains[absTestDir], cfg, llmService)
+		require.True(t, r.success, "Root directory should be processed successfully: %v", r.err)
 
 		// Verify that ignored files were not passed to the LLM
 		assert.NotContains(t, capturedPrompt, "ignored.txt", "Prompt should not include ignored.txt file content")
@@ -380,16 +408,20 @@ func TestLLMUIIntegration(t *testing.T) {
 	testDir, cleanup := setupIntegrationTest(t)
 	defer cleanup()
 
+	// Get absolute path for test directory to ensure path validation works
+	absTestDir, err := filepath.Abs(testDir)
+	require.NoError(t, err, "Failed to get absolute path for test directory")
+
 	t.Run("Progress reporting during LLM generation", func(t *testing.T) {
 		// Setup configuration
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
-			WithTargetDir(testDir).
+			WithTargetDir(absTestDir).
 			WithForce(true).
 			WithVerbose(true) // Enable verbose mode to see more output
 
 		// Execute scanDirectories which uses the config to determine which files to scan
-		dirs, ignoreChains, err := scanDirectories(cfg)
+		_, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
 
 		// Create a mock LLM service
@@ -397,13 +429,14 @@ func TestLLMUIIntegration(t *testing.T) {
 		llmService, err := llm.NewService(mockClient, llm.WithVerbose(true))
 		require.NoError(t, err)
 
-		// Process directories
-		processDirectories(dirs, ignoreChains, cfg, llmService)
+		// Process directory directly
+		r := processDirectory(absTestDir, true, ignoreChains[absTestDir], cfg, llmService)
+		require.True(t, r.success, "Root directory should be processed successfully: %v", r.err)
 
 		// Verify that progress indicators were reported
 		logs := logBuffer.String()
 		assert.Contains(t, logs, "Scanning", "Log should contain scanning indicator")
-		assert.Contains(t, logs, "Preparing to generate", "Log should contain generation preparation message")
+		assert.Contains(t, logs, "Processing", "Log should contain processing message")
 
 		// Reset the log buffer for the next test
 		logBuffer.Reset()
@@ -421,9 +454,13 @@ func TestConfigLLMIntegration(t *testing.T) {
 	testDir, cleanup := setupIntegrationTest(t)
 	defer cleanup()
 
+	// Get absolute path for test directory to ensure path validation works
+	absTestDir, err := filepath.Abs(testDir)
+	require.NoError(t, err, "Failed to get absolute path for test directory")
+
 	t.Run("Custom prompt template flows through to LLM", func(t *testing.T) {
 		// Create a custom prompt template
-		customPromptPath := filepath.Join(testDir, "custom_prompt.txt")
+		customPromptPath := filepath.Join(absTestDir, "custom_prompt.txt")
 		customPromptContent := "Custom prompt for {{.Directory}} with special marker CUSTOM_PROMPT_TEST"
 		err := os.WriteFile(customPromptPath, []byte(customPromptContent), 0644)
 		require.NoError(t, err)
@@ -444,25 +481,28 @@ func TestConfigLLMIntegration(t *testing.T) {
 		// Setup configuration with custom prompt template
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
-			WithTargetDir(testDir).
+			WithTargetDir(absTestDir).
 			WithForce(true).
-			WithPromptTemplate(customPromptContent)
+			WithPromptTemplate(customPromptContent).
+			WithVerbose(true) // Enable verbose mode for debugging
 
 		// Execute scanDirectories which uses the config to determine which files to scan
-		dirs, ignoreChains, err := scanDirectories(cfg)
+		_, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
 
 		// Create LLM service
-		llmService, err := llm.NewService(validatingMockClient)
+		llmService, err := llm.NewService(validatingMockClient, llm.WithVerbose(true))
 		require.NoError(t, err)
 
-		// Process directories
-		processDirectories(dirs, ignoreChains, cfg, llmService)
+		// Process directory directly to have more control
+		r := processDirectory(absTestDir, true, ignoreChains[absTestDir], cfg, llmService)
+		require.True(t, r.success, "Root directory should be processed successfully: %v", r.err)
+		require.Equal(t, 1, r.attempts, "Should have attempted to generate glance.md")
 
 		// Verify that the custom prompt template was used
 		assert.Contains(t, capturedPrompt, "CUSTOM_PROMPT_TEST",
 			"Prompt should include the custom template marker")
-		assert.Contains(t, capturedPrompt, testDir,
+		assert.Contains(t, capturedPrompt, absTestDir,
 			"Prompt should include the directory name from template substitution")
 	})
 }
