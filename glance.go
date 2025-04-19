@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	_ "github.com/joho/godotenv" // Used by the config package for loading environment variables
-	gitignore "github.com/sabhiram/go-gitignore"
 	"github.com/sirupsen/logrus"
 
 	"glance/config"
@@ -125,7 +124,7 @@ func setupLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 }
 
 // scanDirectories performs BFS scanning and gathers .gitignore chain info per directory
-func scanDirectories(cfg *config.Config) ([]string, map[string][]*gitignore.GitIgnore, error) {
+func scanDirectories(cfg *config.Config) ([]string, map[string]filesystem.IgnoreChain, error) {
 	logrus.Info("✨ Excellent! Scanning directories now... Let's explore your code!")
 
 	// Show a spinner while scanning
@@ -146,7 +145,7 @@ func scanDirectories(cfg *config.Config) ([]string, map[string][]*gitignore.GitI
 }
 
 // processDirectories generates glance.md files for each directory in the list
-func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitignore.GitIgnore, cfg *config.Config, llmService *llm.Service) []result {
+func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesystem.IgnoreChain, cfg *config.Config, llmService *llm.Service) []result {
 	logrus.Info("🧠 Preparing to generate all glance.md files... Getting ready to make your code shine!")
 
 	// Create progress bar
@@ -160,9 +159,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 		ignoreChain := dirToIgnoreChain[d]
 
 		// Check if we need to regenerate the glance.md file
-		// Convert ignoreChain to filesystem.IgnoreChain for ShouldRegenerate
-		fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, "")
-		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, fsIgnoreChain, cfg.Verbose)
+		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain, cfg.Verbose)
 		if errCheck != nil && cfg.Verbose {
 			logrus.Warnf("⏱️ Couldn't check modification time for %s: %v", d, errCheck)
 		}
@@ -190,7 +187,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string][]*gitign
 }
 
 // processDirectory processes a single directory with retry logic
-func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgnore, cfg *config.Config, llmService *llm.Service) result {
+func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreChain, cfg *config.Config, llmService *llm.Service) result {
 	r := result{dir: dir}
 
 	glancePath := filepath.Join(dir, "glance.md")
@@ -271,21 +268,10 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 
 // listAllDirsWithIgnores performs a BFS from `root`, collecting subdirectories
 // and merging each directory's .gitignore with its parent's chain.
-// This function now uses filesystem.ListDirsWithIgnores with type conversion for backward compatibility.
-func listAllDirsWithIgnores(root string) ([]string, map[string][]*gitignore.GitIgnore, error) {
+// This function now uses filesystem.ListDirsWithIgnores directly, returning the native IgnoreChain type.
+func listAllDirsWithIgnores(root string) ([]string, map[string]filesystem.IgnoreChain, error) {
 	// Use the filesystem package function to get the directories and ignore chains
-	dirsList, dirToIgnoreChain, err := filesystem.ListDirsWithIgnores(root)
-	if err != nil {
-		return nil, nil, err
-	}
-	
-	// Convert IgnoreChain to []*gitignore.GitIgnore for backward compatibility
-	dirToChain := make(map[string][]*gitignore.GitIgnore, len(dirToIgnoreChain))
-	for dir, ignoreChain := range dirToIgnoreChain {
-		dirToChain[dir] = filesystem.ExtractGitignoreMatchers(ignoreChain)
-	}
-	
-	return dirsList, dirToChain, nil
+	return filesystem.ListDirsWithIgnores(root)
 }
 
 // Removed loadGitignore and isIgnored functions - now using filesystem package directly
@@ -333,58 +319,51 @@ func gatherSubGlances(subdirs []string) (string, error) {
 
 // readSubdirectories lists immediate subdirectories in a directory, skipping hidden or ignored ones.
 // This implementation uses filesystem package functions with appropriate filtering.
-func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]string, error) {
+func readSubdirectories(dir string, ignoreChain filesystem.IgnoreChain) ([]string, error) {
 	// Validate the directory path first
 	validDir, err := filesystem.ValidateDirPath(dir, "", true, true)
 	if err != nil {
 		return nil, fmt.Errorf("invalid directory path: %w", err)
 	}
-	
-	// Convert raw gitignore chain to IgnoreChain
-	fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, dir)
-	
+
 	// Read directory entries
 	entries, err := os.ReadDir(validDir)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Filter for immediate subdirectories only
 	var subdirs []string
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
 		}
-		
+
 		name := e.Name()
 		fullPath := filepath.Join(validDir, name)
-		
+
 		// Use the filesystem package for directory filtering
-		if filesystem.ShouldIgnoreDir(fullPath, validDir, fsIgnoreChain, logrus.IsLevelEnabled(logrus.DebugLevel)) {
+		if filesystem.ShouldIgnoreDir(fullPath, validDir, ignoreChain, logrus.IsLevelEnabled(logrus.DebugLevel)) {
 			continue
 		}
-		
+
 		// Validate the subdirectory path
 		validPath, err := filesystem.ValidateDirPath(fullPath, validDir, true, true)
 		if err != nil {
 			logrus.Debugf("Skipping invalid subdirectory: %v", err)
 			continue
 		}
-		
+
 		subdirs = append(subdirs, validPath)
 	}
 	return subdirs, nil
 }
 
 // gatherLocalFiles reads immediate files in a directory (excluding glance.md, hidden files, etc.).
-// This function now uses filesystem.GatherLocalFiles with appropriate type conversion.
-func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileBytes int64, verbose bool) (map[string]string, error) {
-	// Convert raw gitignore chain to IgnoreChain
-	// We need to set the origin directory correctly for proper relative path calculations
-	fsIgnoreChain := filesystem.CreateIgnoreChain(ignoreChain, dir)
-	
-	// Use the filesystem package function that provides more comprehensive validation and handling
-	return filesystem.GatherLocalFiles(dir, fsIgnoreChain, maxFileBytes, verbose)
+// This function now uses filesystem.GatherLocalFiles directly with the IgnoreChain.
+func gatherLocalFiles(dir string, ignoreChain filesystem.IgnoreChain, maxFileBytes int64, verbose bool) (map[string]string, error) {
+	// Use the filesystem package function that provides comprehensive validation and handling
+	return filesystem.GatherLocalFiles(dir, ignoreChain, maxFileBytes, verbose)
 }
 
 // Note: We now use filesystem.IsTextFile instead of this local function

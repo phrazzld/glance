@@ -142,7 +142,7 @@
         1. All tests pass with refactored code
     - **depends‑on:** [T044]
 
-- [ ] **T046 · refactor · p2: migrate to IgnoreChain abstraction**
+- [x] **T046 · refactor · p2: migrate to IgnoreChain abstraction**
     - **context:** CR-05: Complete filesystem abstraction refactoring
     - **action:**
         1. Update functions to use `filesystem.IgnoreChain` instead of old types

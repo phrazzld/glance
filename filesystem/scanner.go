@@ -155,51 +155,6 @@ func LoadGitignore(dir string) (*gitignore.GitIgnore, error) {
 	return g, nil
 }
 
-// ExtractGitignoreMatchers converts an IgnoreChain to a slice of GitIgnore matchers.
-// This is a helper function for compatibility with code that uses the old-style
-// slice of GitIgnore pointers.
-//
-// Parameters:
-//   - chain: The IgnoreChain to convert
-//
-// Returns:
-//   - A slice of GitIgnore pointers
-func ExtractGitignoreMatchers(chain IgnoreChain) []*gitignore.GitIgnore {
-	if len(chain) == 0 {
-		return nil
-	}
-
-	matchers := make([]*gitignore.GitIgnore, 0, len(chain))
-	for _, rule := range chain {
-		matchers = append(matchers, rule.Matcher)
-	}
-	return matchers
-}
-
-// CreateIgnoreChain converts a slice of GitIgnore matchers to an IgnoreChain.
-// This is a helper function for compatibility with code that uses the old-style
-// slice of GitIgnore pointers.
-//
-// Parameters:
-//   - matchers: The slice of GitIgnore pointers to convert
-//   - originDir: The origin directory for all matchers in the chain
-//
-// Returns:
-//   - An IgnoreChain with the given matchers
-func CreateIgnoreChain(matchers []*gitignore.GitIgnore, originDir string) IgnoreChain {
-	if len(matchers) == 0 {
-		return IgnoreChain{}
-	}
-
-	chain := make(IgnoreChain, 0, len(matchers))
-	for _, matcher := range matchers {
-		if matcher == nil {
-			continue
-		}
-		chain = append(chain, IgnoreRule{
-			OriginDir: originDir,
-			Matcher:   matcher,
-		})
-	}
-	return chain
-}
+// The compatibility functions ExtractGitignoreMatchers and CreateIgnoreChain
+// have been removed as part of the migration to use IgnoreChain consistently
+// throughout the codebase.

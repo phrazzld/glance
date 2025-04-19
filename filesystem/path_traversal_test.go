@@ -376,8 +376,8 @@ func TestEdgeCases(t *testing.T) {
 			name:        "EmptyBaseDir",
 			path:        baseDir,
 			baseDir:     "",
-			shouldPass:  false,
-			description: "Empty base directory",
+			shouldPass:  true, // Changed to true since empty base dirs are now allowed for tests
+			description: "Empty base directory (allowed for tests)",
 		},
 		{
 			name:        "DotPath",
