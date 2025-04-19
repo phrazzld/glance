@@ -79,7 +79,7 @@
         2. Implementation passes basic tests
     - **depends‑on:** [T037]
 
-- [ ] **T039 · test · p1: add path traversal security tests**
+- [x] **T039 · test · p1: add path traversal security tests**
     - **context:** CR-08: Implement file path validation
     - **action:**
         1. Add tests for traversal attempts (e.g., `../etc/passwd`, absolute paths)
