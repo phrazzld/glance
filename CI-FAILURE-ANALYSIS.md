@@ -2,7 +2,7 @@
 
 ## Summary
 
-The GitHub Actions workflow "Go Linting" is failing for the PR on the `add-precommit-and-github-actions` branch. The failure occurs in the `golangci-lint-action@v4` step with the error: `Error: unknown flag: --out-format`.
+The GitHub Actions workflow "Go Linting" is failing for the PR on the `add-precommit-and-github-actions` branch. Initially, the failure occurred in the `golangci-lint-action@v4` step with the error: `Error: unknown flag: --out-format`. After fixing that, we encountered a second error with golangci-lint configuration validation: `the configuration contains invalid elements`.
 
 ## Detailed Analysis
 
@@ -62,7 +62,38 @@ Update the GitHub Action to use the latest version that's properly compatible wi
 
 2. Let the action handle the configuration path and output format automatically, as it has built-in handling for golangci-lint v2.x compatibility.
 
+## Second Failure: Configuration Validation Error
+
+After resolving the initial issue by updating to `golangci-lint-action@v7`, we encountered a new error:
+
+```
+Failed to run: Error: Command failed: /home/runner/golangci-lint-2.1.2-linux-amd64/golangci-lint config verify
+jsonschema: "issues" does not validate with "/properties/issues/additionalProperties": additional properties 'exclude-files', 'exclude-rules', 'exclude-dirs' not allowed
+jsonschema: "run" does not validate with "/properties/run/additionalProperties": additional properties 'cache', 'fast' not allowed
+jsonschema: "linters" does not validate with "/properties/linters/additionalProperties": additional properties 'disable-all' not allowed
+jsonschema: "" does not validate with "/additionalProperties": additional properties 'linters-settings' not allowed
+```
+
+This indicates incompatibilities between our .golangci.yml configuration and golangci-lint v2.1.2. The key issues:
+
+1. Several configuration properties are not supported in the v2.1.2 schema:
+   - `issues.exclude-files`, `issues.exclude-rules`, `issues.exclude-dirs`
+   - `run.cache`, `run.fast`
+   - `linters.disable-all`
+   - The entire `linters-settings` section
+
+2. The schema changed significantly in v2.x, and our configuration was using properties that worked in v1.x but not in v2.x.
+
+### Solution for the Second Issue
+
+Update the .golangci.yml file to use only configuration properties compatible with golangci-lint v2.1.2:
+
+1. Simplify the configuration structure
+2. Remove unsupported properties and sections
+3. Reorganize how we exclude issues using the compatible `issues.exclude` property
+4. Keep the essential linter enables and configuration
+
 ## Additional Notes
 
-- The cache service also reported a warning: `Failed to restore: Cache service responded with 422`, but this is not related to the main failure and is likely just because this is a new workflow or cache key.
+- The cache service also reported a warning: `Failed to restore: Cache service responded with 422`, but this is not related to the main failures and is likely just because this is a new workflow or cache key.
 - All other workflows (Go Build and Go Tests) are passing successfully, indicating that our code changes themselves are not causing issues.

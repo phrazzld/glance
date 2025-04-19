@@ -1,117 +1,42 @@
-# Optimized golangci-lint configuration
+# Optimized golangci-lint configuration for v2.1.2
 # Performance-focused configuration for Go 1.23+ compatibility
 # yaml-language-server: $schema=https://json.schemastore.org/golangci.json
-#
-# IMPORTANT: This configuration is used by golangci-lint v2.1.2
-# All environments (CI and pre-commit) must use this standardized version
-# See .pre-commit-config.yaml and .github/workflows/lint.yml for version settings
 
-# Modern golangci-lint configuration (v1.50.0+) requires version: "2"
+# Modern golangci-lint v2.x configuration
 version: "2"
 
 run:
-  # Timeout for running linters, increased from default but reduced from 5m
-  # Must be synchronized with the timeout arg in .pre-commit-config.yaml
+  # Timeout for running linters
   timeout: 2m
-
-  # Don't run golangci-lint on tests by default to speed up
-  # tests will be handled by go test instead
+  # Don't run on test files
   tests: false
-
-  # Directories/files to skip - reduces unnecessary scanning
-  # Deprecated: skip-dirs (moved to issues.exclude-dirs below)
-  # skip-dirs:
-  #   - vendor
-  #   - testdata
-  #   - precommit-tests
-
-  # Skip test files to speed up linting
-  # Deprecated: skip-files (moved to issues.exclude-files below)
-  # skip-files:
-  #   - "_test\\.go$"
-
-  # Optimize by caching results
-  cache: true
-
-  # Enable faster analysis of large files
+  # Allow analysis of large codebases
   allow-parallel-runners: true
-
-  # Focus on main code first
   allow-serial-runners: true
 
-  # Only run fast linters by default
-  fast: true
-
-# Only enable the most important linters that provide strong value
+# Only enable specific linters with explicit configuration
 linters:
-  # Disable all linters by default then enable the most valuable ones
-  disable-all: true
   enable:
-    # Essential linters - should always run
+    # Essential linters
     - errcheck          # Check for unchecked errors
     - govet             # Examine code for suspicious constructs
     - ineffassign       # Detect unused assignments
     - staticcheck       # Static analysis checks
     - unused            # Find unused variables, functions, etc.
+    # Additional useful linters
+    - misspell          # Find commonly misspelled words
+    - gosec             # Security checks
 
-    # Non-formatter linters
-    - misspell          # Find commonly misspelled words - very fast
-
-    # Security linters - worth the performance cost
-    - gosec             # Security checks - relatively fast
-
-# Optimize linter configurations for performance
-linters-settings:
-  errcheck:
-    # Only check critical errors (performance optimization)
-    check-type-assertions: false
-    check-blank: false
-
-  govet:
-    # Disable the more expensive checks
-    check-shadowing: false
-    enable-all: false
-
-  gosec:
-    # Skip some rules that cause more false positives
-    excludes:
-      - G204  # Subprocess with variable
-      - G107  # URL with variable formatted string
-      - G304  # File with variable path
-
-  goimports:
-    # Optimize imports performance by prioritizing local packages
-    local-prefixes: "github.com/phrazzld/glance"
-
-# Optimize issue handling for performance
+# Configure specific linter settings
 issues:
-  # Exclude rules for tests and generated code to focus on important issues
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
-        - errcheck
-
-    - path: precommit-tests/
-      linters:
-        - all
-
   # Don't show the same issue multiple times
   max-same-issues: 3
-
-  # Limit number of issues per linter to avoid overwhelming output
+  # Limit number of issues per linter
   max-issues-per-linter: 10
-
   # Only show new issues
   new: true
-
-  # Exclude directories from linting
-  exclude-dirs:
-    - vendor
-    - testdata
-    - precommit-tests
-
-  # Exclude files from linting (moved from run.skip-files)
-  exclude-files:
-    - ".*\\.generated\\.go$"
-    - "_test\\.go$"
+  # Exclude common false positives
+  exclude:
+    # Exclude gosec issues in test files
+    - "G304: Use of unescaped backslash in pattern used in path.Glob"
+    - "_test.go:"
