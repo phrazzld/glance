@@ -81,7 +81,11 @@ type GeminiClient struct {
 	options *ClientOptions
 }
 
-// NewGeminiClient creates a new client for the Google Gemini API.
+// NewGeminiClient is a function variable to create a new client for the Google Gemini API.
+// This allows for easier mocking in tests.
+var NewGeminiClient = newGeminiClient
+
+// newGeminiClient is the actual implementation for creating a new client for the Google Gemini API.
 //
 // Parameters:
 //   - apiKey: The API key for authenticating with the Gemini API  // pragma: allowlist secret
@@ -90,7 +94,7 @@ type GeminiClient struct {
 // Returns:
 //   - A new GeminiClient instance
 //   - An error if client creation fails
-func NewGeminiClient(apiKey string, options *ClientOptions) (*GeminiClient, error) {
+func newGeminiClient(apiKey string, options *ClientOptions) (*GeminiClient, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}

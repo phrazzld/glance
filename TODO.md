@@ -179,7 +179,7 @@
         2. Fallback loading is removed
     - **depends‑on:** [T048]
 
-- [ ] **T050 · test · p2: add tests for custom template handling**
+- [x] **T050 · test · p2: add tests for custom template handling**
     - **context:** CR-06: Fix LLM template handling
     - **action:**
         1. Test service with custom template

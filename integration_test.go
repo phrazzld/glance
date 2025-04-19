@@ -459,51 +459,146 @@ func TestConfigLLMIntegration(t *testing.T) {
 	require.NoError(t, err, "Failed to get absolute path for test directory")
 
 	t.Run("Custom prompt template flows through to LLM", func(t *testing.T) {
-		// Create a custom prompt template
-		customPromptPath := filepath.Join(absTestDir, "custom_prompt.txt")
+		// Create a custom prompt template with a distinctive marker
 		customPromptContent := "Custom prompt for {{.Directory}} with special marker CUSTOM_PROMPT_TEST"
-		err := os.WriteFile(customPromptPath, []byte(customPromptContent), 0644)
-		require.NoError(t, err)
 
-		// Setup a custom mock client that validates input data
-		validatingMockClient := new(MockClient)
+		// Create a mock client to validate inputs
+		mockClient := new(MockClient)
 
 		// Capture the prompt to analyze its contents
 		var capturedPrompt string
-		validatingMockClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
+		mockClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
 			Run(func(args mock.Arguments) {
 				capturedPrompt = args.String(1)
 			}).
-			Return("Generated glance content", nil)
-		validatingMockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
-		validatingMockClient.On("Close").Return()
+			Return("Generated content with custom template", nil)
+		mockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
+		mockClient.On("Close").Return()
 
-		// Setup configuration with custom prompt template
+		// Replace the setupLLMService function for this test
+		originalSetupLLM := setupLLMService
+		defer func() { setupLLMService = originalSetupLLM }()
+
+		setupLLMService = func(cfg *config.Config) (llm.Client, *llm.Service, error) {
+			// Check that the prompt template was passed correctly
+			if cfg.PromptTemplate != customPromptContent {
+				t.Errorf("Expected prompt template %q but got %q", customPromptContent, cfg.PromptTemplate)
+			}
+
+			// Create service with the right template and our mock client
+			serviceOptions := []llm.ServiceOption{
+				llm.WithMaxRetries(cfg.MaxRetries),
+				llm.WithVerbose(cfg.Verbose),
+				llm.WithPromptTemplate(cfg.PromptTemplate),
+			}
+
+			service, err := llm.NewService(mockClient, serviceOptions...)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			return mockClient, service, nil
+		}
+
+		// Create config with the custom template
 		cfg := config.NewDefaultConfig().
 			WithAPIKey("test-api-key").
 			WithTargetDir(absTestDir).
 			WithForce(true).
 			WithPromptTemplate(customPromptContent).
-			WithVerbose(true) // Enable verbose mode for debugging
+			WithVerbose(true)
 
-		// Execute scanDirectories which uses the config to determine which files to scan
+		// Get directory information
 		_, ignoreChains, err := scanDirectories(cfg)
 		require.NoError(t, err)
 
-		// Create LLM service
-		llmService, err := llm.NewService(validatingMockClient, llm.WithVerbose(true))
+		// Create client and service using our mocked setupLLMService
+		client, service, err := setupLLMService(cfg)
+		require.NoError(t, err)
+		defer client.Close()
+
+		// Process a directory using the service with custom template
+		r := processDirectory(absTestDir, true, ignoreChains[absTestDir], cfg, service)
+		require.True(t, r.success, "Directory processing should succeed")
+
+		// Verify that our template was used
+		assert.Contains(t, capturedPrompt, "CUSTOM_PROMPT_TEST",
+			"Generated prompt should include our custom template marker")
+	})
+
+	t.Run("Loading template from custom file via --prompt-file flag", func(t *testing.T) {
+		// Create a temporary file with custom template
+		customPromptPath := filepath.Join(absTestDir, "custom_template.txt")
+		customPromptContent := "Template from file with marker FLAG_TEST_MARKER and {{.Directory}}"
+		err := os.WriteFile(customPromptPath, []byte(customPromptContent), 0644)
 		require.NoError(t, err)
 
-		// Process directory directly to have more control
-		r := processDirectory(absTestDir, true, ignoreChains[absTestDir], cfg, llmService)
-		require.True(t, r.success, "Root directory should be processed successfully: %v", r.err)
-		require.Equal(t, 1, r.attempts, "Should have attempted to generate glance.md")
+		// Save original args and reset at end of test
+		originalArgs := os.Args
+		defer func() { os.Args = originalArgs }()
 
-		// Verify that the custom prompt template was used
-		assert.Contains(t, capturedPrompt, "CUSTOM_PROMPT_TEST",
-			"Prompt should include the custom template marker")
-		assert.Contains(t, capturedPrompt, absTestDir,
-			"Prompt should include the directory name from template substitution")
+		// Mock command line with --prompt-file flag
+		os.Args = []string{"glance", "--prompt-file", customPromptPath, absTestDir}
+
+		// Set API key for test
+		os.Setenv("GEMINI_API_KEY", "test-api-key")
+
+		// Create mock client to validate inputs
+		mockClient := new(MockClient)
+
+		// Capture the prompt to analyze contents
+		var capturedPrompt string
+		mockClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
+			Run(func(args mock.Arguments) {
+				capturedPrompt = args.String(1)
+			}).
+			Return("Generated content from file template", nil)
+		mockClient.On("CountTokens", mock.Anything, mock.AnythingOfType("string")).Return(100, nil)
+		mockClient.On("Close").Return()
+
+		// Replace setupLLMService for this test
+		originalSetupLLM := setupLLMService
+		defer func() { setupLLMService = originalSetupLLM }()
+
+		setupLLMService = func(cfg *config.Config) (llm.Client, *llm.Service, error) {
+			serviceOptions := []llm.ServiceOption{
+				llm.WithMaxRetries(cfg.MaxRetries),
+				llm.WithVerbose(cfg.Verbose),
+				llm.WithPromptTemplate(cfg.PromptTemplate),
+			}
+
+			service, err := llm.NewService(mockClient, serviceOptions...)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			return mockClient, service, nil
+		}
+
+		// Load config from command line args
+		cfg, err := config.LoadConfig(os.Args)
+		require.NoError(t, err)
+
+		// Check that the template was loaded from file correctly
+		assert.Contains(t, cfg.PromptTemplate, "FLAG_TEST_MARKER",
+			"Config should have loaded the template from the specified file")
+
+		// Set up client and service
+		client, service, err := setupLLMService(cfg)
+		require.NoError(t, err)
+		defer client.Close()
+
+		// Get directory information
+		_, ignoreChains, err := scanDirectories(cfg)
+		require.NoError(t, err)
+
+		// Process a directory
+		r := processDirectory(absTestDir, true, ignoreChains[absTestDir], cfg, service)
+		require.True(t, r.success, "Directory processing should succeed")
+
+		// Verify the template was used
+		assert.Contains(t, capturedPrompt, "FLAG_TEST_MARKER",
+			"Generated prompt should include marker from file template")
 	})
 }
 

@@ -47,7 +47,7 @@ func main() {
 	// Set up logging based on the verbose flag
 	setupLogging(cfg.Verbose)
 
-	// Set up the LLM client and service
+	// Set up the LLM client and service using the function variable
 	llmClient, llmService, err := setupLLMService(cfg)
 	if err != nil {
 		logrus.Fatalf("🚫 Failed to initialize LLM service: %v", err)
@@ -93,8 +93,15 @@ func setupLogging(verbose bool) {
 	})
 }
 
-// setupLLMService initializes the LLM client and service
-func setupLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
+// setupLLMServiceFunc is the function type for initializing the LLM client and service
+type setupLLMServiceFunc func(cfg *config.Config) (llm.Client, *llm.Service, error)
+
+// setupLLMService is a function variable for initializing the LLM client and service
+// This allows for easier mocking in tests
+var setupLLMService setupLLMServiceFunc = setupLLMServiceImpl
+
+// setupLLMServiceImpl is the actual implementation for initializing the LLM client and service
+func setupLLMServiceImpl(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	// Create client options
 	clientOptions := llm.DefaultClientOptions().
 		WithModelName("gemini-2.5-flash-preview-04-17").
@@ -111,6 +118,7 @@ func setupLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	serviceOptions := []llm.ServiceOption{
 		llm.WithMaxRetries(cfg.MaxRetries),
 		llm.WithVerbose(cfg.Verbose),
+		llm.WithPromptTemplate(cfg.PromptTemplate),
 	}
 
 	// Create the service
