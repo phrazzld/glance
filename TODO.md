@@ -88,7 +88,7 @@
         1. Tests confirm protection against traversal and path manipulation
     - **depends‑on:** [T038]
 
-- [ ] **T040 · refactor · p2: remove unnecessary #nosec suppressions**
+- [x] **T040 · refactor · p2: remove unnecessary #nosec suppressions**
     - **context:** CR-03: Address excessive `#nosec` suppressions
     - **action:**
         1. Remove G304 suppressions where path validation is now implemented

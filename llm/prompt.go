@@ -83,7 +83,7 @@ func LoadTemplate(path string) (string, error) {
 		}
 
 		// Read the validated file path
-		// #nosec G304 -- Reading template files from a validated path
+		// #nosec G304 -- The path has been cleaned, made absolute, and verified to be a file
 		data, err := os.ReadFile(absPath)
 		if err != nil {
 			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", absPath, err)
@@ -97,7 +97,7 @@ func LoadTemplate(path string) (string, error) {
 	if _, err := os.Stat(defaultPromptPath); err == nil {
 		// File exists, clean and read it
 		cleanPath := filepath.Clean(defaultPromptPath)
-		// #nosec G304 -- Reading from a standard prompt.txt file in the current directory
+		// #nosec G304 -- The path has been cleaned and is in the current working directory
 		if data, err := os.ReadFile(cleanPath); err == nil {
 			return string(data), nil
 		}

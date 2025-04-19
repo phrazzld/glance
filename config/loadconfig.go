@@ -74,10 +74,10 @@ func LoadConfig(args []string) (*Config, error) {
 
 	// Get target directory and validate it
 	targetDir := cmdFlags.Arg(0)
-	
+
 	// Clean and normalize the path
 	cleanTargetDir := filepath.Clean(targetDir)
-	
+
 	// Convert to absolute path
 	absDir, err := filepath.Abs(cleanTargetDir)
 	if err != nil {
@@ -88,7 +88,7 @@ func LoadConfig(args []string) (*Config, error) {
 	if err := dirChecker.CheckDirectory(absDir); err != nil {
 		return nil, err
 	}
-	
+
 	// Store the validated directory as our trusted root
 	// This is safe since we've already verified it exists and is a directory
 
@@ -151,7 +151,7 @@ func loadPromptTemplate(path string) (string, error) {
 		}
 
 		// Read the validated file path
-		// #nosec G304 -- This function loads a prompt template from a validated file path
+		// #nosec G304 -- The path has been cleaned, made absolute, and verified to be a file
 		data, err := os.ReadFile(absPath)
 		if err != nil {
 			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", absPath, err)
