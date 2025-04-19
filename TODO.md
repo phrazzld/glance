@@ -161,7 +161,7 @@
         1. Field exists in struct
     - **depends‑on:** none
 
-- [ ] **T048 · feature · p2: add WithPromptTemplate option function**
+- [x] **T048 · feature · p2: add WithPromptTemplate option function**
     - **context:** CR-06: Fix LLM template handling
     - **action:**
         1. Create `WithPromptTemplate(template string) ServiceOption` function
