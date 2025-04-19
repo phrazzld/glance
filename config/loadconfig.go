@@ -116,6 +116,7 @@ func LoadConfig(args []string) (*Config, error) {
 // and falls back to the default prompt template if neither is available.
 func loadPromptTemplate(path string) (string, error) {
 	if path != "" {
+		// #nosec G304 -- This function loads a prompt template from a file path specified by config
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", path, err)
@@ -123,6 +124,7 @@ func loadPromptTemplate(path string) (string, error) {
 		return string(data), nil
 	}
 
+	// #nosec G304 -- Reading from a standard prompt.txt file in the current directory
 	if data, err := os.ReadFile("prompt.txt"); err == nil {
 		return string(data), nil
 	}
