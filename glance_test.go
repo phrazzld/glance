@@ -59,7 +59,7 @@ func TestFileSystemPackageUsage(t *testing.T) {
 	// Demonstrate bubbling up regeneration flags
 	needs := make(map[string]bool)
 	filesystem.BubbleUpParents(tempDir, filepath.Dir(tempDir), needs)
-	
+
 	// That's enough to verify we can use the filesystem package functions
 	// directly without depending on the removed functions in glance.go
 }

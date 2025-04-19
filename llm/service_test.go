@@ -268,6 +268,38 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		assert.NoError(t, err) // Should handle nil fileMap gracefully
 		assert.Equal(t, expectedResponse, result)
 	})
+
+	// Test with prompt template from options
+	t.Run("Use prompt template from options", func(t *testing.T) {
+		// Reset mock
+		mockClient = new(MockClient)
+
+		// Create a custom template
+		customTemplate := "Custom template from options with {{.Directory}}"
+
+		// Setup service with mock client and custom template option
+		service, err := NewService(mockClient, WithPromptTemplate(customTemplate))
+		assert.NoError(t, err)
+
+		// Setup expectations for the mock
+		// The mock would receive a prompt generated from the custom template
+		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Run(func(args mock.Arguments) {
+			// Verify that the prompt contains the custom template
+			prompt := args.String(1)
+			assert.Contains(t, prompt, "Custom template from options with")
+			assert.Contains(t, prompt, dir) // Should contain the directory name
+		}).Return(expectedResponse, nil).Once()
+
+		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
+
+		// Call the method
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+
+		// Verify results
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResponse, result)
+		mockClient.AssertExpectations(t)
+	})
 }
 
 func TestServiceOptions(t *testing.T) {
@@ -324,6 +356,12 @@ func TestServiceOptionFunctions(t *testing.T) {
 	verboseOption := WithVerbose(true)
 	verboseOption(options)
 	assert.True(t, options.Verbose)
+
+	// Apply WithPromptTemplate
+	promptTemplate := "Custom prompt template"
+	promptTemplateOption := WithPromptTemplate(promptTemplate)
+	promptTemplateOption(options)
+	assert.Equal(t, promptTemplate, options.PromptTemplate)
 
 	// Test invalid option values (should still work)
 	negativeRetries := WithMaxRetries(-1)

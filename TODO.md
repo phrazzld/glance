@@ -169,7 +169,7 @@
         1. Function exists and works
     - **depends‑on:** [T047]
 
-- [ ] **T049 · refactor · p2: update service to use stored template**
+- [x] **T049 · refactor · p2: update service to use stored template**
     - **context:** CR-06: Fix LLM template handling
     - **action:**
         1. Modify service to store template from options
