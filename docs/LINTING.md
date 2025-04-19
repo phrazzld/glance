@@ -2,6 +2,9 @@
 
 This document establishes the standardized approach for golangci-lint usage across the Glance project.
 
+> **IMPORTANT:** Glance has standardized on golangci-lint **v2.1.2** across all environments.
+> This version must be used consistently in local development, pre-commit hooks, and CI workflows.
+
 ## Standardized Approach
 
 After careful consideration of workflow efficiency, consistency, and best practices, we have established the following standardized approach for golangci-lint invocation:
@@ -52,7 +55,7 @@ golangci-lint is configured in `.pre-commit-config.yaml`:
 
 ```yaml
 - repo: https://github.com/golangci/golangci-lint
-  rev: v1.57.0  # Definitive version - all other golangci-lint versions should match this
+  rev: v2.1.2  # Definitive version - all other golangci-lint versions should match this
   hooks:
     - id: golangci-lint
       name: golangci-lint
@@ -76,7 +79,7 @@ golangci-lint is configured in `.github/workflows/lint.yml`:
   uses: golangci/golangci-lint-action@v4
   with:
     # IMPORTANT: This version must match exactly the one in .pre-commit-config.yaml
-    version: v1.57.0  # Must match 'rev:' in .pre-commit-config.yaml's golangci-lint hook
+    version: v2.1.2  # Must match 'rev:' in .pre-commit-config.yaml's golangci-lint hook
     args: --config=.golangci.yml --timeout=2m  # Use same config and timeout as in .golangci.yml
     only-new-issues: true
 ```
@@ -87,9 +90,9 @@ golangci-lint is configured in `.github/workflows/lint.yml`:
 
 The golangci-lint configuration in `.golangci.yml` follows the modern structure:
 
-1. **Modern Configuration Format**: Using `version: "2"` for compatibility with golangci-lint 1.50.0+
-   - Previous versions of golangci-lint (pre-1.50.0) used a legacy format without a version field
-   - The modern format requires explicitly setting `version: "2"` for clarity and forward compatibility
+1. **Modern Configuration Format**: Using `version: "2"` for compatibility with golangci-lint v2.x
+   - This configuration format is required for golangci-lint v2.x
+   - The modern format explicitly sets `version: "2"` for clarity and forward compatibility
 
 2. **Top-level Sections**: The configuration is organized with the following top-level sections:
    - `run:` - For execution settings like timeout, include/exclude paths

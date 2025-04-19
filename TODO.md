@@ -31,7 +31,7 @@
         2. CI workflow uses standard `.golangci.yml` config
     - **depends‑on:** [T031, T032]
 
-- [ ] **T034 · chore · p1: update docs for standard golangci-lint version**
+- [x] **T034 · chore · p1: update docs for standard golangci-lint version**
     - **context:** CR-02: Standardize golangci-lint version & configuration
     - **action:**
         1. Update docs (`README.md`, `docs/LINTING.md`, `docs/GITHUB_ACTIONS.md`) to reference standard version

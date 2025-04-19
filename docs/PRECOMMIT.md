@@ -40,7 +40,7 @@ If you previously installed golangci-lint manually, you can continue to use it f
 brew install golangci-lint
 
 # Using Go (make sure to use the version specified in .pre-commit-config.yaml)
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.0
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.1.2
 ```
 
 > **Note:** For version consistency, always check the current version in `.pre-commit-config.yaml`

@@ -330,7 +330,7 @@ We have standardized on specific methods for installing and running golangci-lin
    Example configuration in `.pre-commit-config.yaml`:
    ```yaml
    - repo: https://github.com/golangci/golangci-lint
-     rev: v1.57.0  # This is the source of truth for golangci-lint version
+     rev: v2.1.2  # This is the source of truth for golangci-lint version
      hooks:
        - id: golangci-lint
          name: golangci-lint
@@ -348,7 +348,7 @@ We have standardized on specific methods for installing and running golangci-lin
    - name: Install golangci-lint
      uses: golangci/golangci-lint-action@v4
      with:
-       version: v1.57.0  # Must match the version in .pre-commit-config.yaml
+       version: v2.1.2  # Must match the version in .pre-commit-config.yaml
        args: --config=.golangci.yml
        only-new-issues: true
    ```

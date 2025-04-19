@@ -138,7 +138,7 @@ sudo apt install pre-commit
 brew install golangci-lint
 
 # Using Go (use the version specified in .pre-commit-config.yaml)
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.1.2
 ```
 
 > **Note:** For version consistency, check the current version in `.pre-commit-config.yaml`
