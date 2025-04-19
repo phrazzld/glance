@@ -96,6 +96,13 @@ func WithVerbose(verbose bool) ServiceOption {
 	}
 }
 
+// WithPromptTemplate configures the prompt template for the service.
+func WithPromptTemplate(template string) ServiceOption {
+	return func(o *ServiceOptions) {
+		o.PromptTemplate = template
+	}
+}
+
 // NewService creates a new LLM Service with the specified client and options.
 //
 // Parameters:
