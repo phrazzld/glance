@@ -56,6 +56,7 @@ local file contents:
 func LoadTemplate(path string) (string, error) {
 	// If path is provided, try to load from it
 	if path != "" {
+		// #nosec G304 -- Reading template files is part of core functionality
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", path, err)
@@ -64,6 +65,7 @@ func LoadTemplate(path string) (string, error) {
 	}
 
 	// No path provided, try to load from default location
+	// #nosec G304 -- Reading template files is part of core functionality
 	if data, err := os.ReadFile("prompt.txt"); err == nil {
 		return string(data), nil
 	}

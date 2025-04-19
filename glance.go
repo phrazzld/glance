@@ -384,6 +384,7 @@ func reverseSlice(s []string) {
 func gatherSubGlances(subdirs []string) (string, error) {
 	var combined []string
 	for _, sd := range subdirs {
+		// #nosec G304 -- Reading glance.md files from subdirectories is core functionality
 		data, err := os.ReadFile(filepath.Join(sd, "glance.md"))
 		if err == nil {
 			combined = append(combined, strings.ToValidUTF8(string(data), "�"))
@@ -453,6 +454,7 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileByt
 			}
 			return nil
 		}
+		// #nosec G304 -- Reading files is core functionality of this application
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return nil
