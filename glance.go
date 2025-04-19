@@ -250,7 +250,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 	}
 
 	// Write the generated content to file
-	if werr := os.WriteFile(glancePath, []byte(summary), 0o644); werr != nil {
+	if werr := os.WriteFile(glancePath, []byte(summary), 0o600); werr != nil { // #nosec G306 -- Changing to 0600 for security
 		r.err = fmt.Errorf("failed writing glance.md to %s: %w", dir, werr)
 		return r
 	}
@@ -472,11 +472,15 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileByt
 
 // isTextFile checks a file's content type by reading its first 512 bytes.
 func isTextFile(path string) (bool, error) {
+	// #nosec G304 -- File operations with variable paths are core to this application
 	f, err := os.Open(path)
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+	// Handle Close error properly
+	defer func() {
+		_ = f.Close() // explicitly ignore the error as we're in a read-only context
+	}()
 
 	buf := make([]byte, 512)
 	n, err := f.Read(buf)
