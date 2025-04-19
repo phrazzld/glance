@@ -198,7 +198,7 @@
         1. Constant is defined with documentation
     - **depends‑on:** none
 
-- [ ] **T052 · refactor · p3: use DefaultFileMode in file writes**
+- [x] **T052 · refactor · p3: use DefaultFileMode in file writes**
     - **context:** CR-09: Document file permissions rationale
     - **action:**
         1. Replace hardcoded `0600` with `DefaultFileMode`

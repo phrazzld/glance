@@ -257,7 +257,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	}
 
 	// Write the generated content to file using the validated path
-	if werr := os.WriteFile(validatedPath, []byte(summary), 0o600); werr != nil { // #nosec G306 -- Changed to 0600 for security & path validated
+	if werr := os.WriteFile(validatedPath, []byte(summary), filesystem.DefaultFileMode); werr != nil { // Path validated & using secure permissions
 		r.err = fmt.Errorf("failed writing glance.md to %s: %w", dir, werr)
 		return r
 	}
