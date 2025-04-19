@@ -44,8 +44,10 @@ jobs:
       - name: Install and run golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
-          # Using v2.1.2 as our standardized version across all environments
+          # IMPORTANT: This version MUST match the one in .pre-commit-config.yaml
+          # See docs/LINTING.md for details on version standardization
           version: v2.1.2
+          # Always use the standard configuration file
           args: --config=.golangci.yml --timeout=2m --verbose
 
   additional-checks:

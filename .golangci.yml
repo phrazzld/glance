@@ -1,6 +1,10 @@
 # Optimized golangci-lint configuration
 # Performance-focused configuration for Go 1.23+ compatibility
 # yaml-language-server: $schema=https://json.schemastore.org/golangci.json
+#
+# IMPORTANT: This configuration is used by golangci-lint v2.1.2
+# All environments (CI and pre-commit) must use this standardized version
+# See .pre-commit-config.yaml and .github/workflows/lint.yml for version settings
 
 # Modern golangci-lint configuration (v1.50.0+) requires version: "2"
 version: "2"

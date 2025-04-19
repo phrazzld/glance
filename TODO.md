@@ -21,7 +21,7 @@
         2. Pre-commit config is updated
     - **depends‑on:** none
 
-- [ ] **T033 · chore · p1: configure golangci-lint-action version in CI workflow**
+- [x] **T033 · chore · p1: configure golangci-lint-action version in CI workflow**
     - **context:** CR-02: Standardize golangci-lint version & configuration
     - **action:**
         1. Configure GitHub Action with version from T032
