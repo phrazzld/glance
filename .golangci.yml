@@ -32,5 +32,3 @@ issues:
   max-same-issues: 3
   # Limit number of issues per linter
   max-issues-per-linter: 10
-  # Only show new issues
-  new: true
