@@ -189,7 +189,7 @@
     - **depends‑on:** [T049]
 
 ## misc
-- [ ] **T051 · feature · p3: add DefaultFileMode constant**
+- [x] **T051 · feature · p3: add DefaultFileMode constant**
     - **context:** CR-09: Document file permissions rationale
     - **action:**
         1. Add `const DefaultFileMode = 0o600` in appropriate package

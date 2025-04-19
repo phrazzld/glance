@@ -14,6 +14,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// DefaultFileMode defines the file permission mode for files created by the application.
+// Value 0o600 (rw-------) ensures files are only readable and writable by the owner
+// and not accessible to group members or other users. This is important for security
+// as glance.md files may contain sensitive code analysis or information derived
+// from private code repositories.
+const DefaultFileMode = 0o600
+
 // LatestModTime finds the most recent modification time of any file or directory
 // in the specified directory (recursively searched).
 //
