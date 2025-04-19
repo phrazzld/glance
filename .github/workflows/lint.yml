@@ -37,18 +37,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'  # Use 1.23 for better compatibility with golangci-lint
+          go-version: '1.24'  # Updated to match local development environment
           cache: true
 
       # Use the official GitHub Action as per our standardized approach in docs/LINTING.md
-      # Using direct install approach to avoid version issues with Go 1.24
+      # Using direct install approach for consistent version management
       - name: Install and run golangci-lint
         run: |
-          # Install golangci-lint
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.57.0
+          # Install golangci-lint 2.1.1 to match local development environment
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.1.1
 
-          # Run golangci-lint
-          $(go env GOPATH)/bin/golangci-lint run --config=.golangci.yml --timeout=2m
+          # Run golangci-lint with verbose output for better debugging
+          $(go env GOPATH)/bin/golangci-lint run --config=.golangci.yml --timeout=2m --verbose
 
   additional-checks:
     name: Run additional static checks
@@ -63,7 +63,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'  # Use 1.23 for better compatibility
+          go-version: '1.24'  # Updated to match local development environment
           cache: true
 
       - name: Go Vet
