@@ -232,7 +232,12 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 // It releases resources used by the client.
 func (c *GeminiClient) Close() {
 	if c.client != nil {
-		c.client.Close()
+		// Handle Close error properly
+		err := c.client.Close()
+		if err != nil {
+			// Log the error but don't propagate it as Close() doesn't return an error
+			logrus.Warnf("Error closing Gemini client: %v", err)
+		}
 		c.client = nil
 		c.model = nil
 	}
