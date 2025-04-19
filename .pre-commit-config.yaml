@@ -126,14 +126,16 @@ repos:
         args: ["-o", "/dev/null", "./..."]
         exclude: '^vendor/|^precommit-tests/'
 
-  # NOTE: golangci-lint hook is now disabled in pre-commit because:
-  # 1. We run golangci-lint in a separate workflow (.github/workflows/lint.yml)
-  # 2. Running it in both places caused CI failures due to version compatibility issues
-  # 3. The separate golangci-lint workflow provides more detailed output
+  # NOTE: We have standardized on golangci-lint v2.1.2 across all platforms
+  # This is the definitive version used in both pre-commit and CI workflows
+  # Any version changes should be synchronized between:
+  # 1. This file (rev: field below)
+  # 2. .github/workflows/lint.yml (version parameter in golangci-lint-action)
+  # 3. Documentation in docs/LINTING.md and other relevant docs
 
-  # Original configuration (commented out):
+  # The hook is currently commented out but will be re-enabled in T035
   # - repo: https://github.com/golangci/golangci-lint
-  #   rev: v1.57.0  # Definitive version - all other golangci-lint versions should match this
+  #   rev: v2.1.2  # Definitive version - all other golangci-lint versions should match this
   #   hooks:
   #     - id: golangci-lint
   #       name: golangci-lint

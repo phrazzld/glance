@@ -11,7 +11,7 @@
         2. Lint job passes with GitHub Action
     - **depends‑on:** none
 
-- [ ] **T032 · chore · p1: determine and standardize golangci-lint version**
+- [x] **T032 · chore · p1: determine and standardize golangci-lint version**
     - **context:** CR-02: Standardize golangci-lint version & configuration
     - **action:**
         1. Decide on target golangci-lint version (e.g., v1.57.0)
