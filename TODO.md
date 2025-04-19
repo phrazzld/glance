@@ -69,7 +69,7 @@
         1. Complete list of code locations requiring validation
     - **depends‑on:** none
 
-- [ ] **T038 · feature · p1: implement path validation for external inputs**
+- [x] **T038 · feature · p1: implement path validation for external inputs**
     - **context:** CR-08: Implement file path validation
     - **action:**
         1. Add validation: `filepath.Clean`, `filepath.Abs`, and prefix-checking

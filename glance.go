@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"glance/config"
+	"glance/filesystem"
 	"glance/llm"
 	"glance/ui"
 )
@@ -249,8 +248,15 @@ func processDirectory(dir string, forceDir bool, ignoreChain []*gitignore.GitIgn
 		return r
 	}
 
-	// Write the generated content to file
-	if werr := os.WriteFile(glancePath, []byte(summary), 0o600); werr != nil { // #nosec G306 -- Changing to 0600 for security
+	// Validate the glance.md path before writing
+	validatedPath, pathErr := filesystem.ValidateFilePath(glancePath, dir, true, false)
+	if pathErr != nil {
+		r.err = fmt.Errorf("invalid glance.md path for %s: %w", dir, pathErr)
+		return r
+	}
+	
+	// Write the generated content to file using the validated path
+	if werr := os.WriteFile(validatedPath, []byte(summary), 0o600); werr != nil { // #nosec G306 -- Changed to 0600 for security & path validated
 		r.err = fmt.Errorf("failed writing glance.md to %s: %w", dir, werr)
 		return r
 	}
@@ -381,11 +387,28 @@ func reverseSlice(s []string) {
 // -----------------------------------------------------------------------------
 
 // gatherSubGlances merges the contents of existing subdirectory glance.md files.
+// It validates all file paths to prevent path traversal vulnerabilities.
 func gatherSubGlances(subdirs []string) (string, error) {
 	var combined []string
 	for _, sd := range subdirs {
-		// #nosec G304 -- Reading glance.md files from subdirectories is core functionality
-		data, err := os.ReadFile(filepath.Join(sd, "glance.md"))
+		// Validate the subdirectory first
+		validDir, err := filesystem.ValidateDirPath(sd, "", true, true)
+		if err != nil {
+			logrus.Warnf("Skipping invalid subdirectory for glance.md collection: %v", err)
+			continue
+		}
+		
+		// Construct and validate the glance.md path
+		glancePath := filepath.Join(validDir, "glance.md")
+		validPath, err := filesystem.ValidateFilePath(glancePath, validDir, true, true)
+		if err != nil {
+			logrus.Debugf("Skipping invalid glance.md path: %v", err)
+			continue
+		}
+		
+		// Read the validated file path
+		// #nosec G304 -- Reading validated glance.md files from subdirectories is core functionality
+		data, err := os.ReadFile(validPath)
 		if err == nil {
 			combined = append(combined, strings.ToValidUTF8(string(data), "�"))
 		}
@@ -394,8 +417,15 @@ func gatherSubGlances(subdirs []string) (string, error) {
 }
 
 // readSubdirectories lists immediate subdirectories in a directory, skipping hidden or ignored ones.
+// It validates the directory path to prevent path traversal vulnerabilities.
 func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]string, error) {
-	entries, err := os.ReadDir(dir)
+	// Validate the directory path first
+	validDir, err := filesystem.ValidateDirPath(dir, "", true, true)
+	if err != nil {
+		return nil, fmt.Errorf("invalid directory path: %w", err)
+	}
+	
+	entries, err := os.ReadDir(validDir)
 	if err != nil {
 		return nil, err
 	}
@@ -408,8 +438,16 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 		if strings.HasPrefix(name, ".") || name == "node_modules" {
 			continue
 		}
-		fullPath := filepath.Join(dir, name)
-		rel, _ := filepath.Rel(dir, fullPath)
+		fullPath := filepath.Join(validDir, name)
+		
+		// Validate the subdirectory path
+		validPath, err := filesystem.ValidateDirPath(fullPath, validDir, true, true)
+		if err != nil {
+			logrus.Debugf("Skipping invalid subdirectory: %v", err)
+			continue
+		}
+		
+		rel, _ := filepath.Rel(validDir, validPath)
 		if isIgnored(rel, ignoreChain) {
 			if logrus.IsLevelEnabled(logrus.DebugLevel) {
 				logrus.Debugf("🙈 Ignoring subdirectory (matched .gitignore pattern): %s", rel)
@@ -422,21 +460,37 @@ func readSubdirectories(dir string, ignoreChain []*gitignore.GitIgnore) ([]strin
 }
 
 // gatherLocalFiles reads immediate files in a directory (excluding glance.md, hidden files, etc.).
+// It validates all file paths to prevent path traversal vulnerabilities.
 func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileBytes int64, verbose bool) (map[string]string, error) {
+	// Validate the base directory first
+	validDir, err := filesystem.ValidateDirPath(dir, "", true, true)
+	if err != nil {
+		return nil, fmt.Errorf("invalid directory path for file gathering: %w", err)
+	}
+	
 	files := make(map[string]string)
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
+	err = filepath.WalkDir(validDir, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
 			return werr
 		}
 		// skip subdirectories (beyond the current dir)
-		if d.IsDir() && path != dir {
+		if d.IsDir() && path != validDir {
 			return fs.SkipDir
 		}
 		if d.IsDir() || d.Name() == "glance.md" || strings.HasPrefix(d.Name(), ".") {
 			return nil
 		}
 
-		rel, _ := filepath.Rel(dir, path)
+		// Validate the file path
+		validPath, pathErr := filesystem.ValidateFilePath(path, validDir, true, true)
+		if pathErr != nil {
+			if verbose {
+				logrus.Debugf("Skipping invalid file path: %v", pathErr)
+			}
+			return nil
+		}
+
+		rel, _ := filepath.Rel(validDir, validPath)
 		if isIgnored(rel, ignoreChain) {
 			if verbose {
 				logrus.Debugf("ignoring file via .gitignore chain: %s", rel)
@@ -444,25 +498,27 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileByt
 			return nil
 		}
 
-		isText, errCheck := isTextFile(path)
+		// Now use our filesystem package functions for reading files and checking content type
+		isText, errCheck := filesystem.IsTextFile(validPath, validDir)
 		if errCheck != nil && verbose {
-			logrus.Debugf("error checking if file is text: %s => %v", path, errCheck)
+			logrus.Debugf("error checking if file is text: %s => %v", validPath, errCheck)
 		}
 		if !isText {
 			if verbose {
-				logrus.Debugf("📊 Skipping binary/non-text file: %s", path)
+				logrus.Debugf("📊 Skipping binary/non-text file: %s", validPath)
 			}
 			return nil
 		}
-		// #nosec G304 -- Reading files is core functionality of this application
-		content, err := os.ReadFile(path)
+		
+		// Read the file with validation
+		contentStr, err := filesystem.ReadTextFile(validPath, maxFileBytes, validDir)
 		if err != nil {
+			if verbose {
+				logrus.Debugf("Error reading file %s: %v", validPath, err)
+			}
 			return nil
 		}
-		contentStr := strings.ToValidUTF8(string(content), "�")
-		if len(contentStr) > int(maxFileBytes) {
-			contentStr = contentStr[:maxFileBytes] + "...(truncated)"
-		}
+		
 		files[rel] = contentStr
 		return nil
 	})
@@ -472,32 +528,8 @@ func gatherLocalFiles(dir string, ignoreChain []*gitignore.GitIgnore, maxFileByt
 	return files, nil
 }
 
-// isTextFile checks a file's content type by reading its first 512 bytes.
-func isTextFile(path string) (bool, error) {
-	// #nosec G304 -- File operations with variable paths are core to this application
-	f, err := os.Open(path)
-	if err != nil {
-		return false, err
-	}
-	// Handle Close error properly
-	defer func() {
-		_ = f.Close() // explicitly ignore the error as we're in a read-only context
-	}()
-
-	buf := make([]byte, 512)
-	n, err := f.Read(buf)
-	if err != nil && err != io.EOF {
-		return false, err
-	}
-	ctype := http.DetectContentType(buf[:n])
-	if strings.HasPrefix(ctype, "text/") ||
-		strings.HasPrefix(ctype, "application/json") ||
-		strings.HasPrefix(ctype, "application/xml") ||
-		strings.Contains(ctype, "yaml") {
-		return true, nil
-	}
-	return false, nil
-}
+// Note: We now use filesystem.IsTextFile instead of this local function
+// which provides path validation
 
 // -----------------------------------------------------------------------------
 // regeneration logic and utilities

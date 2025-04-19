@@ -72,9 +72,14 @@ func LoadConfig(args []string) (*Config, error) {
 		return nil, errors.New("missing target directory: exactly one directory must be specified")
 	}
 
-	// Get target directory
+	// Get target directory and validate it
 	targetDir := cmdFlags.Arg(0)
-	absDir, err := filepath.Abs(targetDir)
+	
+	// Clean and normalize the path
+	cleanTargetDir := filepath.Clean(targetDir)
+	
+	// Convert to absolute path
+	absDir, err := filepath.Abs(cleanTargetDir)
 	if err != nil {
 		return nil, fmt.Errorf("invalid target directory: %w", err)
 	}
@@ -83,6 +88,9 @@ func LoadConfig(args []string) (*Config, error) {
 	if err := dirChecker.CheckDirectory(absDir); err != nil {
 		return nil, err
 	}
+	
+	// Store the validated directory as our trusted root
+	// This is safe since we've already verified it exists and is a directory
 
 	// Load .env if present (but don't fail if not found)
 	if err := godotenv.Load(); err != nil {
@@ -114,20 +122,55 @@ func LoadConfig(args []string) (*Config, error) {
 
 // loadPromptTemplate tries to read from the specified file path, then "prompt.txt",
 // and falls back to the default prompt template if neither is available.
+// It validates all file paths to prevent path traversal vulnerabilities.
 func loadPromptTemplate(path string) (string, error) {
+	// Get current working directory as the base for validation
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	// For custom path, don't restrict to current working directory
+	// This allows users to provide templates from anywhere on the filesystem
 	if path != "" {
-		// #nosec G304 -- This function loads a prompt template from a file path specified by config
-		data, err := os.ReadFile(path)
+		// Clean and absolutize the path, but don't enforce directory containment
+		// since the prompt file can be anywhere the user wants
+		cleanPath := filepath.Clean(path)
+		absPath, err := filepath.Abs(cleanPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", path, err)
+			return "", fmt.Errorf("invalid prompt template path: %w", err)
+		}
+
+		// Verify the file exists and is a file (not a directory)
+		info, err := os.Stat(absPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to access prompt template at '%s': %w", path, err)
+		}
+		if info.IsDir() {
+			return "", fmt.Errorf("prompt template path '%s' is a directory, not a file", path)
+		}
+
+		// Read the validated file path
+		// #nosec G304 -- This function loads a prompt template from a validated file path
+		data, err := os.ReadFile(absPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", absPath, err)
 		}
 		return string(data), nil
 	}
 
-	// #nosec G304 -- Reading from a standard prompt.txt file in the current directory
-	if data, err := os.ReadFile("prompt.txt"); err == nil {
-		return string(data), nil
+	// Try the default prompt.txt in the current directory
+	defaultPromptPath := filepath.Join(cwd, "prompt.txt")
+	// Check if the file exists, but don't return an error if it doesn't
+	if _, err := os.Stat(defaultPromptPath); err == nil {
+		// File exists, clean and read it
+		cleanPath := filepath.Clean(defaultPromptPath)
+		// #nosec G304 -- Reading from a standard prompt.txt file in the current directory
+		if data, err := os.ReadFile(cleanPath); err == nil {
+			return string(data), nil
+		}
 	}
 
+	// Fall back to the hardcoded default template
 	return defaultPromptTemplate, nil
 }

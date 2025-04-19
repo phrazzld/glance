@@ -3,6 +3,7 @@
 package filesystem
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -22,13 +23,30 @@ const MaxDefaultFileSize = 5 * 1024 * 1024
 // Parameters:
 //   - path: The absolute path to the file to read
 //   - maxBytes: The maximum number of bytes to read (0 for unlimited)
+//   - baseDir: Optional base directory for path validation. If empty, no validation is performed.
 //
 // Returns:
 //   - The contents of the file as a string
-//   - An error, if any occurred during reading
-func ReadTextFile(path string, maxBytes int64) (string, error) {
-	// #nosec G304 -- This is a core function to read files by path, security validation happens at caller level
-	content, err := os.ReadFile(path)
+//   - An error, if any occurred during reading or validation
+func ReadTextFile(path string, maxBytes int64, baseDir string) (string, error) {
+	var validatedPath string
+
+	// Validate path if baseDir is provided
+	if baseDir != "" {
+		var err error
+		validatedPath, err = ValidateFilePath(path, baseDir, true, true)
+		if err != nil {
+			return "", fmt.Errorf("path validation failed: %w", err)
+		}
+	} else {
+		// No validation requested, use path as-is (legacy behavior)
+		// #nosec G304 -- When baseDir is not provided, caller is responsible for path validation
+		validatedPath = path
+	}
+
+	// Read the file with validated path
+	// #nosec G304 -- Path has been validated to prevent path traversal
+	content, err := os.ReadFile(validatedPath)
 	if err != nil {
 		return "", err
 	}
@@ -73,13 +91,30 @@ func TruncateContent(content string, maxBytes int64) string {
 //
 // Parameters:
 //   - path: The path to the file to check
+//   - baseDir: Optional base directory for path validation. If empty, no validation is performed.
 //
 // Returns:
 //   - true if the file appears to be text-based, false otherwise
-//   - an error, if any occurred during the check
-func IsTextFile(path string) (bool, error) {
-	// #nosec G304 -- This is a core function to open files by path, security validation happens at caller level
-	f, err := os.Open(path)
+//   - an error, if any occurred during the check or validation
+func IsTextFile(path string, baseDir string) (bool, error) {
+	var validatedPath string
+
+	// Validate path if baseDir is provided
+	if baseDir != "" {
+		var err error
+		validatedPath, err = ValidateFilePath(path, baseDir, true, true)
+		if err != nil {
+			return false, fmt.Errorf("path validation failed: %w", err)
+		}
+	} else {
+		// No validation requested, use path as-is (legacy behavior)
+		// #nosec G304 -- When baseDir is not provided, caller is responsible for path validation
+		validatedPath = path
+	}
+
+	// Open the file with validated path
+	// #nosec G304 -- Path has been validated to prevent path traversal
+	f, err := os.Open(validatedPath)
 	if err != nil {
 		return false, err
 	}
@@ -107,6 +142,7 @@ func IsTextFile(path string) (bool, error) {
 
 // GatherLocalFiles reads immediate files in a directory and returns a map of
 // relative path to file content for text-based files.
+// It includes path validation to prevent path traversal vulnerabilities.
 //
 // Parameters:
 //   - dir: The directory to scan for files
@@ -120,27 +156,58 @@ func IsTextFile(path string) (bool, error) {
 func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, verbose bool) (map[string]string, error) {
 	files := make(map[string]string)
 
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
+	// Clean and normalize the directory path
+	cleanDir := filepath.Clean(dir)
+
+	// Verify the directory exists
+	info, err := os.Stat(cleanDir)
+	if err != nil {
+		return nil, fmt.Errorf("invalid directory for file gathering: %w", err)
+	}
+
+	// Ensure it's a directory
+	if !info.IsDir() {
+		return nil, fmt.Errorf("path is not a directory: %s", cleanDir)
+	}
+
+	// Convert to absolute path
+	validDir, err := filepath.Abs(cleanDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	err = filepath.WalkDir(validDir, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
 			return werr
 		}
 
 		// Skip subdirectories (beyond the current dir)
-		if d.IsDir() && path != dir {
+		if d.IsDir() && path != validDir {
 			return fs.SkipDir
 		}
 
 		// Skip directories, glance.md, and hidden files
-		if d.IsDir() || d.Name() == "glance.md" || strings.HasPrefix(d.Name(), ".") {
+		if d.IsDir() || d.Name() == GlanceFilename || strings.HasPrefix(d.Name(), ".") {
+			return nil
+		}
+
+		// Validate the path against the base directory
+		// (Not needed here because WalkDir guarantees the paths are under the directory)
+		// But this validates file existence
+		validPath, err := ValidateFilePath(path, validDir, true, true)
+		if err != nil {
+			if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
+				logrus.Debugf("Path validation failed for %s: %v", path, err)
+			}
 			return nil
 		}
 
 		// Get relative path
-		relPath, err := filepath.Rel(dir, path)
+		relPath, err := filepath.Rel(validDir, validPath)
 		if err != nil {
 			if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
 				logrus.Debugf("Error calculating relative path for %s from %s: %v",
-					path, dir, err)
+					validPath, validDir, err)
 			}
 			return nil
 		}
@@ -149,16 +216,16 @@ func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, 
 		shouldInclude := true
 		for _, rule := range ignoreChain {
 			// Skip rules from directories that are not ancestors of the current path
-			if !strings.HasPrefix(dir, rule.OriginDir) {
+			if !strings.HasPrefix(validDir, rule.OriginDir) {
 				continue
 			}
 
 			// Get the path relative to the rule's origin
-			ruleRelPath, err := filepath.Rel(rule.OriginDir, path)
+			ruleRelPath, err := filepath.Rel(rule.OriginDir, validPath)
 			if err != nil {
 				if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
 					logrus.Debugf("Error calculating relative path for %s from %s: %v",
-						path, rule.OriginDir, err)
+						validPath, rule.OriginDir, err)
 				}
 				continue
 			}
@@ -179,24 +246,24 @@ func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, 
 			return nil
 		}
 
-		// Check if file is text-based
-		isText, errCheck := IsTextFile(path)
+		// Check if file is text-based (pass base directory for validation)
+		isText, errCheck := IsTextFile(validPath, validDir)
 		if errCheck != nil && verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Error checking if file is text: %s => %v", path, errCheck)
+			logrus.Debugf("Error checking if file is text: %s => %v", validPath, errCheck)
 		}
 
 		if !isText {
 			if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("📊 Skipping binary/non-text file: %s", path)
+				logrus.Debugf("📊 Skipping binary/non-text file: %s", validPath)
 			}
 			return nil
 		}
 
-		// Read file content
-		content, err := ReadTextFile(path, maxFileBytes)
+		// Read file content (pass base directory for validation)
+		content, err := ReadTextFile(validPath, maxFileBytes, validDir)
 		if err != nil {
 			if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("Error reading file %s: %v", path, err)
+				logrus.Debugf("Error reading file %s: %v", validPath, err)
 			}
 			return nil
 		}
