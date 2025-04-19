@@ -51,7 +51,7 @@
     - **depends‑on:** [T032]
 
 ## security
-- [ ] **T036 · chore · p1: audit all #nosec annotations**
+- [x] **T036 · chore · p1: audit all #nosec annotations**
     - **context:** CR-03: Address excessive `#nosec` suppressions
     - **action:**
         1. List all `#nosec` usages in codebase (G304/G306/etc)
