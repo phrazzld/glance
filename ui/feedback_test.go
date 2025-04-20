@@ -390,7 +390,7 @@ func TestReportError(t *testing.T) {
 			ReportError(testErr, false, "Test context")
 		})
 		assert.Contains(t, output, "Test context")
-		assert.NotContains(t, output, "test error")
+		assert.Contains(t, output, "test error")
 		assert.Contains(t, output, "❌")
 	})
 

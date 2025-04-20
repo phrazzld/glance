@@ -238,9 +238,5 @@ func ReportError(err error, verbose bool, context string) {
 		return
 	}
 
-	if verbose {
-		logrus.Errorf("❌ %s: %v", context, err)
-	} else {
-		logrus.Errorf("❌ %s", context)
-	}
+	logrus.Errorf("❌ %s: %v", context, err)
 }

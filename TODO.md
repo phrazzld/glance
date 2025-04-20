@@ -200,7 +200,7 @@
         3. Tests pass using the standardized mocking approach.
     - **depends‑on:** [T212]
 
-- [ ] **T214 · bug · p2: Include Error Context in Non-Verbose ReportError**
+- [x] **T214 · bug · p2: Include Error Context in Non-Verbose ReportError**
     - **context:** The `ui.ReportError` function hides useful error information when not in verbose mode.
     - **action:**
         1. Modify the `ReportError` function in `ui/feedback.go` to include the error message even in non-verbose mode.
