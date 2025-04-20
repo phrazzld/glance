@@ -34,37 +34,9 @@ type ServiceOptions struct {
 	PromptTemplate string
 }
 
-// WithMaxRetries returns a new ServiceOptions with the specified max retries value.
-func (o *ServiceOptions) WithMaxRetries(maxRetries int) *ServiceOptions {
-	newOpts := *o
-	newOpts.MaxRetries = maxRetries
-	return &newOpts
-}
-
-// WithModelName returns a new ServiceOptions with the specified model name.
-func (o *ServiceOptions) WithModelName(modelName string) *ServiceOptions {
-	newOpts := *o
-	newOpts.ModelName = modelName
-	return &newOpts
-}
-
-// WithVerbose returns a new ServiceOptions with the specified verbose setting.
-func (o *ServiceOptions) WithVerbose(verbose bool) *ServiceOptions {
-	newOpts := *o
-	newOpts.Verbose = verbose
-	return &newOpts
-}
-
-// WithPromptTemplate returns a new ServiceOptions with the specified prompt template.
-func (o *ServiceOptions) WithPromptTemplate(template string) *ServiceOptions {
-	newOpts := *o
-	newOpts.PromptTemplate = template
-	return &newOpts
-}
-
 // DefaultServiceOptions returns a ServiceOptions instance with sensible defaults.
-func DefaultServiceOptions() *ServiceOptions {
-	return &ServiceOptions{
+func DefaultServiceOptions() ServiceOptions {
+	return ServiceOptions{
 		MaxRetries:     3,
 		ModelName:      "gemini-2.5-flash-preview-04-17",
 		Verbose:        false,
@@ -75,15 +47,15 @@ func DefaultServiceOptions() *ServiceOptions {
 // ServiceOption is a function type for applying options to a Service.
 type ServiceOption func(*ServiceOptions)
 
-// WithMaxRetries configures the maximum number of retries for the service.
-func WithMaxRetries(maxRetries int) ServiceOption {
+// WithServiceMaxRetries configures the maximum number of retries for the service.
+func WithServiceMaxRetries(maxRetries int) ServiceOption {
 	return func(o *ServiceOptions) {
 		o.MaxRetries = maxRetries
 	}
 }
 
-// WithModelName configures the model name for the service.
-func WithModelName(modelName string) ServiceOption {
+// WithServiceModelName configures the model name for the service.
+func WithServiceModelName(modelName string) ServiceOption {
 	return func(o *ServiceOptions) {
 		o.ModelName = modelName
 	}
@@ -122,12 +94,12 @@ func NewService(client Client, options ...ServiceOption) (*Service, error) {
 
 	// Apply any provided options
 	for _, option := range options {
-		option(serviceOptions)
+		option(&serviceOptions)
 	}
 
 	return &Service{
 		client:  client,
-		options: serviceOptions,
+		options: &serviceOptions,
 	}, nil
 }
 

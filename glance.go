@@ -102,27 +102,24 @@ var setupLLMService setupLLMServiceFunc = setupLLMServiceImpl
 
 // setupLLMServiceImpl is the actual implementation for initializing the LLM client and service
 func setupLLMServiceImpl(cfg *config.Config) (llm.Client, *llm.Service, error) {
-	// Create client options
-	clientOptions := llm.DefaultClientOptions().
-		WithModelName("gemini-2.5-flash-preview-04-17").
-		WithMaxRetries(cfg.MaxRetries).
-		WithTimeout(60)
-
-	// Create the client
-	client, err := llm.NewGeminiClient(cfg.APIKey, clientOptions)
+	// Create the client with functional options
+	client, err := llm.NewGeminiClient(
+		cfg.APIKey,
+		llm.WithModelName("gemini-2.5-flash-preview-04-17"),
+		llm.WithMaxRetries(cfg.MaxRetries),
+		llm.WithTimeout(60),
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create LLM client: %w", err)
 	}
 
-	// Create service options
-	serviceOptions := []llm.ServiceOption{
-		llm.WithMaxRetries(cfg.MaxRetries),
+	// Create the service with functional options
+	service, err := llm.NewService(
+		client,
+		llm.WithServiceMaxRetries(cfg.MaxRetries),
 		llm.WithVerbose(cfg.Verbose),
 		llm.WithPromptTemplate(cfg.PromptTemplate),
-	}
-
-	// Create the service
-	service, err := llm.NewService(client, serviceOptions...)
+	)
 	if err != nil {
 		client.Close()
 		return nil, nil, fmt.Errorf("failed to create LLM service: %w", err)

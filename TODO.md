@@ -160,7 +160,7 @@
         2. No incorrect or obsolete suppression comments related to prompt loading exist.
     - **depends‑on:** [T201, T207]
 
-- [ ] **T211 · refactor · p1: Simplify Overly Complex Builder Patterns**
+- [x] **T211 · refactor · p1: Simplify Overly Complex Builder Patterns**
     - **context:** Builder patterns in `llm/client.go` and `llm/service.go` may be overly complex for the configuration required.
     - **action:**
         1. Replace builder patterns with direct struct initialization where appropriate.

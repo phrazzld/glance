@@ -487,7 +487,7 @@ func TestConfigLLMIntegration(t *testing.T) {
 
 			// Create service with the right template and our mock client
 			serviceOptions := []llm.ServiceOption{
-				llm.WithMaxRetries(cfg.MaxRetries),
+				llm.WithServiceMaxRetries(cfg.MaxRetries),
 				llm.WithVerbose(cfg.Verbose),
 				llm.WithPromptTemplate(cfg.PromptTemplate),
 			}
@@ -569,7 +569,7 @@ func TestConfigLLMIntegration(t *testing.T) {
 
 		setupLLMService = func(cfg *config.Config) (llm.Client, *llm.Service, error) {
 			serviceOptions := []llm.ServiceOption{
-				llm.WithMaxRetries(cfg.MaxRetries),
+				llm.WithServiceMaxRetries(cfg.MaxRetries),
 				llm.WithVerbose(cfg.Verbose),
 				llm.WithPromptTemplate(cfg.PromptTemplate),
 			}

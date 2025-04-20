@@ -45,33 +45,36 @@ type ClientOptions struct {
 }
 
 // DefaultClientOptions returns a ClientOptions instance with sensible defaults.
-func DefaultClientOptions() *ClientOptions {
-	return &ClientOptions{
+func DefaultClientOptions() ClientOptions {
+	return ClientOptions{
 		ModelName:  "gemini-2.5-flash-preview-04-17",
 		MaxRetries: 3,
 		Timeout:    60, // 60 seconds
 	}
 }
 
-// WithModelName returns a new ClientOptions with the specified model name.
-func (o *ClientOptions) WithModelName(modelName string) *ClientOptions {
-	newOpts := *o
-	newOpts.ModelName = modelName
-	return &newOpts
+// ClientOption is a function type for applying options to ClientOptions.
+type ClientOption func(*ClientOptions)
+
+// WithModelName sets the model name for the client.
+func WithModelName(modelName string) ClientOption {
+	return func(o *ClientOptions) {
+		o.ModelName = modelName
+	}
 }
 
-// WithMaxRetries returns a new ClientOptions with the specified max retries value.
-func (o *ClientOptions) WithMaxRetries(maxRetries int) *ClientOptions {
-	newOpts := *o
-	newOpts.MaxRetries = maxRetries
-	return &newOpts
+// WithMaxRetries sets the maximum number of retries for the client.
+func WithMaxRetries(maxRetries int) ClientOption {
+	return func(o *ClientOptions) {
+		o.MaxRetries = maxRetries
+	}
 }
 
-// WithTimeout returns a new ClientOptions with the specified timeout in seconds.
-func (o *ClientOptions) WithTimeout(timeout int) *ClientOptions {
-	newOpts := *o
-	newOpts.Timeout = timeout
-	return &newOpts
+// WithTimeout sets the timeout in seconds for the client.
+func WithTimeout(timeout int) ClientOption {
+	return func(o *ClientOptions) {
+		o.Timeout = timeout
+	}
 }
 
 // GeminiClient is a Client implementation that uses Google's Gemini API.
@@ -88,34 +91,38 @@ var NewGeminiClient = newGeminiClient
 // newGeminiClient is the actual implementation for creating a new client for the Google Gemini API.
 //
 // Parameters:
-//   - apiKey: The API key for authenticating with the Gemini API // pragma: allowlist secret
-//   - options: Configuration options for the client
+//   - apiKey: The API key for authenticating with the Gemini API // #nosec G101 // pragma: allowlist secret
+//   - options: Zero or more functional options to configure the client
 //
 // Returns:
 //   - A new GeminiClient instance
 //   - An error if client creation fails
-func newGeminiClient(apiKey string, options *ClientOptions) (*GeminiClient, error) {
+func newGeminiClient(apiKey string, options ...ClientOption) (*GeminiClient, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}
 
-	if options == nil {
-		options = DefaultClientOptions()
+	// Start with default options
+	opts := DefaultClientOptions()
+
+	// Apply any provided options
+	for _, option := range options {
+		option(&opts)
 	}
 
 	ctx := context.Background()
-	// #nosec G101 -- API key is provided by the user and not hardcoded
+	// #nosec G101 -- API key is provided by the user and not hardcoded // pragma: allowlist secret
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Gemini client: %w", err)
 	}
 
-	model := client.GenerativeModel(options.ModelName)
+	model := client.GenerativeModel(opts.ModelName)
 
 	return &GeminiClient{
 		client:  client,
 		model:   model,
-		options: options,
+		options: &opts,
 	}, nil
 }
 
