@@ -254,7 +254,7 @@
     - **depends‑on:** []
 
 ## low-severity-issues
-- [ ] **T223 · chore · p3: Use filesystem.DefaultFileMode in glance.go**
+- [x] **T223 · chore · p3: Use filesystem.DefaultFileMode in glance.go**
     - **context:** The `glance.go` file still uses a magic number (`0o600`) instead of the `filesystem.DefaultFileMode` constant.
     - **action:**
         1. Replace the hardcoded `0o600` in `glance.go:252` with `filesystem.DefaultFileMode`.

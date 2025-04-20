@@ -23,12 +23,12 @@ G304 flags cases where a file path from a variable is passed to functions like `
 
 | File | Line | Suppression | Justification | Mitigations |
 |------|------|-------------|---------------|-------------|
-| `llm/prompt.go` | 87 | `#nosec G304 -- The path has been cleaned, made absolute, and verified to be a file` | Loading a custom prompt template provided by the user. | Before reading, the path is cleaned via `filepath.Clean()`, converted to absolute path, and verified to be an existing file (not a directory). |
-| `llm/prompt.go` | 101 | `#nosec G304 -- The path has been cleaned and is in the current working directory` | Loading the default prompt template from the current working directory. | The path is constructed using the current working directory and `filepath.Join()`, then cleaned to normalize it. |
-| `config/loadconfig.go` | 155 | `#nosec G304 -- The path has been cleaned, made absolute, and verified to be a file` | Loading a custom prompt template provided by the user. | Same validation as in `llm/prompt.go`: cleaned, absolutized, and verified to be a file. |
-| `config/loadconfig.go` | 169 | `#nosec G304 -- Reading from a standard prompt.txt file in the current directory` | Loading the default prompt template from the current working directory. | Path is built using `filepath.Join()` with the current directory and a fixed filename, then cleaned. |
-| `filesystem/reader.go` | 44, 112 | `#nosec G304 -- When baseDir is not provided, caller is responsible for path validation` | Allowing legacy code paths to call the file reading functions without validation. | This is only used when `baseDir` is explicitly empty, which indicates the caller has opted out of validation and is taking responsibility. This is typically only used in tests. |
-| `filesystem/reader.go` | 49, 117 | `#nosec G304 -- Path has been validated to prevent path traversal` | Reading a file after validation. | Before reading, the path is fully validated by `ValidateFilePath()` which ensures the path is within the allowed base directory. |
+| `llm/prompt.go` (loadCustomPrompt) | - | `#nosec G304 -- The path has been cleaned, made absolute, and verified to be a file` | Loading a custom prompt template provided by the user. | Before reading, the path is cleaned via `filepath.Clean()`, converted to absolute path, and verified to be an existing file (not a directory). |
+| `llm/prompt.go` (loadDefaultPrompt) | - | `#nosec G304 -- The path has been cleaned and is in the current working directory` | Loading the default prompt template from the current working directory. | The path is constructed using the current working directory and `filepath.Join()`, then cleaned to normalize it. |
+| `config/loadconfig.go` (LoadPromptTemplate) | - | `#nosec G304 -- The path has been cleaned, made absolute, and verified to be a file` | Loading a custom prompt template provided by the user. | Same validation as in `llm/prompt.go`: cleaned, absolutized, and verified to be a file. |
+| `config/loadconfig.go` (LoadPromptTemplate) | - | `#nosec G304 -- Reading from a standard prompt.txt file in the current directory` | Loading the default prompt template from the current working directory. | Path is built using `filepath.Join()` with the current directory and a fixed filename, then cleaned. |
+| `filesystem/reader.go` (ReadTextFile) | - | `#nosec G304 -- When baseDir is not provided, caller is responsible for path validation` | Allowing legacy code paths to call the file reading functions without validation. | This is only used when `baseDir` is explicitly empty, which indicates the caller has opted out of validation and is taking responsibility. This is typically only used in tests. |
+| `filesystem/reader.go` (ReadTextFile, IsTextFile) | - | `#nosec G304 -- Path has been validated to prevent path traversal` | Reading a file after validation. | Before reading, the path is fully validated by `ValidateFilePath()` which ensures the path is within the allowed base directory. |
 
 ### G306: Write file with sensitive permissions
 
@@ -38,7 +38,7 @@ G306 flags cases where file permissions are not secure enough when writing files
 
 | File | Line | Suppression | Justification | Mitigations |
 |------|------|-------------|---------------|-------------|
-| `glance.go` | 252 | `#nosec G306 -- Changed to 0600 for security & path validated` | Writing to a glance.md file with 0600 permissions for added security. | Permissions are set to 0o600 (user read/write only), which is more secure than the default. Additionally, the path is fully validated using `filesystem.ValidateFilePath()`. |
+| `glance.go` (processDirectory) | - | `#nosec G306 -- Using filesystem.DefaultFileMode (0600) for security & path validated` | Writing to a glance.md file with restrictive permissions for added security. | Permissions are set using `filesystem.DefaultFileMode` (0o600, user read/write only), which is more secure than the default. Additionally, the path is fully validated using `filesystem.ValidateFilePath()`. |
 
 ## Future Guidelines
 
