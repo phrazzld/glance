@@ -101,7 +101,7 @@
     - **note:** Completed via subtasks T234 (signature change), T235 (implementation), T236 (caller update), and T237 (tests).
     - **depends‑on:** [T204]
 
-- [ ] **T206 · bug · p1: Fix Path Validation in readSubdirectories**
+- [x] **T206 · bug · p1: Fix Path Validation in readSubdirectories**
     - **context:** Path validation in `readSubdirectories` (`glance.go:339`) needs strengthening to ensure subdirectories cannot escape the parent directory.
     - **action:**
         1. Validate the constructed `fullPath` using `filesystem.ValidateDirPath`, ensuring the `baseDir` parameter is the parent directory (`validDir`).
