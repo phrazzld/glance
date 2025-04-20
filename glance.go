@@ -298,14 +298,12 @@ func reverseSlice(s []string) {
 
 // gatherSubGlances merges the contents of existing subdirectory glance.md files.
 // This implementation enhances the original by using filesystem.ReadTextFile.
-func gatherSubGlances(subdirs []string) (string, error) {
+// The baseDir parameter defines the security boundary for path validations within the function.
+func gatherSubGlances(baseDir string, subdirs []string) (string, error) {
 	var combined []string
 	for _, sd := range subdirs {
-		// Get the parent directory to use as baseDir for validation
-		parentDir := filepath.Dir(sd)
-
-		// Validate the subdirectory using parent as baseDir
-		validDir, err := filesystem.ValidateDirPath(sd, parentDir, true, true)
+		// Validate the subdirectory using the provided baseDir for consistent security boundary
+		validDir, err := filesystem.ValidateDirPath(sd, baseDir, true, true)
 		if err != nil {
 			logrus.Warnf("Skipping invalid subdirectory for glance.md collection: %v", err)
 			continue

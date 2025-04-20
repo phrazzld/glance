@@ -4,7 +4,10 @@ glance.md
 */glance.md
 .DS_Store
 architect_output/
+architect_output_tasks/
+consultation-report/
 CODE_REVIEW.md
+*-plan.md
 
 # Symlinked documentation files
 DEVELOPMENT_PHILOSOPHY.md

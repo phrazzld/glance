@@ -28,7 +28,68 @@
         3. Unit tests confirm the rejection of empty `baseDir`.
     - **depends‑on:** [T201]
 
-- [ ] **T205 · bug · p1: Fix Path Validation in gatherSubGlances**
+- [x] **T234 · refactor · p1: Refactor gatherSubGlances signature to include baseDir**
+    - **context:** To enforce a common security boundary, the `gatherSubGlances` function signature needs to be modified to accept a `baseDir` parameter. This parameter will define the security boundary for path validations within the function.
+    - **action:**
+        1. Open `glance.go` and locate the declaration of `gatherSubGlances`.
+        2. Change its signature from `func gatherSubGlances(subdirs []string) (string, error)` to `func gatherSubGlances(baseDir string, subdirs []string) (string, error)`.
+        3. Update function documentation to reflect the new parameter.
+    - **done‑when:**
+        1. The signature of the `gatherSubGlances` function in `glance.go` includes `baseDir string` as its first parameter.
+        2. The function documentation is updated to describe the new parameter.
+        3. The code compiles successfully (though tests using the old signature will fail).
+    - **depends‑on:** [T204]
+
+- [x] **T235 · refactor · p1: Update gatherSubGlances implementation to use baseDir for validation**
+    - **context:** Following the signature change in T234, the implementation of `gatherSubGlances` must be updated to use the new `baseDir` parameter for validating subdirectory paths, enforcing the intended security boundary.
+    - **action:**
+        1. In `glance.go`, inside `gatherSubGlances`, replace the parent directory logic with the passed `baseDir`.
+        2. Update the `filesystem.ValidateDirPath` call to use `baseDir` as its second argument: `validDir, err := filesystem.ValidateDirPath(sd, baseDir, true, true)`.
+        3. Ensure the subsequent call to `filesystem.ReadTextFile` uses the `validDir` as its `baseDir` parameter.
+    - **done‑when:**
+        1. All subdirectory validations use the provided `baseDir` as the security boundary.
+        2. The `filesystem.ReadTextFile` call correctly uses `validDir` as its `baseDir` parameter.
+        3. The function properly handles errors and skips invalid paths.
+    - **depends‑on:** [T234]
+
+- [ ] **T236 · refactor · p1: Update processDirectory to pass baseDir to gatherSubGlances**
+    - **context:** The `processDirectory` function calls `gatherSubGlances`. Since the signature of `gatherSubGlances` has changed, the call site in `processDirectory` must be updated to pass the correct `baseDir`.
+    - **action:**
+        1. Open `glance.go` and locate the `processDirectory` function.
+        2. Find the line where `gatherSubGlances` is called.
+        3. Modify the call to pass the `dir` parameter (the directory currently being processed) as the first argument to `gatherSubGlances`: `subGlances, err := gatherSubGlances(dir, subdirs)`.
+    - **done‑when:**
+        1. The call to `gatherSubGlances` within `processDirectory` correctly passes the `dir` variable as the `baseDir` argument.
+        2. The code compiles successfully.
+    - **depends‑on:** [T235]
+
+- [ ] **T237 · test · p1: Update gatherSubGlances unit tests for new signature and validation**
+    - **context:** Unit tests for `gatherSubGlances` in `gather_subglances_test.go` need to be updated to reflect the new function signature and verify the corrected path validation logic, including the path traversal fix.
+    - **action:**
+        1. Update all test cases that call `gatherSubGlances` to pass an appropriate `baseDir` argument (typically the test's temporary root directory).
+        2. Verify that the `AttemptedTraversalWithAbsolutePath` test now correctly blocks access to paths outside the `baseDir`.
+        3. Ensure all existing valid path tests still pass.
+        4. Run all tests to confirm the changes are working correctly.
+        5. Run pre-commit hooks with `pre-commit run --all-files` to ensure all linting and build checks pass.
+    - **done‑when:**
+        1. All calls to `gatherSubGlances` within `gather_subglances_test.go` include the `baseDir` argument.
+        2. The `AttemptedTraversalWithAbsolutePath` test passes, confirming path traversal is blocked.
+        3. All other tests in `gather_subglances_test.go` pass, verifying valid paths still work.
+        4. All pre-commit hooks pass without using `--no-verify`.
+    - **depends‑on:** [T236]
+
+- [ ] **T238 · chore · p1: Mark T205 as complete**
+    - **context:** The original task T205, "Fix Path Validation in gatherSubGlances", has been successfully decomposed and addressed by tasks T234-T237. This task is to formally close the original issue.
+    - **action:**
+        1. Locate task T205 in the `TODO.md` file.
+        2. Change its status marker from `[~]` to `[x]`.
+        3. Add a comment indicating it was completed via the new tasks if needed.
+    - **done‑when:**
+        1. Task T205 in `TODO.md` is marked as complete (`[x]`).
+        2. A reference to tasks T234-T237 is included if appropriate.
+    - **depends‑on:** [T237]
+
+- [~] **T205 · bug · p1: Fix Path Validation in gatherSubGlances**
     - **context:** Path validation in `gatherSubGlances` (`glance.go:308`) needs strengthening using proper `baseDir` parameters to prevent potential traversal.
     - **action:**
         1. Validate the subdirectory path (`sd`) using `filesystem.ValidateDirPath` with an appropriate `baseDir`.
