@@ -45,7 +45,7 @@ func ReadTextFile(path string, maxBytes int64, baseDir string) (string, error) {
 	}
 
 	// Read the file with validated path
-	// #nosec G304 -- Path has been validated to prevent path traversal
+	// #nosec G304 -- Path has been validated using filesystem.ValidateFilePath
 	content, err := os.ReadFile(validatedPath)
 	if err != nil {
 		return "", err
@@ -112,7 +112,7 @@ func IsTextFile(path string, baseDir string) (bool, error) {
 	}
 
 	// Open the file with validated path
-	// #nosec G304 -- Path has been validated to prevent path traversal
+	// #nosec G304 -- Path has been validated using filesystem.ValidateFilePath
 	f, err := os.Open(validatedPath)
 	if err != nil {
 		return false, err

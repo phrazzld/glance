@@ -149,7 +149,7 @@
         3. Ignore patterns function as expected across different parts of the application.
     - **depends‑on:** []
 
-- [ ] **T210 · bug · p1: Update Security Suppression for Prompt Loading**
+- [x] **T210 · bug · p1: Update Security Suppression for Prompt Loading**
     - **context:** Security suppression comments (`#nosec`) in `llm/prompt.go:101` and elsewhere need updating after path traversal fixes.
     - **action:**
         1. Locate all `#nosec G304` suppression comments related to prompt file reading.
