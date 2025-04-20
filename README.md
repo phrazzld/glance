@@ -183,7 +183,7 @@ For detailed information about our GitHub Actions setup, including workflow conf
 
 ## License
 
-This repository is provided under an open license (e.g., Apache-2.0). Please refer to the LICENSE file for details.
+This repository is provided under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Enjoy!
 

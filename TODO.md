@@ -208,7 +208,7 @@
         2. All file writes use consistent permissions
     - **depends‑on:** [T051]
 
-- [ ] **T053 · chore · p3: update README license reference**
+- [x] **T053 · chore · p3: update README license reference**
     - **context:** CR-10: Reconcile license mismatch
     - **action:**
         1. Edit README.md license section to reference MIT
