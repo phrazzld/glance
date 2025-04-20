@@ -194,7 +194,7 @@
         2. Tests verify correct behavior with both relative and absolute paths.
     - **depends‑on:** []
 
-- [ ] **T217 · security · p2: Remove Insecure Allowlist Pragma**
+- [x] **T217 · security · p2: Remove Insecure Allowlist Pragma**
     - **context:** An "allowlist" pragma in parameter documentation may suppress legitimate security warnings.
     - **action:**
         1. Remove the pragma from parameter documentation in `llm/client.go:84`.

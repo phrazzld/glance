@@ -88,7 +88,7 @@ var NewGeminiClient = newGeminiClient
 // newGeminiClient is the actual implementation for creating a new client for the Google Gemini API.
 //
 // Parameters:
-//   - apiKey: The API key for authenticating with the Gemini API  // pragma: allowlist secret
+//   - apiKey: The API key for authenticating with the Gemini API // pragma: allowlist secret
 //   - options: Configuration options for the client
 //
 // Returns:
@@ -104,6 +104,7 @@ func newGeminiClient(apiKey string, options *ClientOptions) (*GeminiClient, erro
 	}
 
 	ctx := context.Background()
+	// #nosec G101 -- API key is provided by the user and not hardcoded
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Gemini client: %w", err)
