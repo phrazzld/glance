@@ -78,7 +78,7 @@
         4. All pre-commit hooks pass without using `--no-verify`.
     - **depends‑on:** [T236]
 
-- [ ] **T238 · chore · p1: Mark T205 as complete**
+- [x] **T238 · chore · p1: Mark T205 as complete**
     - **context:** The original task T205, "Fix Path Validation in gatherSubGlances", has been successfully decomposed and addressed by tasks T234-T237. This task is to formally close the original issue.
     - **action:**
         1. Locate task T205 in the `TODO.md` file.
@@ -89,7 +89,7 @@
         2. A reference to tasks T234-T237 is included if appropriate.
     - **depends‑on:** [T237]
 
-- [~] **T205 · bug · p1: Fix Path Validation in gatherSubGlances**
+- [x] **T205 · bug · p1: Fix Path Validation in gatherSubGlances**
     - **context:** Path validation in `gatherSubGlances` (`glance.go:308`) needs strengthening using proper `baseDir` parameters to prevent potential traversal.
     - **action:**
         1. Validate the subdirectory path (`sd`) using `filesystem.ValidateDirPath` with an appropriate `baseDir`.
@@ -98,6 +98,7 @@
     - **done‑when:**
         1. `gatherSubGlances` uses `ValidateDirPath` for subdirectories and passes the validated path as `baseDir` to `ReadTextFile`.
         2. New unit tests pass, verifying path containment within the expected base directories.
+    - **note:** Completed via subtasks T234 (signature change), T235 (implementation), T236 (caller update), and T237 (tests).
     - **depends‑on:** [T204]
 
 - [ ] **T206 · bug · p1: Fix Path Validation in readSubdirectories**
