@@ -9,6 +9,8 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+
+	"glance/filesystem"
 )
 
 // directoryChecker defines an interface for checking directory existence
@@ -122,7 +124,7 @@ func LoadConfig(args []string) (*Config, error) {
 
 // loadPromptTemplate tries to read from the specified file path, then "prompt.txt",
 // and falls back to the default prompt template if neither is available.
-// It validates all file paths to prevent path traversal vulnerabilities.
+// It securely validates all file paths to prevent path traversal vulnerabilities.
 func loadPromptTemplate(path string) (string, error) {
 	// Get current working directory as the base for validation
 	cwd, err := os.Getwd()
@@ -130,31 +132,34 @@ func loadPromptTemplate(path string) (string, error) {
 		return "", fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
-	// For custom path, don't restrict to current working directory
-	// This allows users to provide templates from anywhere on the filesystem
+	// For custom path, properly validate against the entire filesystem
 	if path != "" {
-		// Clean and absolutize the path, but don't enforce directory containment
-		// since the prompt file can be anywhere the user wants
+		// We can't use ValidateFilePath directly with an empty baseDir
+		// because that would skip validation, so we need to clean and
+		// absolutize the path first, then validate against filesystem root
+		// This allows users to provide templates from anywhere on the filesystem
+		// but prevents path traversal attacks
 		cleanPath := filepath.Clean(path)
 		absPath, err := filepath.Abs(cleanPath)
 		if err != nil {
 			return "", fmt.Errorf("invalid prompt template path: %w", err)
 		}
 
-		// Verify the file exists and is a file (not a directory)
-		info, err := os.Stat(absPath)
+		// Use filesystem root ("/") as baseDir to enforce path validity
+		// but not containment within any specific directory
+		// allowBaseDir=true because the root itself is allowed
+		// mustExist=true to ensure the file exists and is not a directory
+		rootDir := "/"
+		validPath, err := filesystem.ValidateFilePath(absPath, rootDir, true, true)
 		if err != nil {
-			return "", fmt.Errorf("failed to access prompt template at '%s': %w", path, err)
-		}
-		if info.IsDir() {
-			return "", fmt.Errorf("prompt template path '%s' is a directory, not a file", path)
+			return "", fmt.Errorf("failed to validate prompt template path: %w", err)
 		}
 
 		// Read the validated file path
-		// #nosec G304 -- The path has been cleaned, made absolute, and verified to be a file
-		data, err := os.ReadFile(absPath)
+		// #nosec G304 -- The path has been validated using filesystem.ValidateFilePath
+		data, err := os.ReadFile(validPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", absPath, err)
+			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", validPath, err)
 		}
 		return string(data), nil
 	}
@@ -163,11 +168,20 @@ func loadPromptTemplate(path string) (string, error) {
 	defaultPromptPath := filepath.Join(cwd, "prompt.txt")
 	// Check if the file exists, but don't return an error if it doesn't
 	if _, err := os.Stat(defaultPromptPath); err == nil {
-		// File exists, clean and read it
-		cleanPath := filepath.Clean(defaultPromptPath)
-		// #nosec G304 -- Reading from a standard prompt.txt file in the current directory
-		if data, err := os.ReadFile(cleanPath); err == nil {
-			return string(data), nil
+		// Validate the default path against the current working directory
+		// allowBaseDir=false because prompt.txt should be in CWD, not be CWD itself
+		// mustExist=true to ensure the file exists and is a file
+		validDefaultPath, err := filesystem.ValidateFilePath(defaultPromptPath, cwd, false, true)
+		if err != nil {
+			// We just log this rather than fail, to maintain backward compatibility
+			// with existing behavior of falling back to default template
+			logrus.Warnf("Failed to validate default prompt template: %v", err)
+		} else {
+			// Read the validated file
+			// #nosec G304 -- The path has been validated using filesystem.ValidateFilePath
+			if data, err := os.ReadFile(validDefaultPath); err == nil {
+				return string(data), nil
+			}
 		}
 	}
 

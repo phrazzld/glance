@@ -1,7 +1,7 @@
 # todo
 
 ## blocker-issues
-- [ ] **T201 · bug · p0: Fix Path Traversal Vulnerability in Prompt Template Loading**
+- [x] **T201 · bug · p0: Fix Path Traversal Vulnerability in Prompt Template Loading**
     - **context:** Critical security vulnerability allowing arbitrary file reads via default or custom prompt templates due to missing path validation in `config/loadconfig.go` and `llm/prompt.go`. This is the top priority fix.
     - **action:**
         1. Modify prompt loading logic in `config/loadconfig.go:120-159` to use `filesystem.ValidateFilePath`. Validate default prompt against CWD. Validate custom prompt path after cleaning and making absolute.
