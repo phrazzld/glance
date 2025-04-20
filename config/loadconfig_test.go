@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,26 +13,53 @@ import (
 
 // mockDirectoryChecker implements directoryChecker for testing
 type mockDirectoryChecker struct {
-	shouldPass   bool
-	errorMsg     string
-	checkedPaths []string // Tracks all paths that were checked
+	shouldPass    bool
+	errorMsg      string
+	checkedPaths  []string // Tracks all paths that were checked
+	returnAbsPath bool     // Whether to return an absolute path
 }
 
-func (m *mockDirectoryChecker) CheckDirectory(path string) error {
+func (m *mockDirectoryChecker) CheckDirectory(path string) (string, error) {
 	m.checkedPaths = append(m.checkedPaths, path)
 	if !m.shouldPass {
-		return errors.New(m.errorMsg)
+		return "", errors.New(m.errorMsg)
 	}
-	return nil
+
+	// Return the path as-is (preserving relative paths) or convert to absolute
+	if m.returnAbsPath && !filepath.IsAbs(path) {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return "", fmt.Errorf("error converting to absolute path: %w", err)
+		}
+		return absPath, nil
+	}
+	return filepath.Clean(path), nil
 }
 
 // Setup and teardown for directory checker
 func setupMockDirectoryChecker(shouldPass bool, errorMsg string) (*mockDirectoryChecker, func()) {
 	original := dirChecker
 	mock := &mockDirectoryChecker{
-		shouldPass:   shouldPass,
-		errorMsg:     errorMsg,
-		checkedPaths: []string{},
+		shouldPass:    shouldPass,
+		errorMsg:      errorMsg,
+		checkedPaths:  []string{},
+		returnAbsPath: false, // Default to preserving relative paths
+	}
+	dirChecker = mock
+
+	return mock, func() {
+		dirChecker = original
+	}
+}
+
+// Setup mock directory checker with option to return absolute paths
+func setupMockDirectoryCheckerWithOptions(shouldPass bool, errorMsg string, returnAbsPath bool) (*mockDirectoryChecker, func()) {
+	original := dirChecker
+	mock := &mockDirectoryChecker{
+		shouldPass:    shouldPass,
+		errorMsg:      errorMsg,
+		checkedPaths:  []string{},
+		returnAbsPath: returnAbsPath,
 	}
 	dirChecker = mock
 
@@ -423,6 +451,36 @@ func TestLoadConfigMissingTargetDir(t *testing.T) {
 	// Verify error for missing target directory
 	assert.Error(t, err, "LoadConfig should return an error when target directory is missing")
 	assert.Contains(t, err.Error(), "directory", "Error should mention missing directory")
+}
+
+func TestLoadConfigWithRelativePath(t *testing.T) {
+	// Setup the mock directory checker to pass but preserve relative paths
+	mock, cleanup := setupMockDirectoryCheckerWithOptions(true, "", false)
+	defer cleanup()
+
+	// Save and restore environment variables
+	cleanupEnv := setupEnvVars(t, map[string]string{
+		"GEMINI_API_KEY": "test-api-key",
+	})
+	defer cleanupEnv()
+
+	// Create test arguments with a relative path
+	args := []string{"glance", "./relative/path"}
+
+	// Run the function
+	cfg, err := LoadConfig(args)
+
+	// Verify no error
+	require.NoError(t, err, "LoadConfig should not return an error with valid inputs")
+
+	// Check that the relative path was cleaned but preserved
+	expectedCleanPath := "relative/path" // Clean version of "./relative/path"
+	assert.Equal(t, mock.checkedPaths[0], "./relative/path", "Original path should be passed to directoryChecker")
+
+	// The config should have the absolute path for security validation boundaries
+	absPath, err := filepath.Abs(expectedCleanPath)
+	require.NoError(t, err)
+	assert.Equal(t, absPath, cfg.TargetDir, "Config should store path as absolute for security validation")
 }
 
 func TestLoadConfigInvalidFlagSyntax(t *testing.T) {

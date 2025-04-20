@@ -16,22 +16,28 @@ import (
 // directoryChecker defines an interface for checking directory existence
 // This allows for easier testing by substituting a mock implementation
 type directoryChecker interface {
-	CheckDirectory(path string) error
+	// CheckDirectory verifies the path exists and is a directory
+	// Returns the validated path (can be relative or absolute) and any error
+	CheckDirectory(path string) (string, error)
 }
 
 // defaultChecker implements the directoryChecker interface using the real filesystem
 type defaultChecker struct{}
 
 // CheckDirectory verifies the path exists and is a directory
-func (d *defaultChecker) CheckDirectory(path string) error {
-	stat, err := os.Stat(path)
+// It accepts and preserves relative paths rather than forcing absolute conversion
+func (d *defaultChecker) CheckDirectory(path string) (string, error) {
+	// Clean the path to normalize it, but preserve its relative/absolute state
+	cleanPath := filepath.Clean(path)
+
+	stat, err := os.Stat(cleanPath)
 	if err != nil {
-		return fmt.Errorf("cannot access directory %q: %w", path, err)
+		return "", fmt.Errorf("cannot access directory %q: %w", cleanPath, err)
 	}
 	if !stat.IsDir() {
-		return fmt.Errorf("path %q is a file, not a directory", path)
+		return "", fmt.Errorf("path %q is a file, not a directory", cleanPath)
 	}
-	return nil
+	return cleanPath, nil
 }
 
 // Global variable to allow tests to override the directory checker
@@ -77,18 +83,21 @@ func LoadConfig(args []string) (*Config, error) {
 	// Get target directory and validate it
 	targetDir := cmdFlags.Arg(0)
 
-	// Clean and normalize the path
-	cleanTargetDir := filepath.Clean(targetDir)
-
-	// Convert to absolute path
-	absDir, err := filepath.Abs(cleanTargetDir)
+	// Check if directory exists and is actually a directory
+	// The directoryChecker will clean the path and verify it's a directory
+	validatedDir, err := dirChecker.CheckDirectory(targetDir)
 	if err != nil {
-		return nil, fmt.Errorf("invalid target directory: %w", err)
+		return nil, err
 	}
 
-	// Check if directory exists and is actually a directory
-	if err := dirChecker.CheckDirectory(absDir); err != nil {
-		return nil, err
+	// Convert to absolute path only if needed for validation boundary
+	// This is only needed when we need absolute paths for security validation
+	absDir := validatedDir
+	if !filepath.IsAbs(validatedDir) {
+		absDir, err = filepath.Abs(validatedDir)
+		if err != nil {
+			return nil, fmt.Errorf("invalid target directory: %w", err)
+		}
 	}
 
 	// Store the validated directory as our trusted root

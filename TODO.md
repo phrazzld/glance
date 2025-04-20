@@ -222,7 +222,7 @@
         2. Redundant checks in `processDirectory` are removed.
     - **depends‑on:** []
 
-- [ ] **T216 · refactor · p2: Improve Path Handling in directoryChecker**
+- [x] **T216 · refactor · p2: Improve Path Handling in directoryChecker**
     - **context:** The current implementation forces absolute path conversion when relative paths would suffice.
     - **action:**
         1. Improve the `directoryChecker` interface to handle both relative and absolute paths correctly.
