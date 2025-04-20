@@ -301,8 +301,11 @@ func reverseSlice(s []string) {
 func gatherSubGlances(subdirs []string) (string, error) {
 	var combined []string
 	for _, sd := range subdirs {
-		// Validate the subdirectory first
-		validDir, err := filesystem.ValidateDirPath(sd, "", true, true)
+		// Get the parent directory to use as baseDir for validation
+		parentDir := filepath.Dir(sd)
+
+		// Validate the subdirectory using parent as baseDir
+		validDir, err := filesystem.ValidateDirPath(sd, parentDir, true, true)
 		if err != nil {
 			logrus.Warnf("Skipping invalid subdirectory for glance.md collection: %v", err)
 			continue
@@ -329,8 +332,11 @@ func gatherSubGlances(subdirs []string) (string, error) {
 // readSubdirectories lists immediate subdirectories in a directory, skipping hidden or ignored ones.
 // This implementation uses filesystem package functions with appropriate filtering.
 func readSubdirectories(dir string, ignoreChain filesystem.IgnoreChain) ([]string, error) {
-	// Validate the directory path first
-	validDir, err := filesystem.ValidateDirPath(dir, "", true, true)
+	// Get the parent directory to use as baseDir for validation
+	parentDir := filepath.Dir(dir)
+
+	// Validate the directory path using parent as baseDir
+	validDir, err := filesystem.ValidateDirPath(dir, parentDir, true, true)
 	if err != nil {
 		return nil, fmt.Errorf("invalid directory path: %w", err)
 	}

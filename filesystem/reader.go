@@ -3,6 +3,7 @@
 package filesystem
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -23,7 +24,7 @@ const MaxDefaultFileSize = 5 * 1024 * 1024
 // Parameters:
 //   - path: The absolute path to the file to read
 //   - maxBytes: The maximum number of bytes to read (0 for unlimited)
-//   - baseDir: Optional base directory for path validation. If empty, no validation is performed.
+//   - baseDir: Base directory for path validation. Must be non-empty for proper security validation.
 //
 // Returns:
 //   - The contents of the file as a string
@@ -31,17 +32,16 @@ const MaxDefaultFileSize = 5 * 1024 * 1024
 func ReadTextFile(path string, maxBytes int64, baseDir string) (string, error) {
 	var validatedPath string
 
-	// Validate path if baseDir is provided
-	if baseDir != "" {
-		var err error
-		validatedPath, err = ValidateFilePath(path, baseDir, true, true)
-		if err != nil {
-			return "", fmt.Errorf("path validation failed: %w", err)
-		}
-	} else {
-		// No validation requested, use path as-is (legacy behavior)
-		// #nosec G304 -- When baseDir is not provided, caller is responsible for path validation
-		validatedPath = path
+	// A non-empty baseDir is required for proper validation
+	if baseDir == "" {
+		return "", errors.New("baseDir cannot be empty for validation")
+	}
+
+	// Validate path with the provided baseDir
+	var err error
+	validatedPath, err = ValidateFilePath(path, baseDir, true, true)
+	if err != nil {
+		return "", fmt.Errorf("path validation failed: %w", err)
 	}
 
 	// Read the file with validated path
@@ -91,7 +91,7 @@ func TruncateContent(content string, maxBytes int64) string {
 //
 // Parameters:
 //   - path: The path to the file to check
-//   - baseDir: Optional base directory for path validation. If empty, no validation is performed.
+//   - baseDir: Base directory for path validation. Must be non-empty for proper security validation.
 //
 // Returns:
 //   - true if the file appears to be text-based, false otherwise
@@ -99,17 +99,16 @@ func TruncateContent(content string, maxBytes int64) string {
 func IsTextFile(path string, baseDir string) (bool, error) {
 	var validatedPath string
 
-	// Validate path if baseDir is provided
-	if baseDir != "" {
-		var err error
-		validatedPath, err = ValidateFilePath(path, baseDir, true, true)
-		if err != nil {
-			return false, fmt.Errorf("path validation failed: %w", err)
-		}
-	} else {
-		// No validation requested, use path as-is (legacy behavior)
-		// #nosec G304 -- When baseDir is not provided, caller is responsible for path validation
-		validatedPath = path
+	// A non-empty baseDir is required for proper validation
+	if baseDir == "" {
+		return false, errors.New("baseDir cannot be empty for validation")
+	}
+
+	// Validate path with the provided baseDir
+	var err error
+	validatedPath, err = ValidateFilePath(path, baseDir, true, true)
+	if err != nil {
+		return false, fmt.Errorf("path validation failed: %w", err)
 	}
 
 	// Open the file with validated path

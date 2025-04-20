@@ -23,6 +23,12 @@ func TestValidatePathWithinBase(t *testing.T) {
 	err = os.WriteFile(testFile, []byte("test content"), 0644)
 	require.NoError(t, err)
 
+	t.Run("Empty baseDir is rejected", func(t *testing.T) {
+		_, err := ValidatePathWithinBase(testFile, "", true)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "baseDir cannot be empty")
+	})
+
 	t.Run("Valid paths within base", func(t *testing.T) {
 		// Test with base directory itself
 		validPath, err := ValidatePathWithinBase(baseDir, baseDir, true)
@@ -89,6 +95,12 @@ func TestValidateFilePath(t *testing.T) {
 	err = os.WriteFile(testFile, []byte("test content"), 0644)
 	require.NoError(t, err)
 
+	t.Run("Empty baseDir is rejected", func(t *testing.T) {
+		_, err := ValidateFilePath(testFile, "", true, false)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "baseDir cannot be empty")
+	})
+
 	t.Run("Valid file path that exists", func(t *testing.T) {
 		validPath, err := ValidateFilePath(testFile, baseDir, true, true)
 		assert.NoError(t, err)
@@ -136,6 +148,12 @@ func TestValidateDirPath(t *testing.T) {
 	testFile := filepath.Join(subDir, "testfile.txt")
 	err = os.WriteFile(testFile, []byte("test content"), 0644)
 	require.NoError(t, err)
+
+	t.Run("Empty baseDir is rejected", func(t *testing.T) {
+		_, err := ValidateDirPath(subDir, "", true, false)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "baseDir cannot be empty")
+	})
 
 	t.Run("Valid directory path that exists", func(t *testing.T) {
 		validPath, err := ValidateDirPath(subDir, baseDir, true, true)

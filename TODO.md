@@ -14,32 +14,8 @@
         3. Existing functionality for loading default and custom prompts remains intact.
     - **depends‑on:** []
 
-- [ ] **T202 · docs · p0: Restore or Replace Missing DEVELOPMENT_PHILOSOPHY.md**
-    - **context:** A core documentation file, `DEVELOPMENT_PHILOSOPHY.md`, is missing, causing broken references throughout the codebase.
-    - **action:**
-        1. Search git history for `DEVELOPMENT_PHILOSOPHY.md` and attempt to restore it to the root directory.
-        2. If restoration is not possible/desired, create a new file (even if initially a placeholder) to satisfy references.
-        3. Use `grep` or search tools to find all references to "DEVELOPMENT_PHILOSOPHY.md" in the codebase and documentation.
-        4. Update all found references to point to the correct, valid location of the file.
-    - **done‑when:**
-        1. A file named `DEVELOPMENT_PHILOSOPHY.md` exists at the location expected by references (likely the project root).
-        2. All references to `DEVELOPMENT_PHILOSOPHY.md` in the codebase and documentation point to the existing file.
-    - **depends‑on:** []
-
-- [ ] **T203 · docs · p0: Fix References to Missing Standards Documents**
-    - **context:** Code and documentation reference other standards documents that are missing or outdated.
-    - **action:**
-        1. Identify all referenced standards documents (e.g., search for keywords like "standards", common filenames).
-        2. For each referenced document, determine if it still exists and locate its correct path or URL.
-        3. If a document exists, update all references in the codebase and documentation to point to the correct location.
-        4. If a document is confirmed to be obsolete or no longer relevant, remove the references to it.
-    - **done‑when:**
-        1. All references to standards documents within the project point to valid, existing files/URLs or have been removed.
-        2. A review confirms no broken links related to standards documents remain.
-    - **depends‑on:** [T202]
-
 ## high-severity-issues
-- [ ] **T204 · bug · p1: Remove Empty baseDir Escape Hatch in filesystem/reader.go**
+- [x] **T204 · bug · p1: Remove Empty baseDir Escape Hatch in filesystem/reader.go**
     - **context:** The `filesystem/reader.go` functions have a code path allowing an empty `baseDir`, effectively bypassing path validation. This weakens security suppressions relying on this validation.
     - **action:**
         1. Modify `ValidateFilePath` and `ValidateDirPath` in `filesystem/reader.go` (around lines 44, 112) to require a non-empty `baseDir` parameter.

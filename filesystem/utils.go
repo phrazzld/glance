@@ -162,7 +162,7 @@ var ErrNotFile = errors.New("path is not a file")
 //
 // Parameters:
 //   - path: The path to validate
-//   - baseDir: The base directory that the path must be contained within
+//   - baseDir: The base directory that the path must be contained within. MUST be non-empty.
 //   - allowBaseDir: Whether the base directory itself is an acceptable path (true) or only subdirectories (false)
 //
 // Returns:
@@ -178,10 +178,9 @@ func ValidatePathWithinBase(path, baseDir string, allowBaseDir bool) (string, er
 		return "", fmt.Errorf("%w: %v", ErrInvalidPath, err)
 	}
 
-	// If baseDir is empty, we're in a test environment - skip validation
+	// Require a non-empty baseDir for proper validation
 	if baseDir == "" {
-		// For tests, we'll just return the absolute path
-		return absPath, nil
+		return "", errors.New("baseDir cannot be empty for validation")
 	}
 
 	// Get absolute base directory if it's not already
@@ -210,7 +209,7 @@ func ValidatePathWithinBase(path, baseDir string, allowBaseDir bool) (string, er
 //
 // Parameters:
 //   - path: The file path to validate
-//   - baseDir: The base directory that the path must be contained within
+//   - baseDir: The base directory that the path must be contained within. MUST be non-empty.
 //   - allowBaseDir: Whether the base directory itself is an acceptable path
 //   - mustExist: Whether the file must exist (true) or not (false)
 //
@@ -245,7 +244,7 @@ func ValidateFilePath(path, baseDir string, allowBaseDir, mustExist bool) (strin
 //
 // Parameters:
 //   - path: The directory path to validate
-//   - baseDir: The base directory that the path must be contained within
+//   - baseDir: The base directory that the path must be contained within. MUST be non-empty.
 //   - allowBaseDir: Whether the base directory itself is an acceptable path
 //   - mustExist: Whether the directory must exist (true) or not (false)
 //
