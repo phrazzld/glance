@@ -118,18 +118,8 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	// Build prompt data
 	promptData := BuildPromptData(dir, subGlances, fileMap)
 
-	// Use template from options if available, otherwise load from file
-	var template string
-	var err error
-
-	if s.options.PromptTemplate != "" {
-		template = s.options.PromptTemplate
-	} else {
-		template, err = LoadTemplate("")
-		if err != nil {
-			return "", fmt.Errorf("failed to load template: %w", err)
-		}
-	}
+	// Use template from options (no more dynamic loading from file)
+	template := s.options.PromptTemplate
 
 	prompt, err := GeneratePrompt(promptData, template)
 	if err != nil {

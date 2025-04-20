@@ -1,13 +1,10 @@
 package llm
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultTemplate(t *testing.T) {
@@ -25,156 +22,9 @@ func TestDefaultTemplate(t *testing.T) {
 	assert.Contains(t, template, "highlight purpose")
 }
 
-func TestLoadTemplate(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir := t.TempDir()
-
-	// Create a custom template file
-	customTemplate := "Custom template with {{.Directory}} and {{.SubGlances}} and {{.FileContents}}"
-	customTemplatePath := filepath.Join(tempDir, "custom.txt")
-	err := os.WriteFile(customTemplatePath, []byte(customTemplate), 0644)
-	require.NoError(t, err)
-
-	// Create a default location template file in current directory (will be cleaned up)
-	defaultLocTemplate := "Default location template with {{.Directory}}"
-	defaultPath := "prompt.txt"
-	currentDir, err := os.Getwd()
-	require.NoError(t, err)
-	fullDefaultPath := filepath.Join(currentDir, defaultPath)
-
-	// Use cleanup to ensure we remove the prompt.txt file after tests
-	t.Cleanup(func() {
-		os.Remove(fullDefaultPath)
-	})
-
-	// Test cases
-	tests := []struct {
-		name      string
-		setupFn   func() error // Setup function to run before the test
-		cleanupFn func() error // Cleanup function to run after the test
-		path      string
-		want      string
-		wantErr   bool
-		skip      bool   // Skip this test case
-		skipMsg   string // Skip message
-	}{
-		{
-			name:      "Default template when path is empty and no prompt.txt exists",
-			setupFn:   func() error { return nil },
-			cleanupFn: func() error { return nil },
-			path:      "",
-			want:      DefaultTemplate(),
-			wantErr:   false,
-		},
-		{
-			name:      "Custom template from valid path",
-			setupFn:   func() error { return nil },
-			cleanupFn: func() error { return nil },
-			path:      customTemplatePath,
-			want:      customTemplate,
-			wantErr:   true, // Now expect an error due to stricter path validation
-			skip:      true,
-			skipMsg:   "Skipping due to stricter path validation that prevents temp dir access",
-		},
-		{
-			name:      "Error with non-existent path",
-			setupFn:   func() error { return nil },
-			cleanupFn: func() error { return nil },
-			path:      filepath.Join(tempDir, "nonexistent.txt"),
-			want:      "",
-			wantErr:   true,
-		},
-		{
-			name: "Use prompt.txt from current directory when path is empty",
-			setupFn: func() error {
-				return os.WriteFile(fullDefaultPath, []byte(defaultLocTemplate), 0644)
-			},
-			cleanupFn: func() error {
-				return os.Remove(fullDefaultPath)
-			},
-			path:    "",
-			want:    defaultLocTemplate,
-			wantErr: false,
-		},
-	}
-
-	// Run tests
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Skip test if marked to skip
-			if tt.skip {
-				t.Skip(tt.skipMsg)
-			}
-
-			// Run setup
-			if tt.setupFn != nil {
-				err := tt.setupFn()
-				require.NoError(t, err)
-			}
-
-			// Test cleanup
-			if tt.cleanupFn != nil {
-				defer func() {
-					err := tt.cleanupFn()
-					if err != nil {
-						t.Logf("cleanup error: %v", err)
-					}
-				}()
-			}
-
-			got, err := LoadTemplate(tt.path)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
-		})
-	}
-
-	// Test path traversal security
-	t.Run("Path traversal attempt fails", func(t *testing.T) {
-		// Create a temporary directory structure
-		tempDir, err := os.MkdirTemp("", "glance-test-*")
-		require.NoError(t, err, "Failed to create temp directory")
-		defer os.RemoveAll(tempDir)
-
-		// Create a safe directory with a legitimate file
-		safeDir := filepath.Join(tempDir, "safe")
-		err = os.MkdirAll(safeDir, 0755)
-		require.NoError(t, err, "Failed to create safe directory")
-
-		// Create a legitimate prompt file
-		safePromptPath := filepath.Join(safeDir, "safe-prompt.txt")
-		safeContent := "safe template content"
-		err = os.WriteFile(safePromptPath, []byte(safeContent), 0644)
-		require.NoError(t, err, "Failed to create safe prompt file")
-
-		// Create a "secret" file outside the safe directory
-		secretPath := filepath.Join(tempDir, "secret.txt")
-		secretContent := "sensitive data that should not be accessible"
-		err = os.WriteFile(secretPath, []byte(secretContent), 0644)
-		require.NoError(t, err, "Failed to create secret file")
-
-		// Test path traversal attempt (../secret.txt)
-		traversalPath := filepath.Join(safeDir, "..", "secret.txt")
-
-		// Temporarily set working directory to the safe directory to simulate CWD-based validation
-		origDir, err := os.Getwd()
-		require.NoError(t, err, "Failed to get current working directory")
-
-		err = os.Chdir(safeDir)
-		require.NoError(t, err, "Failed to change to safe directory")
-		defer os.Chdir(origDir) // Restore original directory when done
-
-		// Attempt to load the file with path traversal
-		result, err := LoadTemplate(traversalPath)
-
-		// Verify the attempt is rejected
-		assert.Error(t, err, "Should return error for path traversal attempt")
-		assert.Contains(t, err.Error(), "outside", "Error should indicate path traversal issue")
-		assert.Empty(t, result, "Result should be empty for rejected path")
-	})
+func TestLoadTemplateDeprecated(t *testing.T) {
+	// Skip as LoadTemplate is now deprecated
+	t.Skip("LoadTemplate is deprecated, tests are now in config/template_test.go")
 }
 
 func TestGeneratePrompt(t *testing.T) {

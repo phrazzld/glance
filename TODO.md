@@ -111,7 +111,7 @@
         2. New unit tests pass, verifying path containment.
     - **depends‑on:** [T204]
 
-- [ ] **T207 · refactor · p1: Centralize Prompt Template Loading Logic**
+- [x] **T207 · refactor · p1: Centralize Prompt Template Loading Logic**
     - **context:** Duplicate logic for loading prompt templates exists in `config/loadconfig.go`, `llm/prompt.go`, and `llm/service.go`. This should be consolidated into a single, secure implementation.
     - **action:**
         1. Designate the `config` package as the sole owner of prompt template loading logic.

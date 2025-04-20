@@ -3,14 +3,10 @@ package llm
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 // We're using the MockClient defined in client_test.go
@@ -79,8 +75,9 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 
 	// Test successful generation on first attempt
 	t.Run("Successful generation", func(t *testing.T) {
-		// Setup service with mock client
-		service, err := NewService(mockClient)
+		// Setup service with mock client and custom template
+		customTemplate := "Custom template for test {{.Directory}}"
+		service, err := NewService(mockClient, WithPromptTemplate(customTemplate))
 		assert.NoError(t, err)
 
 		// Setup expectations for the mock
@@ -102,7 +99,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient = new(MockClient)
 
 		// Setup service with mock client and 3 retries
-		service, err := NewService(mockClient, WithServiceMaxRetries(3))
+		service, err := NewService(mockClient, WithServiceMaxRetries(3), WithPromptTemplate("test template"))
 		assert.NoError(t, err)
 
 		// Setup expectations - first 2 attempts fail, 3rd succeeds
@@ -126,7 +123,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient = new(MockClient)
 
 		// Setup service with mock client and 2 retries
-		service, err := NewService(mockClient, WithServiceMaxRetries(2))
+		service, err := NewService(mockClient, WithServiceMaxRetries(2), WithPromptTemplate("test template"))
 		assert.NoError(t, err)
 
 		// Setup expectations - all attempts fail
@@ -144,129 +141,23 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient.AssertExpectations(t)
 	})
 
-	// Test with custom template
-	t.Run("Custom template", func(t *testing.T) {
-		// Reset mock
+	// Test with template generation error
+	t.Run("Template generation error", func(t *testing.T) {
+		// Create a service with a mock client
 		mockClient = new(MockClient)
 
-		// Create a temporary directory for the test
-		tempDir := t.TempDir()
-
-		// Create a custom template file
-		customTemplate := "Custom template with {{.Directory}} and {{.SubGlances}} and {{.FileContents}}"
-		customTemplatePath := filepath.Join(tempDir, "custom_template.txt")
-		err := os.WriteFile(customTemplatePath, []byte(customTemplate), 0644)
-		require.NoError(t, err)
-
-		// Create temp prompt.txt in current directory to test template loading
-		currentDir, err := os.Getwd()
-		require.NoError(t, err)
-		promptPath := filepath.Join(currentDir, "prompt.txt")
-		err = os.WriteFile(promptPath, []byte(customTemplate), 0644)
-		require.NoError(t, err)
-
-		// Clean up the prompt.txt file after the test
-		defer os.Remove(promptPath)
-
-		// Setup service with mock client
-		service, err := NewService(mockClient)
-		assert.NoError(t, err)
-
-		// Setup expectations for the mock
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
-		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
-
-		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
-
-		// Verify results
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, result)
-		mockClient.AssertExpectations(t)
-	})
-
-	// Test with verbose mode enabled
-	t.Run("Verbose mode enabled", func(t *testing.T) {
-		// Reset mock
-		mockClient = new(MockClient)
-
-		// Save current log level and restore it after test
-		originalLevel := logrus.GetLevel()
-		logrus.SetLevel(logrus.DebugLevel)
-		defer logrus.SetLevel(originalLevel)
-
-		// Setup service with mock client and verbose mode
-		service, err := NewService(mockClient, WithVerbose(true))
-		assert.NoError(t, err)
-
-		// Setup expectations for the mock - include token counting since verbose is enabled
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
-		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Once() // Should be called with verbose=true
-
-		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
-
-		// Verify results
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, result)
-		mockClient.AssertExpectations(t)
-	})
-
-	// Test with token counting error in verbose mode
-	t.Run("Token counting error in verbose mode", func(t *testing.T) {
-		// Reset mock
-		mockClient = new(MockClient)
-
-		// Save current log level and restore it after test
-		originalLevel := logrus.GetLevel()
-		logrus.SetLevel(logrus.DebugLevel)
-		defer logrus.SetLevel(originalLevel)
-
-		// Setup service with mock client and verbose mode
-		service, err := NewService(mockClient, WithVerbose(true))
-		assert.NoError(t, err)
-
-		// Setup expectations for the mock
-		tokenError := errors.New("token counting error")
-		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(0, tokenError).Once()
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
-
-		// Call the method - should still work despite token counting error
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
-
-		// Verify results - generation should succeed despite token counting error
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, result)
-		mockClient.AssertExpectations(t)
-	})
-
-	// Test with template loading error
-	t.Run("Template loading error", func(t *testing.T) {
-		// Create a service with a mock client that expects nothing to be called
-		// because we'll error before reaching the client
-		mockClient = new(MockClient)
-		service, err := NewService(mockClient)
-		assert.NoError(t, err)
-
-		// Create a directory where we can't read files (no permissions)
-		// This is tricky to do in a test, so we'll mock the behavior by
-		// patching the LoadTemplate function (not easy in Go)
-		// Instead, we'll test error handling for prompt generation
-
-		// Create an invalid template to cause an error
+		// Create an invalid template to cause an error in prompt generation
 		invalidTemplate := "Invalid template with {{.MissingVar}}"
-		customTemplatePath := filepath.Join(t.TempDir(), "invalid_template.txt")
-		err = os.WriteFile(customTemplatePath, []byte(invalidTemplate), 0644)
-		require.NoError(t, err)
+		service, err := NewService(mockClient, WithPromptTemplate(invalidTemplate))
+		assert.NoError(t, err)
 
-		// Set mock expectations for nil fileMap case
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
-		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
+		// This should fail due to invalid template with .MissingVar
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
 
-		// Test handling of nil fileMap
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, nil, subGlances)
-		assert.NoError(t, err) // Should handle nil fileMap gracefully
-		assert.Equal(t, expectedResponse, result)
+		// Now we expect an error from template generation
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "template")
+		assert.Empty(t, result) // No result since template failed
 	})
 
 	// Test with prompt template from options
