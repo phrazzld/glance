@@ -28,6 +28,10 @@ type ServiceOptions struct {
 
 	// Verbose enables detailed logging for LLM operations
 	Verbose bool
+
+	// PromptTemplate is the template string to use for generating prompts
+	// If empty, the service will load the template from a file or use the default
+	PromptTemplate string
 }
 
 // WithMaxRetries returns a new ServiceOptions with the specified max retries value.
@@ -51,12 +55,20 @@ func (o *ServiceOptions) WithVerbose(verbose bool) *ServiceOptions {
 	return &newOpts
 }
 
+// WithPromptTemplate returns a new ServiceOptions with the specified prompt template.
+func (o *ServiceOptions) WithPromptTemplate(template string) *ServiceOptions {
+	newOpts := *o
+	newOpts.PromptTemplate = template
+	return &newOpts
+}
+
 // DefaultServiceOptions returns a ServiceOptions instance with sensible defaults.
 func DefaultServiceOptions() *ServiceOptions {
 	return &ServiceOptions{
-		MaxRetries: 3,
-		ModelName:  "gemini-2.0-flash",
-		Verbose:    false,
+		MaxRetries:     3,
+		ModelName:      "gemini-2.5-flash-preview-04-17",
+		Verbose:        false,
+		PromptTemplate: "",
 	}
 }
 
@@ -81,6 +93,13 @@ func WithModelName(modelName string) ServiceOption {
 func WithVerbose(verbose bool) ServiceOption {
 	return func(o *ServiceOptions) {
 		o.Verbose = verbose
+	}
+}
+
+// WithPromptTemplate configures the prompt template for the service.
+func WithPromptTemplate(template string) ServiceOption {
+	return func(o *ServiceOptions) {
+		o.PromptTemplate = template
 	}
 }
 
@@ -127,10 +146,17 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	// Build prompt data
 	promptData := BuildPromptData(dir, subGlances, fileMap)
 
-	// Get template and generate prompt
-	template, err := LoadTemplate("")
-	if err != nil {
-		return "", fmt.Errorf("failed to load template: %w", err)
+	// Use template from options if available, otherwise load from file
+	var template string
+	var err error
+
+	if s.options.PromptTemplate != "" {
+		template = s.options.PromptTemplate
+	} else {
+		template, err = LoadTemplate("")
+		if err != nil {
+			return "", fmt.Errorf("failed to load template: %w", err)
+		}
 	}
 
 	prompt, err := GeneratePrompt(promptData, template)

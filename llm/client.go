@@ -47,7 +47,7 @@ type ClientOptions struct {
 // DefaultClientOptions returns a ClientOptions instance with sensible defaults.
 func DefaultClientOptions() *ClientOptions {
 	return &ClientOptions{
-		ModelName:  "gemini-2.0-flash",
+		ModelName:  "gemini-2.5-flash-preview-04-17",
 		MaxRetries: 3,
 		Timeout:    60, // 60 seconds
 	}
@@ -81,16 +81,20 @@ type GeminiClient struct {
 	options *ClientOptions
 }
 
-// NewGeminiClient creates a new client for the Google Gemini API.
+// NewGeminiClient is a function variable to create a new client for the Google Gemini API.
+// This allows for easier mocking in tests.
+var NewGeminiClient = newGeminiClient
+
+// newGeminiClient is the actual implementation for creating a new client for the Google Gemini API.
 //
 // Parameters:
-//   - apiKey: The API key for authenticating with the Gemini API
+//   - apiKey: The API key for authenticating with the Gemini API  // pragma: allowlist secret
 //   - options: Configuration options for the client
 //
 // Returns:
 //   - A new GeminiClient instance
 //   - An error if client creation fails
-func NewGeminiClient(apiKey string, options *ClientOptions) (*GeminiClient, error) {
+func newGeminiClient(apiKey string, options *ClientOptions) (*GeminiClient, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}
@@ -232,7 +236,12 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 // It releases resources used by the client.
 func (c *GeminiClient) Close() {
 	if c.client != nil {
-		c.client.Close()
+		// Handle Close error properly
+		err := c.client.Close()
+		if err != nil {
+			// Log the error but don't propagate it as Close() doesn't return an error
+			logrus.Warnf("Error closing Gemini client: %v", err)
+		}
 		c.client = nil
 		c.model = nil
 	}

@@ -1,5 +1,10 @@
 # Glance README
 
+[![Pre-commit Checks](https://github.com/phrazzld/glance/actions/workflows/precommit.yml/badge.svg)](https://github.com/phrazzld/glance/actions/workflows/precommit.yml)
+[![Go Tests](https://github.com/phrazzld/glance/actions/workflows/test.yml/badge.svg)](https://github.com/phrazzld/glance/actions/workflows/test.yml)
+[![Go Linting](https://github.com/phrazzld/glance/actions/workflows/lint.yml/badge.svg)](https://github.com/phrazzld/glance/actions/workflows/lint.yml)
+[![Go Build](https://github.com/phrazzld/glance/actions/workflows/build.yml/badge.svg)](https://github.com/phrazzld/glance/actions/workflows/build.yml)
+
 ## What is it?
 
 Glance is a command-line tool that recursively scans a directory tree and generates a `glance.md` file in each directory. This file provides a high-level summary of the directory's contents, generated using Google's Generative AI API (Gemini).
@@ -70,6 +75,102 @@ Glance is organized into several packages:
 - **llm:** Abstractions for interacting with the Gemini API
 - **ui:** User interface components for feedback, including spinners and progress bars
 
+## Developer Setup
+
+### Quick Setup (Recommended)
+
+We provide a comprehensive setup script that will configure your entire development environment:
+
+```bash
+./scripts/setup-dev-environment.sh
+```
+
+This script will:
+- Verify Go and Git installations
+- Configure Git settings if needed
+- Install and configure pre-commit hooks
+- Install the GitHub CLI (optional)
+- Set up a local environment file
+- Verify Go modules
+- Build the project
+- Provide next steps
+
+### Pre-commit Hooks
+
+Glance uses pre-commit hooks to ensure code quality and consistency. These hooks automatically check your code before each commit to catch issues early.
+
+#### What Pre-commit Hooks Do
+
+- Ensure code follows Go formatting standards (`go fmt`, `go imports`)
+- Run static analysis to catch potential bugs (`go vet`, `golangci-lint` - see [docs/LINTING.md](docs/LINTING.md))
+- Verify tests pass before committing (`go test`)
+- Fix common issues like trailing whitespace and line endings
+- Prevent accidentally committing secrets or sensitive data
+- Block large files and other unwanted content from the repository
+
+#### Manual Installation
+
+If you prefer to set up only the pre-commit hooks manually:
+
+**Option 1: Use our pre-commit setup script**
+```bash
+./scripts/setup-precommit.sh
+```
+
+**Option 2: Manual installation**
+
+1. Install pre-commit:
+```bash
+# Using pip (Python)
+pip install pre-commit
+
+# Using Homebrew (macOS)
+brew install pre-commit
+
+# Using apt (Debian/Ubuntu)
+sudo apt update
+sudo apt install pre-commit
+```
+
+2. Install golangci-lint:
+```bash
+# Using Homebrew
+brew install golangci-lint
+
+# Using Go (use the version specified in .pre-commit-config.yaml)
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.1.2
+```
+
+> **Note:** For version consistency, check the current version in `.pre-commit-config.yaml`
+> and ensure you're using the same version as specified in the `rev:` field under the
+> golangci-lint repo configuration.
+
+3. Set up the git hooks:
+```bash
+cd /path/to/glance
+pre-commit install
+```
+
+#### Using Pre-commit Hooks
+
+After installation, hooks run automatically on each commit. You can also run them manually:
+
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run a specific hook
+pre-commit run go-fmt --all-files
+```
+
+For more details on our pre-commit setup, available hooks, configuration, and troubleshooting, see [docs/PRECOMMIT.md](/docs/PRECOMMIT.md).
+
+### GitHub Actions Workflows
+
+Glance uses GitHub Actions for continuous integration and deployment. Our workflows automatically test, lint, and build the project on every push and pull request.
+
+For detailed information about our GitHub Actions setup, including workflow configurations, triggers, and troubleshooting tips, see [docs/GITHUB_ACTIONS.md](/docs/GITHUB_ACTIONS.md).
+
 ## Dependencies
 
 - [github.com/briandowns/spinner](https://github.com/briandowns/spinner) – Spinner animation.
@@ -82,7 +183,7 @@ Glance is organized into several packages:
 
 ## License
 
-This repository is provided under an open license (e.g., Apache-2.0). Please refer to the LICENSE file for details.
+This repository is provided under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Enjoy!
 

@@ -1,0 +1,34 @@
+# Optimized golangci-lint configuration for v2.1.2
+# Performance-focused configuration for Go 1.23+ compatibility
+
+# Modern golangci-lint v2.x configuration
+version: "2"
+
+run:
+  # Timeout for running linters
+  timeout: 2m
+  # Don't run on test files
+  tests: false
+  # Allow analysis of large codebases
+  allow-parallel-runners: true
+  allow-serial-runners: true
+
+# Only enable specific linters with explicit configuration
+linters:
+  enable:
+    # Essential linters
+    - errcheck          # Check for unchecked errors
+    - govet             # Examine code for suspicious constructs
+    - ineffassign       # Detect unused assignments
+    - staticcheck       # Static analysis checks
+    - unused            # Find unused variables, functions, etc.
+    # Additional useful linters
+    - misspell          # Find commonly misspelled words
+    - gosec             # Security checks
+
+# Configure specific linter settings
+issues:
+  # Don't show the same issue multiple times
+  max-same-issues: 3
+  # Limit number of issues per linter
+  max-issues-per-linter: 10

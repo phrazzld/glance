@@ -500,7 +500,8 @@ func TestLoadPromptTemplate(t *testing.T) {
 
 		// Verify
 		assert.Error(t, err, "Should return error for invalid path")
-		assert.Contains(t, err.Error(), "failed to read", "Error should indicate read failure")
+		assert.Contains(t, err.Error(), "failed to access", "Error should indicate access failure")
+		assert.Contains(t, err.Error(), "no such file or directory", "Error should mention file not found")
 		assert.Empty(t, result, "Result should be empty")
 	})
 
