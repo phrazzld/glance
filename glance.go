@@ -222,7 +222,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		r.err = err
 		return r
 	}
-	subGlances, err := gatherSubGlances(subdirs)
+	subGlances, err := gatherSubGlances(dir, subdirs)
 	if err != nil {
 		r.err = fmt.Errorf("gatherSubGlances failed: %w", err)
 		return r

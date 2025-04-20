@@ -52,7 +52,7 @@
         3. The function properly handles errors and skips invalid paths.
     - **depends‑on:** [T234]
 
-- [ ] **T236 · refactor · p1: Update processDirectory to pass baseDir to gatherSubGlances**
+- [x] **T236 · refactor · p1: Update processDirectory to pass baseDir to gatherSubGlances**
     - **context:** The `processDirectory` function calls `gatherSubGlances`. Since the signature of `gatherSubGlances` has changed, the call site in `processDirectory` must be updated to pass the correct `baseDir`.
     - **action:**
         1. Open `glance.go` and locate the `processDirectory` function.
