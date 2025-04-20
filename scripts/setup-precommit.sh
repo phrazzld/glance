@@ -1,5 +1,6 @@
 #!/bin/bash
 # Pre-commit setup script for Glance
+# Note: This project standardizes on golangci-lint v2.1.2 across all environments
 
 set -e
 
@@ -29,15 +30,19 @@ fi
 if ! command -v golangci-lint &> /dev/null; then
     echo "golangci-lint not found. Attempting to install..."
 
-    # Try brew installation
+    # Try brew installation with specific version
     if command -v brew &> /dev/null; then
+        # Note: We try to install a specific version but fall back to using pre-commit's managed version
+        # since brew might not support the exact version pinning we need
         brew install golangci-lint
+        echo "Note: Brew might install a different version than v2.1.2 required by this project."
+        echo "The pre-commit hook will use the correct version v2.1.2 regardless of the installed version."
     # Try go installation
     elif command -v go &> /dev/null; then
-        go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.0
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.1.2
     else
         echo "Warning: Could not install golangci-lint. Please install manually:"
-        echo "brew install golangci-lint or go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.0"
+        echo "brew install golangci-lint or go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.1.2"
     fi
 fi
 
