@@ -9,30 +9,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/api/iterator"
+
+	"glance/internal/mocks"
 )
 
-// MockClient is a mock implementation of the Client interface for testing
-type MockClient struct {
-	mock.Mock
-}
-
-func (m *MockClient) Generate(ctx context.Context, prompt string) (string, error) {
-	args := m.Called(ctx, prompt)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockClient) CountTokens(ctx context.Context, prompt string) (int, error) {
-	args := m.Called(ctx, prompt)
-	return args.Int(0), args.Error(1)
-}
-
-func (m *MockClient) Close() {
-	m.Called()
-}
+// We're using the LLMClient from internal/mocks package
 
 // Test the interface definition with the mock implementation
 func TestClientInterface(t *testing.T) {
-	mockClient := new(MockClient)
+	mockClient := new(mocks.LLMClient)
 
 	ctx := context.Background()
 	testPrompt := "Test prompt"

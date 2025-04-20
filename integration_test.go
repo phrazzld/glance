@@ -1,33 +1,14 @@
 package main
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-// MockClient is a mock implementation of the llm.Client interface for testing
-type MockClient struct {
-	mock.Mock
-}
-
-func (m *MockClient) Generate(ctx context.Context, prompt string) (string, error) {
-	args := m.Called(ctx, prompt)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockClient) CountTokens(ctx context.Context, prompt string) (int, error) {
-	args := m.Called(ctx, prompt)
-	return args.Int(0), args.Error(1)
-}
-
-func (m *MockClient) Close() {
-	m.Called()
-}
+// Tests are skipped, but would use internal/mocks.LLMClient when implemented
 
 // Additional setup specific to this integration test
 func setupIntegrationTest(t *testing.T) (string, func()) {

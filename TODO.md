@@ -175,7 +175,7 @@
     - **depends‑on:** []
 
 ## medium-severity-issues
-- [ ] **T212 · refactor · p2: Create Shared Test Utilities for Mock Client**
+- [x] **T212 · refactor · p2: Create Shared Test Utilities for Mock Client**
     - **context:** A mock LLM client implementation is duplicated across different test files.
     - **action:**
         1. Create a new internal package dedicated to shared testing utilities (e.g., `internal/testutil`).

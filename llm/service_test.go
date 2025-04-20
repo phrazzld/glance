@@ -7,9 +7,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"glance/internal/mocks"
 )
 
-// We're using the MockClient defined in client_test.go
+// We're using the LLMClient defined in internal/mocks package
 
 func TestNewService(t *testing.T) {
 	// Test with nil client
@@ -22,7 +24,7 @@ func TestNewService(t *testing.T) {
 
 	// Test with valid client and default options
 	t.Run("Valid client with default options", func(t *testing.T) {
-		mockClient := new(MockClient)
+		mockClient := new(mocks.LLMClient)
 		service, err := NewService(mockClient)
 
 		assert.NoError(t, err)
@@ -35,7 +37,7 @@ func TestNewService(t *testing.T) {
 
 	// Test with valid client and custom options
 	t.Run("Valid client with custom options", func(t *testing.T) {
-		mockClient := new(MockClient)
+		mockClient := new(mocks.LLMClient)
 		customRetries := 10
 		service, err := NewService(mockClient, WithServiceMaxRetries(customRetries))
 
@@ -46,7 +48,7 @@ func TestNewService(t *testing.T) {
 
 	// Test with multiple options
 	t.Run("Multiple options", func(t *testing.T) {
-		mockClient := new(MockClient)
+		mockClient := new(mocks.LLMClient)
 		service, err := NewService(mockClient,
 			WithServiceMaxRetries(5),
 			WithServiceModelName("custom-model"),
@@ -61,7 +63,7 @@ func TestNewService(t *testing.T) {
 }
 
 func TestGenerateGlanceMarkdown(t *testing.T) {
-	mockClient := new(MockClient)
+	mockClient := new(mocks.LLMClient)
 	ctx := context.Background()
 
 	// Test data
@@ -96,7 +98,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	// Test with retries
 	t.Run("Generation succeeds after retries", func(t *testing.T) {
 		// Reset mock
-		mockClient = new(MockClient)
+		mockClient = new(mocks.LLMClient)
 
 		// Setup service with mock client and 3 retries
 		service, err := NewService(mockClient, WithServiceMaxRetries(3), WithPromptTemplate("test template"))
@@ -120,7 +122,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	// Test with all retries failing
 	t.Run("All retries fail", func(t *testing.T) {
 		// Reset mock
-		mockClient = new(MockClient)
+		mockClient = new(mocks.LLMClient)
 
 		// Setup service with mock client and 2 retries
 		service, err := NewService(mockClient, WithServiceMaxRetries(2), WithPromptTemplate("test template"))
@@ -144,7 +146,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	// Test with template generation error
 	t.Run("Template generation error", func(t *testing.T) {
 		// Create a service with a mock client
-		mockClient = new(MockClient)
+		mockClient = new(mocks.LLMClient)
 
 		// Create an invalid template to cause an error in prompt generation
 		invalidTemplate := "Invalid template with {{.MissingVar}}"
@@ -163,7 +165,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	// Test with prompt template from options
 	t.Run("Use prompt template from options", func(t *testing.T) {
 		// Reset mock
-		mockClient = new(MockClient)
+		mockClient = new(mocks.LLMClient)
 
 		// Create a custom template
 		customTemplate := "Custom template from options with {{.Directory}}"
