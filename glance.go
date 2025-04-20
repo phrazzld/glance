@@ -195,16 +195,9 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreChain, cfg *config.Config, llmService *llm.Service) result {
 	r := result{dir: dir}
 
-	glancePath := filepath.Join(dir, "glance.md")
-	fileExists := false
-
-	// Check if the file exists (and remember the result)
-	if _, err := os.Stat(glancePath); err == nil {
-		fileExists = true
-	}
-
-	// Skip if glance.md exists and we're not forcing regeneration
-	if fileExists && !forceDir && !cfg.Force {
+	// forceDir already indicates if regeneration is needed based on filesystem.ShouldRegenerate
+	// called in processDirectories
+	if !forceDir && !cfg.Force {
 		if cfg.Verbose {
 			logrus.Debugf("⏩ Skipping %s (glance.md already exists and looks fresh)", dir)
 		}
@@ -247,6 +240,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	}
 
 	// Validate the glance.md path before writing
+	glancePath := filepath.Join(dir, "glance.md")
 	validatedPath, pathErr := filesystem.ValidateFilePath(glancePath, dir, true, false)
 	if pathErr != nil {
 		r.err = fmt.Errorf("invalid glance.md path for %s: %w", dir, pathErr)

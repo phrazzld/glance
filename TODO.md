@@ -211,7 +211,7 @@
         2. Calling `ui.ReportError` with `verbose=true` still includes the stack trace.
     - **depends‑on:** []
 
-- [ ] **T215 · refactor · p2: Consolidate Regeneration Check Logic**
+- [x] **T215 · refactor · p2: Consolidate Regeneration Check Logic**
     - **context:** Redundant logic to determine if a glance file needs regeneration exists in multiple places.
     - **action:**
         1. Identify all places where regeneration checks occur.
