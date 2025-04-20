@@ -153,7 +153,7 @@ func IsTextFile(path string, baseDir string) (bool, error) {
 // Returns:
 //   - A map of relative file paths to their contents as strings
 //   - An error, if any occurred during scanning or reading
-func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, verbose bool) (map[string]string, error) {
+func GatherLocalFiles(dir string, ignoreChain IgnoreChain, maxFileBytes int64, verbose bool) (map[string]string, error) {
 	files := make(map[string]string)
 
 	// Clean and normalize the directory path
@@ -212,37 +212,11 @@ func GatherLocalFiles(dir string, ignoreChain []IgnoreRule, maxFileBytes int64, 
 			return nil
 		}
 
-		// Check if the file should be ignored
-		shouldInclude := true
-		for _, rule := range ignoreChain {
-			// Skip rules from directories that are not ancestors of the current path
-			if !strings.HasPrefix(validDir, rule.OriginDir) {
-				continue
+		// Check if the file should be ignored using the standardized function
+		if ShouldIgnoreFile(validPath, validDir, ignoreChain, verbose) {
+			if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
+				logrus.Debugf("Ignoring file: %s", relPath)
 			}
-
-			// Get the path relative to the rule's origin
-			ruleRelPath, err := filepath.Rel(rule.OriginDir, validPath)
-			if err != nil {
-				if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-					logrus.Debugf("Error calculating relative path for %s from %s: %v",
-						validPath, rule.OriginDir, err)
-				}
-				continue
-			}
-
-			// Convert to slash path for consistent matching
-			ruleRelPath = filepath.ToSlash(ruleRelPath)
-
-			if rule.Matcher.MatchesPath(ruleRelPath) {
-				shouldInclude = false
-				if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-					logrus.Debugf("Ignoring file via .gitignore chain: %s", relPath)
-				}
-				break
-			}
-		}
-
-		if !shouldInclude {
 			return nil
 		}
 

@@ -98,7 +98,7 @@
         2. Running linters locally yields results consistent with the CI pipeline.
     - **depends‑on:** []
 
-- [ ] **T209 · refactor · p1: Standardize gitignore Handling with IgnoreChain**
+- [x] **T209 · refactor · p1: Standardize gitignore Handling with IgnoreChain**
     - **context:** Gitignore pattern handling is inconsistent in `glance.go`, with potential direct use of raw `gitignore` types instead of the `filesystem.IgnoreChain` abstraction.
     - **action:**
         1. Review all functions in `glance.go` that handle file ignoring logic.
