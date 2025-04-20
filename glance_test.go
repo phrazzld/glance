@@ -7,7 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"glance/config"
 	"glance/filesystem"
+	"glance/internal/mocks"
 	"glance/llm"
 )
 
@@ -71,3 +73,32 @@ func TestFileSystemPackageUsage(t *testing.T) {
 }
 
 // Note: setupTestDir function was merged into setupIntegrationTest in integration_test.go
+
+// TestSetupLLMService verifies that the service factory interface works correctly
+func TestSetupLLMService(t *testing.T) {
+	t.Run("Uses factory to create service", func(t *testing.T) {
+		// Create mocks for return values
+		mockClient := new(mocks.LLMClient)
+		mockService := &llm.Service{} // Using a real type as it's easier in this test
+
+		// Create the factory mock
+		factory := newMockLLMServiceFactory(mockClient, mockService, nil)
+
+		// Replace the default factory
+		originalFactory := llmServiceFactory
+		llmServiceFactory = factory
+		defer func() { llmServiceFactory = originalFactory }()
+
+		// Call the setupLLMService function
+		cfg := &config.Config{APIKey: "test-key"}
+		client, service, err := setupLLMService(cfg)
+
+		// Verify results
+		assert.NoError(t, err)
+		assert.Equal(t, mockClient, client)
+		assert.Equal(t, mockService, service)
+
+		// Verify factory was called
+		factory.AssertCalled(t, "CreateService", cfg)
+	})
+}

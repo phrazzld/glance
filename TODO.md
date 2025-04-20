@@ -187,7 +187,7 @@
         3. Tests continue to pass.
     - **depends‑on:** []
 
-- [ ] **T213 · refactor · p2: Standardize Mocking Approach**
+- [x] **T213 · refactor · p2: Standardize Mocking Approach**
     - **context:** Mocking approaches are inconsistent, using a mix of interface injection and function variables.
     - **action:**
         1. Review code for different mocking techniques currently employed.

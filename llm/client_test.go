@@ -16,6 +16,37 @@ import (
 // We're using the LLMClient from internal/mocks package
 
 // Test the interface definition with the mock implementation
+func TestClientFactory(t *testing.T) {
+	t.Run("Default factory creates client", func(t *testing.T) {
+		// Test with a real factory but invalid API key - should fail cleanly
+		origFactory := DefaultClientFactory
+		defer func() { DefaultClientFactory = origFactory }()
+
+		client, err := NewGeminiClient("")
+		assert.Error(t, err)
+		assert.Nil(t, client)
+	})
+
+	t.Run("Mocked factory returns predetermined client", func(t *testing.T) {
+		// Set up a mock factory
+		mockClient := new(mocks.LLMClient)
+		mockFactory := newMockClientFactory(mockClient, nil)
+
+		// Replace the default factory with our mock
+		origFactory := DefaultClientFactory
+		DefaultClientFactory = mockFactory
+		defer func() { DefaultClientFactory = origFactory }()
+
+		// Now using NewGeminiClient should use our mock factory
+		client, err := NewGeminiClient("any-api-key")
+		assert.NoError(t, err)
+		assert.Same(t, mockClient, client)
+
+		// Verify the factory was called correctly
+		mockFactory.AssertCalled(t, "CreateClient", "any-api-key", mock.Anything)
+	})
+}
+
 func TestClientInterface(t *testing.T) {
 	mockClient := new(mocks.LLMClient)
 
