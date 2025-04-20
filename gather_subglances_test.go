@@ -42,8 +42,8 @@ func TestGatherSubGlances(t *testing.T) {
 	t.Run("ValidSubdirectories", func(t *testing.T) {
 		// Test with valid subdirectories
 		subdirs := []string{subDir1, subDir2, subDir3}
-		content, err := gatherSubGlances(subdirs)
-		
+		content, err := gatherSubGlances(testDir, subdirs)
+
 		assert.NoError(t, err)
 		assert.Contains(t, content, "Content from subdir1")
 		assert.Contains(t, content, "Content from subdir2")
@@ -53,8 +53,8 @@ func TestGatherSubGlances(t *testing.T) {
 	t.Run("NestedSubdirectory", func(t *testing.T) {
 		// Test with nested subdirectory
 		subdirs := []string{nestedDir}
-		content, err := gatherSubGlances(subdirs)
-		
+		content, err := gatherSubGlances(testDir, subdirs)
+
 		assert.NoError(t, err)
 		assert.Contains(t, content, "Content from nested dir")
 	})
@@ -62,8 +62,8 @@ func TestGatherSubGlances(t *testing.T) {
 	t.Run("MixedSubdirectories", func(t *testing.T) {
 		// Test with a mix of regular and nested subdirectories
 		subdirs := []string{subDir1, nestedDir}
-		content, err := gatherSubGlances(subdirs)
-		
+		content, err := gatherSubGlances(testDir, subdirs)
+
 		assert.NoError(t, err)
 		assert.Contains(t, content, "Content from subdir1")
 		assert.Contains(t, content, "Content from nested dir")
@@ -74,9 +74,9 @@ func TestGatherSubGlances(t *testing.T) {
 		// This should be caught by the path validation
 		invalidPath := filepath.Join(subDir1, "..", "outside")
 		subdirs := []string{invalidPath}
-		
-		content, err := gatherSubGlances(subdirs)
-		
+
+		content, err := gatherSubGlances(testDir, subdirs)
+
 		// Function shouldn't return an error, but should skip the invalid directory
 		assert.NoError(t, err)
 		assert.Empty(t, content)
@@ -88,16 +88,16 @@ func TestGatherSubGlances(t *testing.T) {
 		err := os.MkdirAll(outsideDir, 0755)
 		require.NoError(t, err)
 		defer os.RemoveAll(outsideDir)
-		
+
 		// Create a glance.md file in the outside directory
 		outsideGlanceFile := filepath.Join(outsideDir, "glance.md")
 		err = os.WriteFile(outsideGlanceFile, []byte("Content from outside"), 0644)
 		require.NoError(t, err)
-		
+
 		// Try to gather from the outside directory
 		subdirs := []string{outsideDir}
-		content, err := gatherSubGlances(subdirs)
-		
+		content, err := gatherSubGlances(testDir, subdirs)
+
 		// Function shouldn't return an error, but should skip the invalid directory
 		assert.NoError(t, err)
 		assert.Empty(t, content)
@@ -107,9 +107,9 @@ func TestGatherSubGlances(t *testing.T) {
 		// Test with a directory that doesn't exist
 		nonExistentDir := filepath.Join(testDir, "nonexistent")
 		subdirs := []string{nonExistentDir}
-		
-		content, err := gatherSubGlances(subdirs)
-		
+
+		content, err := gatherSubGlances(testDir, subdirs)
+
 		// Function shouldn't return an error, but should skip the non-existent directory
 		assert.NoError(t, err)
 		assert.Empty(t, content)
@@ -120,10 +120,10 @@ func TestGatherSubGlances(t *testing.T) {
 		emptyDir := filepath.Join(testDir, "empty")
 		err := os.MkdirAll(emptyDir, 0755)
 		require.NoError(t, err)
-		
+
 		subdirs := []string{emptyDir}
-		content, err := gatherSubGlances(subdirs)
-		
+		content, err := gatherSubGlances(testDir, subdirs)
+
 		// Function shouldn't return an error, but should skip the directory without glance.md
 		assert.NoError(t, err)
 		assert.Empty(t, content)
@@ -132,22 +132,22 @@ func TestGatherSubGlances(t *testing.T) {
 	t.Run("InvalidBaseDirForGlancePath", func(t *testing.T) {
 		// This test ensures that using a parent directory as baseDir for validating glance.md
 		// correctly prevents path traversal
-		
+
 		// Create a scenario where an attacker might try to reference a file outside
 		// the directory by manipulating the glance.md path
-		
+
 		// First create a valid directory
 		validDir := filepath.Join(testDir, "valid")
 		err := os.MkdirAll(validDir, 0755)
 		require.NoError(t, err)
-		
+
 		// But manually use it with a manipulated path to test security
 		// This test directly checks the path validation logic
 		// In real use, the file name is hardcoded as "glance.md"
-		
+
 		subdirs := []string{validDir}
-		content, err := gatherSubGlances(subdirs)
-		
+		content, err := gatherSubGlances(testDir, subdirs)
+
 		// Function shouldn't return an error but should skip the invalid file
 		assert.NoError(t, err)
 		assert.Empty(t, content)

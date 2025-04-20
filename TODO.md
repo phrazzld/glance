@@ -63,7 +63,7 @@
         2. The code compiles successfully.
     - **depends‑on:** [T235]
 
-- [ ] **T237 · test · p1: Update gatherSubGlances unit tests for new signature and validation**
+- [x] **T237 · test · p1: Update gatherSubGlances unit tests for new signature and validation**
     - **context:** Unit tests for `gatherSubGlances` in `gather_subglances_test.go` need to be updated to reflect the new function signature and verify the corrected path validation logic, including the path traversal fix.
     - **action:**
         1. Update all test cases that call `gatherSubGlances` to pass an appropriate `baseDir` argument (typically the test's temporary root directory).
