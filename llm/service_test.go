@@ -30,9 +30,9 @@ func TestNewService(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		assert.Equal(t, mockClient, service.client)
-		assert.Equal(t, DefaultServiceOptions().MaxRetries, service.options.MaxRetries)
-		assert.Equal(t, DefaultServiceOptions().ModelName, service.options.ModelName)
-		assert.Equal(t, DefaultServiceOptions().Verbose, service.options.Verbose)
+		assert.Equal(t, DefaultServiceConfig().MaxRetries, service.maxRetries)
+		assert.Equal(t, DefaultServiceConfig().ModelName, service.modelName)
+		assert.Equal(t, DefaultServiceConfig().Verbose, service.verbose)
 	})
 
 	// Test with valid client and custom options
@@ -43,7 +43,7 @@ func TestNewService(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
-		assert.Equal(t, customRetries, service.options.MaxRetries)
+		assert.Equal(t, customRetries, service.maxRetries)
 	})
 
 	// Test with multiple options
@@ -56,9 +56,9 @@ func TestNewService(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
-		assert.Equal(t, 5, service.options.MaxRetries)
-		assert.Equal(t, "custom-model", service.options.ModelName)
-		assert.True(t, service.options.Verbose)
+		assert.Equal(t, 5, service.maxRetries)
+		assert.Equal(t, "custom-model", service.modelName)
+		assert.True(t, service.verbose)
 	})
 }
 
@@ -195,85 +195,85 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	})
 }
 
-func TestServiceOptions(t *testing.T) {
-	// Test default options
-	defaults := DefaultServiceOptions()
+func TestServiceConfig(t *testing.T) {
+	// Test default config
+	defaults := DefaultServiceConfig()
 	assert.Greater(t, defaults.MaxRetries, 0)
 	assert.NotEmpty(t, defaults.ModelName)
 	assert.False(t, defaults.Verbose)
 
-	// Test functional option pattern directly
-	// Create test options instance
-	testOpts := DefaultServiceOptions()
+	// Test config option functions
+	// Create test config instance
+	testConfig := DefaultServiceConfig()
 
 	// Test WithServiceMaxRetries
 	retries := 5
 	retriesOption := WithServiceMaxRetries(retries)
-	retriesOption(&testOpts)
-	assert.Equal(t, retries, testOpts.MaxRetries)
+	retriesOption(&testConfig)
+	assert.Equal(t, retries, testConfig.MaxRetries)
 
 	// Test WithServiceModelName
 	modelName := "custom-model"
 	modelOption := WithServiceModelName(modelName)
 
-	// Reset test options
-	testOpts = DefaultServiceOptions()
-	modelOption(&testOpts)
-	assert.Equal(t, modelName, testOpts.ModelName)
+	// Reset test config
+	testConfig = DefaultServiceConfig()
+	modelOption(&testConfig)
+	assert.Equal(t, modelName, testConfig.ModelName)
 
 	// Test WithVerbose
 	verboseOption := WithVerbose(true)
 
-	// Reset test options
-	testOpts = DefaultServiceOptions()
-	verboseOption(&testOpts)
-	assert.True(t, testOpts.Verbose)
+	// Reset test config
+	testConfig = DefaultServiceConfig()
+	verboseOption(&testConfig)
+	assert.True(t, testConfig.Verbose)
 
 	// Test applying multiple options
-	testOpts = DefaultServiceOptions()
-	retriesOption(&testOpts)
-	modelOption(&testOpts)
-	verboseOption(&testOpts)
+	testConfig = DefaultServiceConfig()
+	retriesOption(&testConfig)
+	modelOption(&testConfig)
+	verboseOption(&testConfig)
 
-	assert.Equal(t, retries, testOpts.MaxRetries)
-	assert.Equal(t, modelName, testOpts.ModelName)
-	assert.True(t, testOpts.Verbose)
+	assert.Equal(t, retries, testConfig.MaxRetries)
+	assert.Equal(t, modelName, testConfig.ModelName)
+	assert.True(t, testConfig.Verbose)
 }
 
-func TestServiceOptionFunctions(t *testing.T) {
-	// Test the functional option pattern functions directly
-	// Create base options
-	options := DefaultServiceOptions()
+func TestServiceConfigFunctions(t *testing.T) {
+	// Test the config functions directly
+	// Create base config
+	config := DefaultServiceConfig()
 
 	// Apply WithServiceMaxRetries
 	maxRetriesOption := WithServiceMaxRetries(7)
-	maxRetriesOption(&options)
-	assert.Equal(t, 7, options.MaxRetries)
+	maxRetriesOption(&config)
+	assert.Equal(t, 7, config.MaxRetries)
 
 	// Apply WithServiceModelName
 	modelNameOption := WithServiceModelName("functional-option-model")
-	modelNameOption(&options)
-	assert.Equal(t, "functional-option-model", options.ModelName)
+	modelNameOption(&config)
+	assert.Equal(t, "functional-option-model", config.ModelName)
 
 	// Apply WithVerbose
 	verboseOption := WithVerbose(true)
-	verboseOption(&options)
-	assert.True(t, options.Verbose)
+	verboseOption(&config)
+	assert.True(t, config.Verbose)
 
 	// Apply WithPromptTemplate
 	promptTemplate := "Custom prompt template"
 	promptTemplateOption := WithPromptTemplate(promptTemplate)
-	promptTemplateOption(&options)
-	assert.Equal(t, promptTemplate, options.PromptTemplate)
+	promptTemplateOption(&config)
+	assert.Equal(t, promptTemplate, config.PromptTemplate)
 
 	// Test invalid option values (should still work)
 	negativeRetries := WithServiceMaxRetries(-1)
-	negativeRetries(&options)
-	assert.Equal(t, -1, options.MaxRetries) // Should allow negative values even if they're invalid
+	negativeRetries(&config)
+	assert.Equal(t, -1, config.MaxRetries) // Should allow negative values even if they're invalid
 
 	emptyModel := WithServiceModelName("")
-	emptyModel(&options)
-	assert.Equal(t, "", options.ModelName) // Should allow empty string even if it's invalid
+	emptyModel(&config)
+	assert.Equal(t, "", config.ModelName) // Should allow empty string even if it's invalid
 }
 
 // Test the end-to-end workflow from prompt creation to generation

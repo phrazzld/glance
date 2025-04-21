@@ -15,35 +15,36 @@ import (
 
 // We're using the LLMClient from internal/mocks package
 
-// Test the interface definition with the mock implementation
-func TestClientFactory(t *testing.T) {
-	t.Run("Default factory creates client", func(t *testing.T) {
-		// Test with a real factory but invalid API key - should fail cleanly
-		origFactory := DefaultClientFactory
-		defer func() { DefaultClientFactory = origFactory }()
+// Test the function variable pattern for client creation
+func TestClientCreation(t *testing.T) {
+	t.Run("Default function creates client", func(t *testing.T) {
+		// Test with the real function but invalid API key - should fail cleanly
+		origFunc := createGeminiClient
+		defer func() { createGeminiClient = origFunc }()
 
 		client, err := NewGeminiClient("")
 		assert.Error(t, err)
 		assert.Nil(t, client)
 	})
 
-	t.Run("Mocked factory returns predetermined client", func(t *testing.T) {
-		// Set up a mock factory
+	t.Run("Mocked function returns predetermined client", func(t *testing.T) {
+		// Set up a mock client to return
 		mockClient := new(mocks.LLMClient)
-		mockFactory := newMockClientFactory(mockClient, nil)
 
-		// Replace the default factory with our mock
-		origFactory := DefaultClientFactory
-		DefaultClientFactory = mockFactory
-		defer func() { DefaultClientFactory = origFactory }()
+		// Create a mock function that returns our mock client
+		mockCreateFunc := func(apiKey string, options ...ClientOption) (Client, error) {
+			return mockClient, nil
+		}
 
-		// Now using NewGeminiClient should use our mock factory
+		// Replace the default function with our mock
+		origFunc := createGeminiClient
+		createGeminiClient = mockCreateFunc
+		defer func() { createGeminiClient = origFunc }()
+
+		// Now using NewGeminiClient should use our mock function
 		client, err := NewGeminiClient("any-api-key")
 		assert.NoError(t, err)
 		assert.Same(t, mockClient, client)
-
-		// Verify the factory was called correctly
-		mockFactory.AssertCalled(t, "CreateClient", "any-api-key", mock.Anything)
 	})
 }
 

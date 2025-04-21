@@ -14,12 +14,16 @@ import (
 // It encapsulates a Client and provides application-specific functionality
 // for generating directory summaries.
 type Service struct {
-	client  Client
-	options *ServiceOptions
+	client         Client
+	maxRetries     int
+	modelName      string
+	verbose        bool
+	promptTemplate string
 }
 
-// ServiceOptions configures the behavior of the LLM Service.
-type ServiceOptions struct {
+// ServiceConfig contains configuration for creating a new Service.
+// This simplifies the pattern for service creation while maintaining flexibility.
+type ServiceConfig struct {
 	// MaxRetries is the number of times to retry failed LLM operations
 	MaxRetries int
 
@@ -30,13 +34,12 @@ type ServiceOptions struct {
 	Verbose bool
 
 	// PromptTemplate is the template string to use for generating prompts
-	// If empty, the service will load the template from a file or use the default
 	PromptTemplate string
 }
 
-// DefaultServiceOptions returns a ServiceOptions instance with sensible defaults.
-func DefaultServiceOptions() ServiceOptions {
-	return ServiceOptions{
+// DefaultServiceConfig returns a ServiceConfig with sensible defaults.
+func DefaultServiceConfig() ServiceConfig {
+	return ServiceConfig{
 		MaxRetries:     3,
 		ModelName:      "gemini-2.5-flash-preview-04-17",
 		Verbose:        false,
@@ -44,34 +47,31 @@ func DefaultServiceOptions() ServiceOptions {
 	}
 }
 
-// ServiceOption is a function type for applying options to a Service.
-type ServiceOption func(*ServiceOptions)
-
 // WithServiceMaxRetries configures the maximum number of retries for the service.
-func WithServiceMaxRetries(maxRetries int) ServiceOption {
-	return func(o *ServiceOptions) {
-		o.MaxRetries = maxRetries
+func WithServiceMaxRetries(maxRetries int) func(*ServiceConfig) {
+	return func(c *ServiceConfig) {
+		c.MaxRetries = maxRetries
 	}
 }
 
 // WithServiceModelName configures the model name for the service.
-func WithServiceModelName(modelName string) ServiceOption {
-	return func(o *ServiceOptions) {
-		o.ModelName = modelName
+func WithServiceModelName(modelName string) func(*ServiceConfig) {
+	return func(c *ServiceConfig) {
+		c.ModelName = modelName
 	}
 }
 
 // WithVerbose configures verbose logging for the service.
-func WithVerbose(verbose bool) ServiceOption {
-	return func(o *ServiceOptions) {
-		o.Verbose = verbose
+func WithVerbose(verbose bool) func(*ServiceConfig) {
+	return func(c *ServiceConfig) {
+		c.Verbose = verbose
 	}
 }
 
 // WithPromptTemplate configures the prompt template for the service.
-func WithPromptTemplate(template string) ServiceOption {
-	return func(o *ServiceOptions) {
-		o.PromptTemplate = template
+func WithPromptTemplate(template string) func(*ServiceConfig) {
+	return func(c *ServiceConfig) {
+		c.PromptTemplate = template
 	}
 }
 
@@ -84,22 +84,25 @@ func WithPromptTemplate(template string) ServiceOption {
 // Returns:
 //   - A new Service instance
 //   - An error if service creation fails
-func NewService(client Client, options ...ServiceOption) (*Service, error) {
+func NewService(client Client, options ...func(*ServiceConfig)) (*Service, error) {
 	if client == nil {
 		return nil, fmt.Errorf("client cannot be nil")
 	}
 
-	// Start with default options
-	serviceOptions := DefaultServiceOptions()
+	// Start with default config
+	config := DefaultServiceConfig()
 
 	// Apply any provided options
 	for _, option := range options {
-		option(&serviceOptions)
+		option(&config)
 	}
 
 	return &Service{
-		client:  client,
-		options: &serviceOptions,
+		client:         client,
+		maxRetries:     config.MaxRetries,
+		modelName:      config.ModelName,
+		verbose:        config.Verbose,
+		promptTemplate: config.PromptTemplate,
 	}, nil
 }
 
@@ -118,16 +121,14 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	// Build prompt data
 	promptData := BuildPromptData(dir, subGlances, fileMap)
 
-	// Use template from options (no more dynamic loading from file)
-	template := s.options.PromptTemplate
-
-	prompt, err := GeneratePrompt(promptData, template)
+	// Use template from the service
+	prompt, err := GeneratePrompt(promptData, s.promptTemplate)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate prompt: %w", err)
 	}
 
 	// Optional token counting for debugging
-	if s.options.Verbose {
+	if s.verbose {
 		tokens, tokenErr := s.client.CountTokens(ctx, prompt)
 		if tokenErr == nil {
 			logrus.Debugf("🔤 Token count for %s: %d tokens in prompt", dir, tokens)
@@ -138,12 +139,12 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 
 	// Attempt generation with retries
 	var lastError error
-	maxAttempts := s.options.MaxRetries + 1 // +1 for the initial attempt
+	maxAttempts := s.maxRetries + 1 // +1 for the initial attempt
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if s.options.Verbose {
+		if s.verbose {
 			if attempt > 1 {
-				logrus.Debugf("🔄 Retry #%d/%d for %s", attempt-1, s.options.MaxRetries, dir)
+				logrus.Debugf("🔄 Retry #%d/%d for %s", attempt-1, s.maxRetries, dir)
 			} else {
 				logrus.Debugf("🚀 Generating content for %s", dir)
 			}
@@ -158,7 +159,7 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 
 		// Log error and retry
 		lastError = err
-		if s.options.Verbose {
+		if s.verbose {
 			logrus.Debugf("❌ Attempt %d for %s failed: %v", attempt, dir, err)
 		}
 
@@ -170,5 +171,5 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	}
 
 	return "", fmt.Errorf("failed to generate content after %d attempts: %w",
-		s.options.MaxRetries, lastError)
+		s.maxRetries, lastError)
 }

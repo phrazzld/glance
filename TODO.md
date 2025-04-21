@@ -242,14 +242,43 @@
         2. Any required suppressions are moved to specific assignment operations.
     - **depends‑on:** []
 
-- [ ] **T218 · chore · p2: Rename CI Workflow Schedules**
-    - **context:** CI workflow schedule descriptions are misleading and do not reflect their actual purpose.
+- [x] **T239 · refactor · p1: Simplify Factory and Builder Patterns**
+    - **context:** Current implementation has multiple layers of factories (ClientFactory, LLMServiceFactory) and complex builder patterns that may be excessive for a CLI tool.
     - **action:**
-        1. Update workflow schedule names in `.github/workflows/lint.yml` and `.github/workflows/precommit.yml`.
-        2. Ensure the descriptions accurately reflect what the workflows do.
+        1. Review the interface abstractions introduced in llm/client.go and glance.go, particularly the factory patterns.
+        2. Maintain interfaces at key boundaries (llm.Client, etc.) but simplify the factory layers where possible.
+        3. Reduce builder patterns to simpler struct initialization with minimal functional options.
     - **done‑when:**
-        1. Workflow schedule names match their actual functionality.
-        2. No misleading references to "dependency checks" or "security scans" remain unless those are actually performed.
+        1. Factory layers are reduced to essential abstractions.
+        2. Builder patterns are simplified while maintaining configurability.
+        3. Tests pass with the simplified approach.
+    - **depends‑on:** []
+    - **note:** Converted factory interfaces to function variables in both client.go and glance.go. Simplified Service from complex options pattern to direct struct fields.
+
+- [ ] **T241 · refactor · p1: Refine Mocking Strategy for Balanced Approach**
+    - **context:** Based on the architect assessment, we may have over-rotated toward interface-based mocking when function variables would be sufficient in some cases.
+    - **action:**
+        1. Review all existing mocks and identify places where simple function variables would be more appropriate.
+        2. For single-function helpers, consider replacing interfaces with function variables where the abstraction is contained within a package.
+        3. Maintain interfaces at true boundary points (filesystem, LLM, UI) where multiple implementations exist.
+        4. Document clear guidelines for when to use each approach.
+    - **done‑when:**
+        1. Mocking approach is optimized for simplicity and clarity.
+        2. Clear guidelines exist for future development.
+        3. Tests continue to pass with the refined approach.
+    - **depends‑on:** []
+
+- [ ] **T240 · docs · p2: Documentation Refresh for User and Contributor Experience**
+    - **context:** Multiple documentation improvements are needed to enhance user and contributor experience.
+    - **action:**
+        1. Rename CI workflow schedules to match their actual purpose (from T218).
+        2. Document the file permission model and rationale for 0600 permissions (from T221).
+        3. Document LLM model changes and their impacts (from T222).
+        4. Clean up .gitignore entries for clarity (from T220).
+    - **done‑when:**
+        1. CI workflow names accurately reflect their functionality.
+        2. README includes information about file permissions and LLM model changes.
+        3. .gitignore is cleaned of unnecessary entries.
     - **depends‑on:** []
 
 - [ ] **T219 · chore · p2: Standardize Pre-commit Hook Language Configs**
@@ -260,35 +289,6 @@
     - **done‑when:**
         1. All Go hooks use `language: golang` consistently.
         2. Pre-commit checks pass without errors.
-    - **depends‑on:** []
-
-- [ ] **T220 · docs · p2: Clean Up .gitignore Entries**
-    - **context:** `.gitignore` contains entries for files or directories that no longer exist.
-    - **action:**
-        1. Review `.gitignore` to identify obsolete entries.
-        2. Remove entries for deleted files or directories.
-        3. Document any special patterns that should be retained.
-    - **done‑when:**
-        1. `.gitignore` only contains patterns for files/directories that exist or may be created.
-        2. No references to deleted documentation or symlinks remain.
-    - **depends‑on:** [T202, T203]
-
-- [ ] **T221 · docs · p2: Document File Permission Settings**
-    - **context:** The README lacks documentation about the secure file permissions used by the application.
-    - **action:**
-        1. Add a section to `README.md` explaining the use of `filesystem.DefaultFileMode`.
-        2. Update `SECURITY_SUPPRESSIONS.md` to document the rationale for 0600 permissions.
-    - **done‑when:**
-        1. Documentation clearly explains the file permission model and its security implications.
-    - **depends‑on:** []
-
-- [ ] **T222 · docs · p2: Document LLM Model Name Change**
-    - **context:** The default LLM model name changed without user-facing documentation, affecting outputs and costs.
-    - **action:**
-        1. Add a section to `README.md` noting the model name change from the old version to the new one.
-        2. Document any potential impacts on output quality, performance, or costs.
-    - **done‑when:**
-        1. Documentation clearly explains the model change and its implications.
     - **depends‑on:** []
 
 ## low-severity-issues
@@ -313,89 +313,41 @@
         2. All callers have been updated to use the appropriate direct function.
     - **depends‑on:** []
 
-- [ ] **T225 · test · p3: Standardize Test Model Names and File Permissions**
+## nice-to-have-but-optional
+The following items are considered optional based on the architect assessment. They may be implemented if time permits but are not critical for a CLI utility tool:
+
+- [ ] **T225 · test · p3: Standardize Test Model Names and File Permissions** *(optional)*
     - **context:** Tests use outdated model names and inconsistent file permissions.
-    - **action:**
-        1. Update all mock models to use the current model name.
-        2. Replace hardcoded permission constants with `filesystem.DefaultFileMode` where appropriate.
-    - **done‑when:**
-        1. All tests use the current model name and consistent permissions.
-        2. Tests pass without modification to behavior.
-    - **depends‑on:** []
+    - **note:** While consistency is good, this is low impact for a CLI tool.
 
-- [ ] **T226 · test · p3: Fix Potential Race Condition in logCapture**
+- [ ] **T226 · test · p3: Fix Potential Race Condition in logCapture** *(optional)*
     - **context:** The `logCapture` test utility may not be thread-safe if tests run in parallel.
-    - **action:**
-        1. Update `logCapture` in test files to use a thread-safe buffer.
-        2. Or add appropriate test flags to prevent parallel execution.
-    - **done‑when:**
-        1. Log capturing in tests works reliably without race conditions.
-    - **depends‑on:** []
+    - **note:** Only implement if parallel tests are causing actual issues.
 
-- [ ] **T227 · test · p3: Add t.Helper() to Test Helper Functions**
+- [ ] **T227 · test · p3: Add t.Helper() to Test Helper Functions** *(optional)*
     - **context:** Test helper functions are missing `t.Helper()` calls, making error reporting less precise.
-    - **action:**
-        1. Identify all test helper functions that take a `t *testing.T` parameter.
-        2. Add `t.Helper()` as the first line in each helper function.
-    - **done‑when:**
-        1. All test helper functions include `t.Helper()`.
-        2. Test failures report the correct line number in the test file.
-    - **depends‑on:** []
+    - **note:** Nice for test clarity but low impact for overall functionality.
 
-- [ ] **T228 · chore · p3: Remove Redundant goimports Installation in CI**
+- [ ] **T228 · chore · p3: Remove Redundant goimports Installation in CI** *(optional)*
     - **context:** The CI workflow manually installs `goimports` when pre-commit would manage it.
-    - **action:**
-        1. Remove redundant `go install` commands for tools managed by pre-commit.
-        2. Verify CI workflows still run correctly after removal.
-    - **done‑when:**
-        1. CI workflow is simplified without redundant tool installation.
-        2. Pre-commit hooks continue to work in CI.
-    - **depends‑on:** []
+    - **note:** Minor CI optimization with limited practical benefit.
 
-- [ ] **T229 · refactor · p3: Simplify OS-Specific Build Logic**
+- [ ] **T229 · refactor · p3: Simplify OS-Specific Build Logic** *(optional)*
     - **context:** The build workflow uses complex OS-specific conditionals that could be simplified.
-    - **action:**
-        1. Refactor `.github/workflows/build.yml` to use standard GOOS-based logic.
-        2. Remove redundant verification steps where possible.
-    - **done‑when:**
-        1. Build workflow is simplified while maintaining functionality.
-        2. Builds succeed for all target platforms.
-    - **depends‑on:** []
+    - **note:** If current builds work fine, this is low priority.
 
-- [ ] **T230 · refactor · p3: Remove Dead Code**
+- [ ] **T230 · refactor · p3: Remove Dead Code** *(optional)*
     - **context:** Unused code (e.g., `queueItem` struct) and redundant comments remain in the codebase.
-    - **action:**
-        1. Remove the `queueItem` struct in `glance.go`.
-        2. Clean up redundant or outdated comments.
-    - **done‑when:**
-        1. No unused structs or functions remain in the codebase.
-        2. Comments are accurate and up-to-date.
-    - **depends‑on:** []
+    - **note:** Consider including as part of regular code cleanup rather than a dedicated task.
 
-- [ ] **T231 · refactor · p3: Centralize Logging Logic**
-    - **context:** Logging code is duplicated across multiple files, leading to inconsistent formatting.
-    - **action:**
-        1. Create shared logging utility functions if needed.
-        2. Standardize log level usage and formatting across the codebase.
-    - **done‑when:**
-        1. Logging is consistent and non-duplicative across the codebase.
-    - **depends‑on:** []
+- [ ] **T231 · refactor · p3: Centralize Logging Logic** *(optional)*
+    - **context:** Logging code is duplicated across multiple files.
+    - **note:** For a CLI tool, slightly inconsistent logging is acceptable.
 
-- [ ] **T232 · chore · p3: Refine Pre-commit Ignore Patterns**
-    - **context:** Pre-commit ignore patterns may be too broad, potentially skipping important files.
-    - **action:**
-        1. Review `.pre-commit-config.yaml` exclude patterns.
-        2. Narrow exclude patterns to only necessary files/directories.
-    - **done‑when:**
-        1. Pre-commit hooks run on all relevant files without unnecessary exclusions.
-    - **depends‑on:** []
+- [ ] **T232 · chore · p3: Refine Pre-commit Ignore Patterns** *(optional)*
+    - **context:** Pre-commit ignore patterns may be too broad.
+    - **note:** Only address if specific issues are found.
 
-- [ ] **T233 · test · p3: Add Test Coverage Enforcement to CI**
+- [ ] **T233 · test · p3: Add Test Coverage Enforcement to CI** *(optional)*
     - **context:** The CI pipeline doesn't enforce minimum test coverage requirements.
-    - **action:**
-        1. Add a coverage gate to `.github/workflows/test.yml` that fails if coverage drops below a threshold.
-        2. Set appropriate thresholds for each package or component.
-    - **done‑when:**
-        1. CI fails if test coverage falls below the defined threshold.
-        2. Current code passes the coverage requirements.
-    - **depends‑on:** []
+    - **note:** For a CLI tool, key areas with high coverage is sufficient; 100% coverage enforcement is unnecessary.

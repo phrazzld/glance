@@ -84,28 +84,19 @@ type GeminiClient struct {
 	options *ClientOptions
 }
 
-// ClientFactory defines an interface for creating LLM clients.
-// This abstraction allows for easier mocking in tests.
-type ClientFactory interface {
-	// CreateClient creates a new Client with the given API key and options.
-	CreateClient(apiKey string, options ...ClientOption) (Client, error)
-}
+// NewGeminiClientFunc is a function type for creating LLM clients.
+// This allows for replacing the implementation in tests without the full factory interface.
+type NewGeminiClientFunc func(apiKey string, options ...ClientOption) (Client, error)
 
-// GeminiClientFactory implements ClientFactory for creating Gemini API clients.
-type GeminiClientFactory struct{}
-
-// CreateClient implements ClientFactory.CreateClient for GeminiClientFactory.
-func (f *GeminiClientFactory) CreateClient(apiKey string, options ...ClientOption) (Client, error) {
+// The actual implementation function - can be swapped in tests
+var createGeminiClient NewGeminiClientFunc = func(apiKey string, options ...ClientOption) (Client, error) {
 	return newGeminiClient(apiKey, options...)
 }
 
-// DefaultClientFactory is the default implementation of ClientFactory.
-var DefaultClientFactory ClientFactory = &GeminiClientFactory{}
-
-// NewGeminiClient creates a new client for the Google Gemini API using the default factory.
-// This maintains backward compatibility while allowing for injection of mock factories in tests.
+// NewGeminiClient creates a new client for the Google Gemini API.
+// Tests can replace createGeminiClient to return mock implementations.
 func NewGeminiClient(apiKey string, options ...ClientOption) (Client, error) {
-	return DefaultClientFactory.CreateClient(apiKey, options...)
+	return createGeminiClient(apiKey, options...)
 }
 
 // newGeminiClient is the actual implementation for creating a new client for the Google Gemini API.

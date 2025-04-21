@@ -93,31 +93,20 @@ func setupLogging(verbose bool) {
 	})
 }
 
-// LLMServiceFactory defines an interface for creating LLM services.
-// This interface provides a way to mock the service creation process in tests.
-type LLMServiceFactory interface {
-	// CreateService creates an LLM client and service based on the provided configuration.
-	CreateService(cfg *config.Config) (llm.Client, *llm.Service, error)
-}
+// SetupLLMServiceFunc is a function type for creating LLM clients and services.
+// This allows for easier mocking in tests without the complexity of a full factory interface.
+type SetupLLMServiceFunc func(cfg *config.Config) (llm.Client, *llm.Service, error)
 
-// DefaultLLMServiceFactory is the standard implementation of LLMServiceFactory.
-type DefaultLLMServiceFactory struct{}
+// The implementation to use - can be swapped in tests
+var setupLLMServiceFunc SetupLLMServiceFunc = createLLMService
 
-// CreateService implements the LLMServiceFactory interface for the default factory.
-func (f *DefaultLLMServiceFactory) CreateService(cfg *config.Config) (llm.Client, *llm.Service, error) {
-	return setupLLMServiceImpl(cfg)
-}
-
-// The service factory instance to use - can be replaced in tests
-var llmServiceFactory LLMServiceFactory = &DefaultLLMServiceFactory{}
-
-// setupLLMService creates a client and service using the current factory
+// setupLLMService creates a client and service
 func setupLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
-	return llmServiceFactory.CreateService(cfg)
+	return setupLLMServiceFunc(cfg)
 }
 
-// setupLLMServiceImpl is the actual implementation for initializing the LLM client and service
-func setupLLMServiceImpl(cfg *config.Config) (llm.Client, *llm.Service, error) {
+// createLLMService is the actual implementation for initializing the LLM client and service
+func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	// Create the client with functional options
 	client, err := llm.NewGeminiClient(
 		cfg.APIKey,
