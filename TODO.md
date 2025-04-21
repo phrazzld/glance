@@ -244,7 +244,7 @@ Search and replace all references to the old package path (`github.com/google/ge
 
 **Estimated Effort:** Medium
 
-## [ ] [T018] Update Inline Code Comments
+## [x] [T018] Update Inline Code Comments
 
 **Description:**
 Review code comments, particularly within the `llm` package and related areas. Update any comments that specifically mention the old package path, its types, or methods to accurately reflect the new `google.golang.org/genai` implementation.
