@@ -131,7 +131,7 @@ Review the `llm.Client` interface definition in `llm/client.go` (or wherever it'
 
 **Estimated Effort:** Low
 
-## [T010] Update Mocks for `llm.Client`
+## [X] [T010] Update Mocks for `llm.Client`
 
 **Description:**
 Regenerate or manually update any mock implementations of the `llm.Client` interface (e.g., using `gomock` or similar, likely in `internal/mocks`). Ensure the mocks align with the updated interface definition from T009.

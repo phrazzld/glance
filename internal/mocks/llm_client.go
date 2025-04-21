@@ -22,6 +22,7 @@ type StreamChunk struct {
 
 // LLMClient is a mock implementation of a client for LLM services.
 // It uses github.com/stretchr/testify/mock to provide a flexible mocking system.
+// It implements the llm.Client interface for testing purposes.
 type LLMClient struct {
 	mock.Mock
 }
