@@ -33,6 +33,15 @@ Glance is a command-line tool that recursively scans a directory tree and genera
 - **GEMINI_API_KEY:**
   Your Google Generative AI API key. This must be valid for the Gemini calls to succeed.
 
+## LLM Configuration
+
+Glance uses Google's Gemini AI model for generating summaries:
+
+- **Default Model:** `gemini-2.5-flash-preview-04-17`
+- **Token Management:** Automatically truncates large files to avoid token limits
+- **Error Handling:** Includes automatic retries with backoff for API failures
+- **Upgrade Path:** New Gemini models can be supported by updating the default model name in the configuration (no code changes required)
+
 ## .env File
 
 Optionally, create a `.env` file in the same directory as the tool to automatically load your environment variables. For example:
@@ -57,6 +66,9 @@ If the `.env` file is absent, Glance will fall back to your system's environment
 
 - **Invalid UTF-8:**
   Any invalid UTF-8 in file contents is sanitized before sending data to the API.
+
+- **File Permissions:**
+  Glance uses restrictive file permissions (0600 / rw-------) for all generated files to protect potentially sensitive information. This means only the user who ran Glance can read or modify the generated glance.md files.
 
 ## Logging
 

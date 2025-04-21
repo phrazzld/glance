@@ -1,15 +1,24 @@
+# Application files
 .env
 glance
+
+# Generated summaries
 glance.md
 */glance.md
-.DS_Store
+
+# Temporary files
+*-plan.md
+CODE_REVIEW.md
+consultation-report/
+
+# AI assistance artifacts
 architect_output/
 architect_output_tasks/
-consultation-report/
-CODE_REVIEW.md
-*-plan.md
 
 # Symlinked documentation files
 DEVELOPMENT_PHILOSOPHY.md
 DEVELOPMENT_PHILOSOPHY_APPENDIX_GO.md
 docs/prompts
+
+# System files
+.DS_Store

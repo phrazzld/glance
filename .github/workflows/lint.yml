@@ -16,7 +16,7 @@ on:
   pull_request:
     branches: [master]
   schedule:
-    - cron: '0 1 1 * *'  # Monthly on the 1st at 01:00 UTC
+    - cron: '0 1 1 * *'  # Monthly Dependency Vulnerability Scan (1st of each month at 01:00 UTC)
 
 # Prevent multiple identical workflow runs
 concurrency:

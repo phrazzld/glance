@@ -269,7 +269,7 @@
     - **depends‑on:** []
     - **note:** Removed unused factory mocks, created comprehensive documentation in docs/MOCKING_APPROACH.md with clear guidelines, and updated README to reference our mocking strategy.
 
-- [ ] **T240 · docs · p2: Documentation Refresh for User and Contributor Experience**
+- [x] **T240 · docs · p2: Documentation Refresh for User and Contributor Experience**
     - **context:** Multiple documentation improvements are needed to enhance user and contributor experience.
     - **action:**
         1. Rename CI workflow schedules to match their actual purpose (from T218).
@@ -281,6 +281,7 @@
         2. README includes information about file permissions and LLM model changes.
         3. .gitignore is cleaned of unnecessary entries.
     - **depends‑on:** []
+    - **note:** Updated workflow schedules with descriptive names, added file permissions documentation to README, added LLM model information, and reorganized .gitignore for clarity.
 
 - [ ] **T219 · chore · p2: Standardize Pre-commit Hook Language Configs**
     - **context:** Pre-commit hooks use inconsistent language configuration (some `system`, some `golang`).
