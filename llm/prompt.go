@@ -42,15 +42,6 @@ local file contents:
 `
 }
 
-// LoadTemplate is deprecated.
-// Use config.LoadPromptTemplate instead, which provides the same functionality
-// with centralized security validation.
-//
-// Deprecated: Use config.LoadPromptTemplate instead.
-func LoadTemplate(path string) (string, error) {
-	return "", fmt.Errorf("LoadTemplate is deprecated, use config.LoadPromptTemplate instead")
-}
-
 // GeneratePrompt generates a prompt by filling the template with the provided data.
 //
 // Parameters:

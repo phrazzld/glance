@@ -284,7 +284,7 @@ Remove the line requiring `github.com/google/generative-ai-go/genai` from the `g
 
 **Estimated Effort:** Low
 
-## [ ] [T021] Remove Dead Code Related to Old API
+## [x] [T021] Remove Dead Code Related to Old API
 
 **Description:**
 Identify and remove any helper functions, types, constants, or variables that were specifically created to support or workaround aspects of the old `github.com/google/generative-ai-go/genai` package and are no longer needed with the new `google.golang.org/genai` package.
