@@ -38,10 +38,11 @@ type ServiceConfig struct {
 }
 
 // DefaultServiceConfig returns a ServiceConfig with sensible defaults.
+// It uses the same default model as the client configuration.
 func DefaultServiceConfig() ServiceConfig {
 	return ServiceConfig{
 		MaxRetries:     3,
-		ModelName:      "gemini-2.5-flash-preview-04-17",
+		ModelName:      "gemini-2.5-flash-preview-04-17", // Make sure this matches the client default
 		Verbose:        false,
 		PromptTemplate: "",
 	}
@@ -107,6 +108,8 @@ func NewService(client Client, options ...func(*ServiceConfig)) (*Service, error
 }
 
 // GenerateGlanceMarkdown generates a markdown summary for a directory using the LLM.
+// It builds a prompt based on directory information, sends it to the LLM client,
+// and handles retries with exponential backoff if necessary.
 //
 // Parameters:
 //   - ctx: The context for the operation

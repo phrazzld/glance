@@ -145,7 +145,7 @@ Regenerate or manually update any mock implementations of the `llm.Client` inter
 
 **Estimated Effort:** Medium
 
-## [T011] Update `llm/service.go` to Use Refactored Client
+## [X] [T011] Update `llm/service.go` to Use Refactored Client
 
 **Description:**
 Modify the LLM service layer (`llm/service.go`) to work with the updated `llm.Client` interface (T009). Adjust how service methods call the client, handle returned data types, and manage errors based on the changes introduced by the new client implementation.
