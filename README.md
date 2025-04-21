@@ -74,6 +74,7 @@ Glance is organized into several packages:
 - **filesystem:** Directory scanning, file reading, and gitignore handling
 - **llm:** Abstractions for interacting with the Gemini API
 - **ui:** User interface components for feedback, including spinners and progress bars
+- **internal/mocks:** Shared mock implementations for testing
 
 ## Developer Setup
 
@@ -170,6 +171,16 @@ For more details on our pre-commit setup, available hooks, configuration, and tr
 Glance uses GitHub Actions for continuous integration and deployment. Our workflows automatically test, lint, and build the project on every push and pull request.
 
 For detailed information about our GitHub Actions setup, including workflow configurations, triggers, and troubleshooting tips, see [docs/GITHUB_ACTIONS.md](/docs/GITHUB_ACTIONS.md).
+
+### Testing and Mocking Strategy
+
+Glance follows a balanced approach to testing and mocking:
+
+- Interface-based mocking at true API boundaries
+- Function variable mocking for internal implementation details
+- Shared mock implementations in the internal/mocks package
+
+For more details on our testing and mocking approach, including guidelines and examples, see [docs/MOCKING_APPROACH.md](/docs/MOCKING_APPROACH.md).
 
 ## Dependencies
 

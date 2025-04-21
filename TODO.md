@@ -255,7 +255,7 @@
     - **depends‑on:** []
     - **note:** Converted factory interfaces to function variables in both client.go and glance.go. Simplified Service from complex options pattern to direct struct fields.
 
-- [ ] **T241 · refactor · p1: Refine Mocking Strategy for Balanced Approach**
+- [x] **T241 · refactor · p1: Refine Mocking Strategy for Balanced Approach**
     - **context:** Based on the architect assessment, we may have over-rotated toward interface-based mocking when function variables would be sufficient in some cases.
     - **action:**
         1. Review all existing mocks and identify places where simple function variables would be more appropriate.
@@ -267,6 +267,7 @@
         2. Clear guidelines exist for future development.
         3. Tests continue to pass with the refined approach.
     - **depends‑on:** []
+    - **note:** Removed unused factory mocks, created comprehensive documentation in docs/MOCKING_APPROACH.md with clear guidelines, and updated README to reference our mocking strategy.
 
 - [ ] **T240 · docs · p2: Documentation Refresh for User and Contributor Experience**
     - **context:** Multiple documentation improvements are needed to enhance user and contributor experience.
