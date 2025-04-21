@@ -75,7 +75,7 @@ Update the client methods responsible for making streaming API calls (e.g., `Gen
 
 **Estimated Effort:** Medium
 
-## [T006] Update Token Counting Logic in `llm/client.go`
+## [X] [T006] Update Token Counting Logic in `llm/client.go`
 
 **Description:**
 Update the code responsible for counting tokens to use the corresponding functionality in the new `google.golang.org/genai` package (e.g., `client.CountTokens`). Adapt the request structure as needed for this specific API call.

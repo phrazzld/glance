@@ -241,7 +241,15 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 }
 
 // CountTokens implements the Client interface for GeminiClient.
-// It counts the number of tokens in the provided prompt.
+// It counts the number of tokens in the provided prompt using the google.golang.org/genai package.
+//
+// The method creates a genai.Content array from the prompt, then calls the CountTokens method
+// on the genai.Models service. It includes retry logic with exponential backoff and honors
+// the timeout set in ClientOptions.
+//
+// Returns:
+//   - The total number of tokens in the prompt
+//   - An error if the API call fails after all retries
 func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, error) {
 	if c.client == nil || c.model == "" {
 		return 0, fmt.Errorf("client is not properly initialized")
@@ -270,13 +278,19 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 			logrus.Debugf("Retry attempt %d/%d for counting tokens", attempt, c.options.MaxRetries)
 		}
 
+		// Call the CountTokens API with the model name, contents, and no additional configuration
 		response, err := c.client.Models.CountTokens(tokenCtx, c.model, contents, nil)
-		if err == nil {
-			// Convert int32 to int
+		if err == nil && response != nil {
+			// Convert int32 to int and return the token count
 			return int(response.TotalTokens), nil
 		}
 
-		lastError = err
+		// Check for nil response
+		if err == nil && response == nil {
+			lastError = fmt.Errorf("received nil response from CountTokens API")
+		} else {
+			lastError = fmt.Errorf("failed to count tokens: %w", err)
+		}
 
 		// Simple backoff before retry
 		if attempt < c.options.MaxRetries {

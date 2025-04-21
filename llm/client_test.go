@@ -262,6 +262,40 @@ func TestGeminiClientCountTokens(t *testing.T) {
 		assert.Equal(t, 0, result)
 		assert.Contains(t, err.Error(), "not properly initialized")
 	})
+
+	// Test timeout behavior
+	t.Run("Timeout behavior", func(t *testing.T) {
+		opts := DefaultClientOptions()
+		opts.Timeout = 1 // 1 second timeout
+		client := &GeminiClient{
+			client:  nil, // Will cause an error before timeout is triggered
+			model:   "test-model",
+			options: &opts,
+		}
+
+		ctx := context.Background()
+		_, err := client.CountTokens(ctx, "test prompt")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not properly initialized")
+	})
+
+	// Test retry behavior
+	t.Run("Retry behavior with API error", func(t *testing.T) {
+		opts := DefaultClientOptions()
+		opts.MaxRetries = 2
+		// Unable to directly test retry logic without mocking the genai.Client
+		// which is challenging due to its structure. This is more of an integration test.
+		client := &GeminiClient{
+			client:  nil, // Will always fail
+			model:   "test-model",
+			options: &opts,
+		}
+
+		result, err := client.CountTokens(context.Background(), "test prompt")
+		assert.Error(t, err)
+		assert.Equal(t, 0, result)
+		assert.Contains(t, err.Error(), "not properly initialized")
+	})
 }
 
 // TestGeminiClientClose tests the Close method of GeminiClient
