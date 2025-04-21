@@ -204,7 +204,7 @@ Modify the unit tests in `llm/service_test.go` to align with the refactored serv
 
 **Estimated Effort:** Medium
 
-## [ ] [T015] Update Other Relevant Unit Tests
+## [x] [T015] Update Other Relevant Unit Tests
 
 **Description:**
 Review and update any other unit tests throughout the codebase (e.g., in `cmd/` tests) that might be indirectly affected by the changes in the LLM client/service interfaces, types, or behavior.
