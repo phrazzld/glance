@@ -8,10 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/generative-ai-go/genai"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
+	"google.golang.org/genai"
 )
 
 // Client defines the interface for interacting with LLM services.
@@ -80,7 +78,7 @@ func WithTimeout(timeout int) ClientOption {
 // GeminiClient is a Client implementation that uses Google's Gemini API.
 type GeminiClient struct {
 	client  *genai.Client
-	model   *genai.GenerativeModel
+	model   string
 	options *ClientOptions
 }
 
@@ -123,16 +121,17 @@ func newGeminiClient(apiKey string, options ...ClientOption) (*GeminiClient, err
 
 	ctx := context.Background()
 	// #nosec G101 -- API key is provided by the user and not hardcoded // pragma: allowlist secret
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey:  apiKey, // pragma: allowlist secret
+		Backend: genai.BackendGeminiAPI,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Gemini client: %w", err)
 	}
 
-	model := client.GenerativeModel(opts.ModelName)
-
 	return &GeminiClient{
 		client:  client,
-		model:   model,
+		model:   opts.ModelName,
 		options: &opts,
 	}, nil
 }
@@ -140,7 +139,7 @@ func newGeminiClient(apiKey string, options ...ClientOption) (*GeminiClient, err
 // Generate implements the Client interface for GeminiClient.
 // It sends the prompt to the Gemini API and processes the streaming response.
 func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, error) {
-	if c.client == nil || c.model == nil {
+	if c.client == nil || c.model == "" {
 		return "", fmt.Errorf("client is not properly initialized")
 	}
 
@@ -157,6 +156,11 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 	var result strings.Builder
 	var lastError error
 
+	// Prepare the content for the request
+	contents := []*genai.Content{
+		genai.NewContentFromText(prompt, "user"),
+	}
+
 	// Retry logic
 	for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
 		if attempt > 1 {
@@ -164,31 +168,25 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 		}
 
 		result.Reset()
-		stream := c.model.GenerateContentStream(genCtx, genai.Text(prompt))
+
+		// Create a stream for the response
+		streamChan := c.client.Models.GenerateContentStream(genCtx, c.model, contents, nil)
 
 		// Process the streaming response
 		success := true
-		for {
-			resp, err := stream.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				lastError = err
-				logrus.Debugf("Error in stream response: %v", err)
+		for resp := range streamChan {
+			// If the response has an error, break and retry
+			if resp == nil {
+				lastError = fmt.Errorf("received nil response") // pragma: allowlist secret
 				success = false
 				break
 			}
 
-			// Process candidates from the response
-			for _, candidate := range resp.Candidates {
-				if candidate.Content == nil {
-					continue
-				}
-				for _, part := range candidate.Content.Parts {
-					if txt, ok := part.(genai.Text); ok {
-						result.WriteString(string(txt))
-					}
+			// Extract text from the response
+			if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
+				part := resp.Candidates[0].Content.Parts[0]
+				if part.Text != "" {
+					result.WriteString(part.Text)
 				}
 			}
 		}
@@ -211,7 +209,7 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 // CountTokens implements the Client interface for GeminiClient.
 // It counts the number of tokens in the provided prompt.
 func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, error) {
-	if c.client == nil || c.model == nil {
+	if c.client == nil || c.model == "" {
 		return 0, fmt.Errorf("client is not properly initialized")
 	}
 
@@ -227,15 +225,21 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 
 	var lastError error
 
+	// Prepare the content for the token count
+	contents := []*genai.Content{
+		genai.NewContentFromText(prompt, "user"),
+	}
+
 	// Retry logic
 	for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
 		if attempt > 1 {
 			logrus.Debugf("Retry attempt %d/%d for counting tokens", attempt, c.options.MaxRetries)
 		}
 
-		tokenResp, err := c.model.CountTokens(tokenCtx, genai.Text(prompt))
+		response, err := c.client.Models.CountTokens(tokenCtx, c.model, contents, nil)
 		if err == nil {
-			return int(tokenResp.TotalTokens), nil
+			// Convert int32 to int
+			return int(response.TotalTokens), nil
 		}
 
 		lastError = err
@@ -255,13 +259,8 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 // It releases resources used by the client.
 func (c *GeminiClient) Close() {
 	if c.client != nil {
-		// Handle Close error properly
-		err := c.client.Close()
-		if err != nil {
-			// Log the error but don't propagate it as Close() doesn't return an error
-			logrus.Warnf("Error closing Gemini client: %v", err)
-		}
+		// The new Google GenAI client doesn't require explicit closing
 		c.client = nil
-		c.model = nil
+		c.model = ""
 	}
 }

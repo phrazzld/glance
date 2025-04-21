@@ -185,7 +185,7 @@ func TestGeminiClientGenerate(t *testing.T) {
 		opts := DefaultClientOptions()
 		client := &GeminiClient{
 			client:  nil,
-			model:   nil,
+			model:   "",
 			options: &opts,
 		}
 
@@ -203,7 +203,7 @@ func TestGeminiClientCountTokens(t *testing.T) {
 		opts := DefaultClientOptions()
 		client := &GeminiClient{
 			client:  nil,
-			model:   nil,
+			model:   "",
 			options: &opts,
 		}
 
@@ -221,7 +221,7 @@ func TestGeminiClientClose(t *testing.T) {
 		opts := DefaultClientOptions()
 		client := &GeminiClient{
 			client:  nil,
-			model:   nil,
+			model:   "",
 			options: &opts,
 		}
 
@@ -230,7 +230,7 @@ func TestGeminiClientClose(t *testing.T) {
 
 		// Verify client is still nil after close
 		assert.Nil(t, client.client)
-		assert.Nil(t, client.model)
+		assert.Empty(t, client.model)
 	})
 }
 
@@ -245,7 +245,7 @@ func TestGeminiClientTimeout(t *testing.T) {
 		}
 		client := &GeminiClient{
 			client:  nil, // We won't use the actual client in this test
-			model:   nil,
+			model:   "",
 			options: &options,
 		}
 
@@ -272,7 +272,7 @@ func TestGeminiClientRetryLogic(t *testing.T) {
 		}
 		client := &GeminiClient{
 			client:  nil, // We won't use the actual client in this test
-			model:   nil,
+			model:   "",
 			options: &options,
 		}
 
