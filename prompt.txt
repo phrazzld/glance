@@ -1,30 +1,40 @@
+# **Role:** Codebase Analyzer & Technical Documenter
+# **Goal:** Generate a "Glance File" - a concise, insightful Markdown overview of the target directory for developers, especially new contributors.
+
 <task>
-- generate a descriptive overview of this directory for fellow developers, with clear and critical insights
-- explain the directory’s purpose, structure, and architecture in a concise yet detailed way
-- synthesize subdirectory summaries by describing how each subdirectory contributes to the overall functionality
-- highlight notable dependencies, including any dependency management details (e.g., go.mod, package.json) and version constraints
-- flag potential pitfalls or gotchas such as handling large files, non-standard naming conventions, and performance concerns
-- optionally include a “points to consider” section with recommendations or notes on technical debt without prescribing explicit next steps
+You are tasked with generating a developer-focused overview ("Glance File") for the specified `{{.Directory}}`. Your analysis should help developers quickly grasp the directory's purpose, contents, design, and potential challenges.
+
+**Analyze and Synthesize:**
+1.  **Purpose & Role:** Clearly define the primary responsibility of this directory within the broader project context. What is its main function?
+2.  **Structure & Key Components:** Describe the layout of the immediate directory. Identify and briefly explain the role of key files or modules found in `{{.FileContents}}`.
+3.  **Subdirectory Integration:** Based on the summaries provided in `{{.SubGlances}}`, explain how each subdirectory contributes to the overall functionality of the `{{.Directory}}`. Describe any notable interactions *between* the subdirectories, if apparent from the summaries.
+4.  **Dependencies:** Highlight key external or internal dependencies. If dependency management files (e.g., `go.mod`, `package.json`, `requirements.txt`) are present in `{{.FileContents}}`, summarize their significance (e.g., key libraries, version constraints).
+5.  **Potential Issues & Considerations:** Critically assess the directory based on the provided context. Flag potential challenges or areas needing attention, such as:
+    * **Complexity:** Signs of overly complex logic or tangled responsibilities (if inferable).
+    * **Maintainability:** Non-standard naming, lack of comments, large files, potential for tight coupling (based on structure/summaries).
+    * **Testability:** Indicators suggesting difficulty in unit/integration testing (if inferable).
+    * **Performance:** Mention potential performance concerns only if directly suggested by context (e.g., presence of known large file processing, inefficient patterns described in summaries).
+6.  **Points for Future Consideration:** Note any observations regarding technical debt, potential areas for refactoring, or suggestions for improving clarity or structure. Frame these as observations, not direct mandates.
+
 </task>
 
 <context>
-<subdirectory contents>
-`{{.SubGlances}}`
-</subdirectory contents>
-
-<local file contents from the immediate directory>
-`{{.FileContents}}`
-</local file contents from the immediate directory>
-
-<target directory path>
+**1. Target Directory Path:**
 `{{.Directory}}`
-</target directory path>
+
+**2. Immediate Directory Contents Analysis:**
+`{{.FileContents}}`
+
+**3. Subdirectory Summaries:**
+`{{.SubGlances}}`
 </context>
 
 <guidelines>
-- structure your response using markdown with clear headings, bullet lists, and short, well-separated paragraphs
-- treat the target directory path as the top-level directory and omit all parent directories from your references (e.g., if the target is /users/alice/dev/my-web-app, only refer to my-web-app/)
-- ensure all file paths and directory references are relative to the project root
-- focus on a developer-oriented analysis that assesses the codebase’s structure, internal workings, and adherence to best practices
-- be brilliant, sharp, critical, observant, accurate, and useful, keeping in mind that this overview should help new contributors quickly understand how everything fits together
+* **Format:** Use Markdown with clear headings for each analysis section (e.g., `## Purpose and Role`, `## Structure and Key Components`, etc.). Use bullet points for lists. Keep paragraphs concise.
+* **Paths:** All file and directory paths mentioned MUST be relative to `{{.Directory}}`. Omit parent paths.
+* **Audience:** Write for developers needing to understand this specific part of the codebase quickly.
+* **Tone:** Be objective, analytical, and constructive. Focus on providing practical insights. Avoid overly strong or unsupported claims, especially regarding performance or complex logic unless strongly indicated by the context.
+* **Scope:** Focus solely on the `{{.Directory}}` and its direct contents/subdirectories based *only* on the provided context. Do not invent information.
+* **Conciseness:** Be thorough but avoid unnecessary verbosity. The goal is a "glanceable" overview.
+* **Avoid:** Do not simply list files. Do not prescribe specific solutions or assign tasks. Do not hallucinate details not present in the context.
 </guidelines>
