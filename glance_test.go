@@ -79,11 +79,12 @@ func TestSetupLLMService(t *testing.T) {
 	t.Run("Uses function variable to create service", func(t *testing.T) {
 		// Create mocks for return values
 		mockClient := new(mocks.LLMClient)
+		adapter := llm.NewMockClientAdapter(mockClient)
 		mockService := &llm.Service{} // Using a real type as it's easier in this test
 
 		// Create a mock function that returns our mocks
 		mockSetupFunc := func(cfg *config.Config) (llm.Client, *llm.Service, error) {
-			return mockClient, mockService, nil
+			return adapter, mockService, nil
 		}
 
 		// Replace the default function
@@ -97,7 +98,7 @@ func TestSetupLLMService(t *testing.T) {
 
 		// Verify results
 		assert.NoError(t, err)
-		assert.Equal(t, mockClient, client)
+		assert.Equal(t, adapter, client)
 		assert.Equal(t, mockService, service)
 	})
 }

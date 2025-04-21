@@ -25,11 +25,12 @@ func TestNewService(t *testing.T) {
 	// Test with valid client and default options
 	t.Run("Valid client with default options", func(t *testing.T) {
 		mockClient := new(mocks.LLMClient)
-		service, err := NewService(mockClient)
+		adapter := NewMockClientAdapter(mockClient)
+		service, err := NewService(adapter)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
-		assert.Equal(t, mockClient, service.client)
+		assert.Equal(t, adapter, service.client)
 		assert.Equal(t, DefaultServiceConfig().MaxRetries, service.maxRetries)
 		assert.Equal(t, DefaultServiceConfig().ModelName, service.modelName)
 		assert.Equal(t, DefaultServiceConfig().Verbose, service.verbose)
@@ -38,8 +39,9 @@ func TestNewService(t *testing.T) {
 	// Test with valid client and custom options
 	t.Run("Valid client with custom options", func(t *testing.T) {
 		mockClient := new(mocks.LLMClient)
+		adapter := NewMockClientAdapter(mockClient)
 		customRetries := 10
-		service, err := NewService(mockClient, WithServiceMaxRetries(customRetries))
+		service, err := NewService(adapter, WithServiceMaxRetries(customRetries))
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
@@ -49,7 +51,8 @@ func TestNewService(t *testing.T) {
 	// Test with multiple options
 	t.Run("Multiple options", func(t *testing.T) {
 		mockClient := new(mocks.LLMClient)
-		service, err := NewService(mockClient,
+		adapter := NewMockClientAdapter(mockClient)
+		service, err := NewService(adapter,
 			WithServiceMaxRetries(5),
 			WithServiceModelName("custom-model"),
 			WithVerbose(true))
@@ -64,6 +67,7 @@ func TestNewService(t *testing.T) {
 
 func TestGenerateGlanceMarkdown(t *testing.T) {
 	mockClient := new(mocks.LLMClient)
+	adapter := NewMockClientAdapter(mockClient)
 	ctx := context.Background()
 
 	// Test data
@@ -79,7 +83,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	t.Run("Successful generation", func(t *testing.T) {
 		// Setup service with mock client and custom template
 		customTemplate := "Custom template for test {{.Directory}}"
-		service, err := NewService(mockClient, WithPromptTemplate(customTemplate))
+		service, err := NewService(adapter, WithPromptTemplate(customTemplate))
 		assert.NoError(t, err)
 
 		// Setup expectations for the mock
@@ -99,9 +103,10 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	t.Run("Generation succeeds after retries", func(t *testing.T) {
 		// Reset mock
 		mockClient = new(mocks.LLMClient)
+		adapter = NewMockClientAdapter(mockClient)
 
 		// Setup service with mock client and 3 retries
-		service, err := NewService(mockClient, WithServiceMaxRetries(3), WithPromptTemplate("test template"))
+		service, err := NewService(adapter, WithServiceMaxRetries(3), WithPromptTemplate("test template"))
 		assert.NoError(t, err)
 
 		// Setup expectations - first 2 attempts fail, 3rd succeeds
@@ -123,9 +128,10 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	t.Run("All retries fail", func(t *testing.T) {
 		// Reset mock
 		mockClient = new(mocks.LLMClient)
+		adapter = NewMockClientAdapter(mockClient)
 
 		// Setup service with mock client and 2 retries
-		service, err := NewService(mockClient, WithServiceMaxRetries(2), WithPromptTemplate("test template"))
+		service, err := NewService(adapter, WithServiceMaxRetries(2), WithPromptTemplate("test template"))
 		assert.NoError(t, err)
 
 		// Setup expectations - all attempts fail
@@ -147,10 +153,11 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	t.Run("Template generation error", func(t *testing.T) {
 		// Create a service with a mock client
 		mockClient = new(mocks.LLMClient)
+		adapter = NewMockClientAdapter(mockClient)
 
 		// Create an invalid template to cause an error in prompt generation
 		invalidTemplate := "Invalid template with {{.MissingVar}}"
-		service, err := NewService(mockClient, WithPromptTemplate(invalidTemplate))
+		service, err := NewService(adapter, WithPromptTemplate(invalidTemplate))
 		assert.NoError(t, err)
 
 		// This should fail due to invalid template with .MissingVar
@@ -166,12 +173,13 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	t.Run("Use prompt template from options", func(t *testing.T) {
 		// Reset mock
 		mockClient = new(mocks.LLMClient)
+		adapter = NewMockClientAdapter(mockClient)
 
 		// Create a custom template
 		customTemplate := "Custom template from options with {{.Directory}}"
 
 		// Setup service with mock client and custom template option
-		service, err := NewService(mockClient, WithPromptTemplate(customTemplate))
+		service, err := NewService(adapter, WithPromptTemplate(customTemplate))
 		assert.NoError(t, err)
 
 		// Setup expectations for the mock

@@ -59,7 +59,7 @@ Update the client methods responsible for making non-streaming (synchronous) API
 
 **Estimated Effort:** Medium
 
-## [T005] Refactor Streaming API Calls in `llm/client.go`
+## [X] [T005] Refactor Streaming API Calls in `llm/client.go`
 
 **Description:**
 Update the client methods responsible for making streaming API calls (e.g., `GenerateContentStream`). Adapt the request construction and response handling logic to use the new `GenerativeModel.GenerateContentStream` API, including iterator patterns and handling of streamed `GenerateContentResponse` chunks.

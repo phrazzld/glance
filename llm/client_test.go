@@ -30,10 +30,11 @@ func TestClientCreation(t *testing.T) {
 	t.Run("Mocked function returns predetermined client", func(t *testing.T) {
 		// Set up a mock client to return
 		mockClient := new(mocks.LLMClient)
+		adapterClient := NewMockClientAdapter(mockClient)
 
 		// Create a mock function that returns our mock client
 		mockCreateFunc := func(apiKey string, options ...ClientOption) (Client, error) {
-			return mockClient, nil
+			return adapterClient, nil
 		}
 
 		// Replace the default function with our mock
@@ -44,30 +45,61 @@ func TestClientCreation(t *testing.T) {
 		// Now using NewGeminiClient should use our mock function
 		client, err := NewGeminiClient("any-api-key")
 		assert.NoError(t, err)
-		assert.Same(t, mockClient, client)
+		assert.Equal(t, adapterClient, client)
 	})
 }
 
 func TestClientInterface(t *testing.T) {
 	mockClient := new(mocks.LLMClient)
+	// Create adapter to convert mock to Client interface
+	var client Client = NewMockClientAdapter(mockClient)
 
 	ctx := context.Background()
 	testPrompt := "Test prompt"
 	expectedResponse := "Generated response"
 	expectedTokenCount := 42
 
+	// Create a test chunk channel for streaming
+	mockChunkChan := make(chan mocks.StreamChunk, 3)
+	mockChunkChan <- mocks.StreamChunk{Text: "Chunk 1"}
+	mockChunkChan <- mocks.StreamChunk{Text: "Chunk 2"}
+	mockChunkChan <- mocks.StreamChunk{Done: true}
+
 	// Set up expectations
 	mockClient.On("Generate", ctx, testPrompt).Return(expectedResponse, nil)
+	mockClient.On("GenerateStream", ctx, testPrompt).Return((<-chan mocks.StreamChunk)(mockChunkChan), nil)
 	mockClient.On("CountTokens", ctx, testPrompt).Return(expectedTokenCount, nil)
 	mockClient.On("Close").Return()
-
-	// Use the mock client through the interface
-	var client Client = mockClient
 
 	// Test Generate
 	response, err := client.Generate(ctx, testPrompt)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResponse, response)
+
+	// Test GenerateStream
+	streamChan, err := client.GenerateStream(ctx, testPrompt)
+	assert.NoError(t, err)
+	assert.NotNil(t, streamChan)
+
+	// Collect chunks from the stream - we need to adapt from one stream chunk type to another
+	var receivedTexts []string
+	var done bool
+
+	for chunk := range streamChan {
+		if chunk.Text != "" {
+			receivedTexts = append(receivedTexts, chunk.Text)
+		}
+		if chunk.Done {
+			done = true
+			break
+		}
+	}
+
+	// Verify chunks
+	assert.Len(t, receivedTexts, 2)
+	assert.Equal(t, "Chunk 1", receivedTexts[0])
+	assert.Equal(t, "Chunk 2", receivedTexts[1])
+	assert.True(t, done)
 
 	// Test CountTokens
 	tokenCount, err := client.CountTokens(ctx, testPrompt)
@@ -192,6 +224,24 @@ func TestGeminiClientGenerate(t *testing.T) {
 		result, err := client.Generate(context.Background(), "test prompt")
 		assert.Error(t, err)
 		assert.Empty(t, result)
+		assert.Contains(t, err.Error(), "not properly initialized")
+	})
+}
+
+// TestGeminiClientGenerateStream tests the GenerateStream method of GeminiClient
+func TestGeminiClientGenerateStream(t *testing.T) {
+	// Test uninitialized client
+	t.Run("Uninitialized client", func(t *testing.T) {
+		opts := DefaultClientOptions()
+		client := &GeminiClient{
+			client:  nil,
+			model:   "",
+			options: &opts,
+		}
+
+		chunkChan, err := client.GenerateStream(context.Background(), "test prompt")
+		assert.Error(t, err)
+		assert.Nil(t, chunkChan)
 		assert.Contains(t, err.Error(), "not properly initialized")
 	})
 }

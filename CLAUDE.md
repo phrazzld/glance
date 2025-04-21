@@ -21,5 +21,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 * **Documentation:** Code should be self-documenting. Comments explain rationale (why), not how.
 * **NEVER suppress linter warnings/errors** - fix the root cause instead.
 * **Conventional Commits:** All commit messages must follow the spec for automated versioning.
+* **Always write detailed multiline conventional commit messages**
 
 Remember to adhere to all principles outlined in the Development Philosophy. Quality gates require passing all pre-commit hooks and CI checks. Do not bypass hooks with `--no-verify`.

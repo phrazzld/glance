@@ -20,6 +20,11 @@ type Client interface {
 	// It handles all API interaction details and returns only the final result.
 	Generate(ctx context.Context, prompt string) (string, error)
 
+	// GenerateStream takes a prompt and returns a channel of generated text chunks.
+	// It enables streaming responses from the LLM API for incremental processing.
+	// Consumers must read from the channel until it's closed to avoid resource leaks.
+	GenerateStream(ctx context.Context, prompt string) (<-chan StreamChunk, error)
+
 	// CountTokens counts the number of tokens in the provided prompt.
 	// This is useful for understanding API usage and costs.
 	CountTokens(ctx context.Context, prompt string) (int, error)
@@ -27,6 +32,19 @@ type Client interface {
 	// Close releases any resources used by the client.
 	// It should be called when the client is no longer needed.
 	Close()
+}
+
+// StreamChunk represents a piece of content from a streaming LLM response.
+// It contains either content text or an error encountered during streaming.
+type StreamChunk struct {
+	// Text contains the text content of this chunk, if any
+	Text string
+
+	// Error contains any error encountered during streaming
+	Error error
+
+	// Done indicates that this is the final chunk of the stream
+	Done bool
 }
 
 // ClientOptions holds configuration options for LLM clients.
@@ -269,6 +287,120 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 
 	return 0, fmt.Errorf("failed to count tokens after %d attempts: %w",
 		c.options.MaxRetries, lastError)
+}
+
+// GenerateStream implements the Client interface for GeminiClient.
+// It sends the prompt to the Gemini API and processes the streaming response.
+// This method returns a channel that will receive text chunks as they are generated.
+func (c *GeminiClient) GenerateStream(ctx context.Context, prompt string) (<-chan StreamChunk, error) {
+	if c.client == nil || c.model == "" {
+		return nil, fmt.Errorf("client is not properly initialized")
+	}
+
+	// Create a context with timeout if specified
+	var genCtx context.Context
+	var cancel context.CancelFunc
+	if c.options.Timeout > 0 {
+		genCtx, cancel = context.WithTimeout(ctx, time.Duration(c.options.Timeout)*time.Second)
+	} else {
+		genCtx = ctx
+		cancel = func() {} // No-op cancel function
+	}
+
+	// Create a channel for streaming content back to the caller
+	chunkChan := make(chan StreamChunk)
+
+	// Prepare the content for the request
+	contents := []*genai.Content{
+		genai.NewContentFromText(prompt, "user"),
+	}
+
+	// Start a goroutine to handle the streaming response
+	go func() {
+		defer close(chunkChan)
+		defer cancel()
+
+		var lastError error
+		success := false
+
+		// Retry logic
+		for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
+			if attempt > 1 {
+				logrus.Debugf("Retry attempt %d/%d for streaming content", attempt, c.options.MaxRetries)
+			}
+
+			// Create a stream for the response
+			streamChan := c.client.Models.GenerateContentStream(genCtx, c.model, contents, nil)
+
+			// Process the streaming response
+			chunkReceived := false
+			responseFinished := false
+
+			for resp := range streamChan {
+				// If the response has an error, break and retry
+				if resp == nil {
+					lastError = fmt.Errorf("received nil response")
+					break
+				}
+
+				// Extract text from the response
+				if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
+					candidate := resp.Candidates[0]
+
+					// Check for finish reason issues
+					if candidate.FinishReason != "" && candidate.FinishReason != "FINISHED" {
+						reason := candidate.FinishReason
+						if reason == "SAFETY" {
+							lastError = fmt.Errorf("content blocked by safety settings")
+						} else {
+							lastError = fmt.Errorf("generation incomplete: %s", reason)
+						}
+						responseFinished = true
+						break
+					}
+
+					// Send each part to the channel
+					for _, part := range candidate.Content.Parts {
+						if part.Text != "" {
+							chunkChan <- StreamChunk{
+								Text: part.Text,
+							}
+							chunkReceived = true
+						}
+					}
+				}
+			}
+
+			// Check if we got any chunks back
+			if chunkReceived && !responseFinished {
+				// Success - we got content and it finished normally
+				success = true
+				break
+			}
+
+			// Simple backoff before retry
+			if attempt < c.options.MaxRetries {
+				backoffMs := 100 * attempt * attempt // Exponential backoff
+				time.Sleep(time.Duration(backoffMs) * time.Millisecond)
+			}
+		}
+
+		// Send final chunk with error if we failed
+		if !success {
+			chunkChan <- StreamChunk{
+				Error: fmt.Errorf("failed to generate streaming content after %d attempts: %w",
+					c.options.MaxRetries, lastError),
+				Done: true,
+			}
+		} else {
+			// Send a final chunk to signal completion
+			chunkChan <- StreamChunk{
+				Done: true,
+			}
+		}
+	}()
+
+	return chunkChan, nil
 }
 
 // Close implements the Client interface for GeminiClient.
