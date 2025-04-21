@@ -31,7 +31,7 @@ Replace imports of the old `genai` package with `google.golang.org/genai` in `ll
 
 **Estimated Effort:** Medium
 
-## [~] [T003] Update Model Selection Logic in `llm/client.go`
+## [X] [T003] Update Model Selection Logic in `llm/client.go`
 
 **Description:**
 Modify the code within the LLM client implementation (`llm/client.go`) that selects or retrieves the generative model instance. This typically involves replacing calls like `client.GetModel` or similar with the new `client.GenerativeModel` pattern.
@@ -44,7 +44,7 @@ Modify the code within the LLM client implementation (`llm/client.go`) that sele
 
 **Estimated Effort:** Low
 
-## [T004] Refactor Non-Streaming API Calls in `llm/client.go`
+## [~] [T004] Refactor Non-Streaming API Calls in `llm/client.go`
 
 **Description:**
 Update the client methods responsible for making non-streaming (synchronous) API calls (e.g., `GenerateContent`). Adapt the request construction (prompt, parts, safety settings) and response handling (extracting text content, checking errors) to match the new `GenerativeModel.GenerateContent` API.
