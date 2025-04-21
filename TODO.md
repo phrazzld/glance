@@ -257,7 +257,7 @@ Review code comments, particularly within the `llm` package and related areas. U
 
 **Estimated Effort:** Low
 
-## [ ] [T019] Review and Update Developer Scripts
+## [x] [T019] Review and Update Developer Scripts
 
 **Description:**
 Check any scripts used for development (e.g., build scripts, test runners, setup scripts in `scripts/` or `Makefile`) for hardcoded references to the old package path (`github.com/google/generative-ai-go/genai`) and update them if necessary.
