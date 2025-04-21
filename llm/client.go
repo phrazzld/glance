@@ -137,7 +137,8 @@ func newGeminiClient(apiKey string, options ...ClientOption) (*GeminiClient, err
 }
 
 // Generate implements the Client interface for GeminiClient.
-// It sends the prompt to the Gemini API and processes the streaming response.
+// It sends the prompt to the Gemini API and processes the response.
+// This uses the non-streaming API for better efficiency with simple requests.
 func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, error) {
 	if c.client == nil || c.model == "" {
 		return "", fmt.Errorf("client is not properly initialized")
@@ -153,7 +154,6 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 		genCtx = ctx
 	}
 
-	var result strings.Builder
 	var lastError error
 
 	// Prepare the content for the request
@@ -167,39 +167,55 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 			logrus.Debugf("Retry attempt %d/%d for generating content", attempt, c.options.MaxRetries)
 		}
 
-		result.Reset()
-
-		// Create a stream for the response
-		streamChan := c.client.Models.GenerateContentStream(genCtx, c.model, contents, nil)
-
-		// Process the streaming response
-		success := true
-		for resp := range streamChan {
-			// If the response has an error, break and retry
-			if resp == nil {
-				lastError = fmt.Errorf("received nil response") // pragma: allowlist secret
-				success = false
-				break
+		// Use non-streaming API for better efficiency
+		resp, err := c.client.Models.GenerateContent(genCtx, c.model, contents, nil)
+		if err != nil {
+			lastError = fmt.Errorf("failed to generate content: %w", err)
+			// Simple backoff before retry
+			if attempt < c.options.MaxRetries {
+				backoffMs := 100 * attempt * attempt // Exponential backoff
+				time.Sleep(time.Duration(backoffMs) * time.Millisecond)
 			}
+			continue
+		}
 
-			// Extract text from the response
-			if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
-				part := resp.Candidates[0].Content.Parts[0]
-				if part.Text != "" {
-					result.WriteString(part.Text)
-				}
+		// Check if we have valid candidates
+		if resp == nil || len(resp.Candidates) == 0 {
+			lastError = fmt.Errorf("received empty response")
+			// Simple backoff before retry
+			if attempt < c.options.MaxRetries {
+				backoffMs := 100 * attempt * attempt // Exponential backoff
+				time.Sleep(time.Duration(backoffMs) * time.Millisecond)
+			}
+			continue
+		}
+
+		// Check for finish reason issues
+		if resp.Candidates[0].FinishReason != "FINISHED" {
+			// Handle various non-success finish reasons
+			reason := resp.Candidates[0].FinishReason
+			if reason == "SAFETY" {
+				lastError = fmt.Errorf("content blocked by safety settings")
+			} else {
+				lastError = fmt.Errorf("generation incomplete: %s", reason)
+			}
+			// Simple backoff before retry
+			if attempt < c.options.MaxRetries {
+				backoffMs := 100 * attempt * attempt // Exponential backoff
+				time.Sleep(time.Duration(backoffMs) * time.Millisecond)
+			}
+			continue
+		}
+
+		// Extract text from the response
+		var result strings.Builder
+		for _, part := range resp.Candidates[0].Content.Parts {
+			if part.Text != "" {
+				result.WriteString(part.Text)
 			}
 		}
 
-		if success {
-			return result.String(), nil
-		}
-
-		// Simple backoff before retry
-		if attempt < c.options.MaxRetries {
-			backoffMs := 100 * attempt * attempt // Exponential backoff
-			time.Sleep(time.Duration(backoffMs) * time.Millisecond)
-		}
+		return result.String(), nil
 	}
 
 	return "", fmt.Errorf("failed to generate content after %d attempts: %w",

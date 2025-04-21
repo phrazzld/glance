@@ -44,7 +44,7 @@ Modify the code within the LLM client implementation (`llm/client.go`) that sele
 
 **Estimated Effort:** Low
 
-## [~] [T004] Refactor Non-Streaming API Calls in `llm/client.go`
+## [X] [T004] Refactor Non-Streaming API Calls in `llm/client.go`
 
 **Description:**
 Update the client methods responsible for making non-streaming (synchronous) API calls (e.g., `GenerateContent`). Adapt the request construction (prompt, parts, safety settings) and response handling (extracting text content, checking errors) to match the new `GenerativeModel.GenerateContent` API.
