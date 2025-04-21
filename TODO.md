@@ -230,7 +230,7 @@ Execute the project's full suite of integration and end-to-end (E2E) tests. Iden
 
 **Estimated Effort:** High
 
-## [ ] [T017] Update README and Documentation Files
+## [~] [T017] Update README and Documentation Files
 
 **Description:**
 Search and replace all references to the old package path (`github.com/google/generative-ai-go/genai`) with the new path (`google.golang.org/genai`) in the main `README.md` file and any other documentation files (e.g., under a `docs/` directory). Update any setup instructions, environment variable mentions, or usage examples that might have changed due to the migration.

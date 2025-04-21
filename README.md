@@ -197,7 +197,7 @@ For more details on our testing and mocking approach, including guidelines and e
 ## Dependencies
 
 - [github.com/briandowns/spinner](https://github.com/briandowns/spinner) – Spinner animation.
-- [github.com/google/generative-ai-go/genai](https://github.com/google/generative-ai-go) – Gemini API client.
+- [google.golang.org/genai](https://pkg.go.dev/google.golang.org/genai) – Gemini API client.
 - [github.com/joho/godotenv](https://github.com/joho/godotenv) – Loads environment variables from a `.env` file.
 - [github.com/sabhiram/go-gitignore](https://github.com/sabhiram/go-gitignore) – Parses `.gitignore` files.
 - [github.com/schollz/progressbar/v3](https://github.com/schollz/progressbar) – Displays a progress bar.
