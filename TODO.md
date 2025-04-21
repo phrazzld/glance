@@ -175,7 +175,7 @@ Review and update code in the main application entry points (`cmd/`, `main.go`, 
 
 **Estimated Effort:** Medium
 
-## [ ] [T013] Update Unit Tests for `llm/client_test.go`
+## [x] [T013] Update Unit Tests for `llm/client_test.go`
 
 **Description:**
 Modify the unit tests in `llm/client_test.go` to align with the refactored client implementation (T002-T008). Update test setup, assertions, and potentially use updated mocks (T010 is implicitly needed, but tests depend on the *implementation*). Ensure tests cover the behavior of the client using the new `google.golang.org/genai` API.
@@ -190,7 +190,7 @@ Modify the unit tests in `llm/client_test.go` to align with the refactored clien
 
 **Estimated Effort:** High
 
-## [ ] [T014] Update Unit Tests for `llm/service_test.go`
+## [x] [T014] Update Unit Tests for `llm/service_test.go`
 
 **Description:**
 Modify the unit tests in `llm/service_test.go` to align with the refactored service implementation (T011). Update test setup, assertions, and ensure the tests correctly use the updated `llm.Client` mock (T010).
