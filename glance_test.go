@@ -17,31 +17,11 @@ import (
 func TestLoadPromptTemplate(t *testing.T) {
 	// Skip due to stricter path validation
 	// Our new path validation is intentionally stricter for security reasons
-	t.Skip("Skipping due to stricter path validation in llm.LoadTemplate")
+	t.Skip("Skipping due to stricter path validation in config.LoadPromptTemplate")
 
-	// The rest is kept for reference, but won't run
-
-	// Create a temporary test directory
-	tempDir, err := os.MkdirTemp("", "glance-prompt-test-*")
-	assert.NoError(t, err, "Failed to create temp directory")
-	defer os.RemoveAll(tempDir)
-
-	// Create a test prompt file
-	testPromptPath := filepath.Join(tempDir, "test-prompt.txt")
-	testPromptContent := "test prompt template {{.Directory}}"
-	err = os.WriteFile(testPromptPath, []byte(testPromptContent), 0644)
-	assert.NoError(t, err, "Failed to create test prompt file")
-
-	// Test loading the custom prompt file
-	loadedPrompt, err := llm.LoadTemplate(testPromptPath)
-	assert.NoError(t, err, "Failed to load test prompt template")
-	assert.Equal(t, testPromptContent, loadedPrompt, "Loaded prompt content doesn't match expected")
-
-	// Test with empty path - should check for prompt.txt
-	// Since prompt.txt exists in this project, let's verify it loads correctly
-	emptyPathResult, err := llm.LoadTemplate("")
-	assert.NoError(t, err, "Loading with empty path should succeed")
-	assert.NotEmpty(t, emptyPathResult, "Should return a non-empty template when path is empty")
+	// Note: This test originally used llm.LoadTemplate, which has been removed.
+	// The same functionality is now available in config.LoadPromptTemplate.
+	// For actual tests of this functionality, see config/template_test.go.
 }
 
 // TestFileSystemPackageUsage demonstrates using the filesystem package directly
@@ -79,11 +59,12 @@ func TestSetupLLMService(t *testing.T) {
 	t.Run("Uses function variable to create service", func(t *testing.T) {
 		// Create mocks for return values
 		mockClient := new(mocks.LLMClient)
+		adapter := llm.NewMockClientAdapter(mockClient)
 		mockService := &llm.Service{} // Using a real type as it's easier in this test
 
 		// Create a mock function that returns our mocks
 		mockSetupFunc := func(cfg *config.Config) (llm.Client, *llm.Service, error) {
-			return mockClient, mockService, nil
+			return adapter, mockService, nil
 		}
 
 		// Replace the default function
@@ -97,7 +78,7 @@ func TestSetupLLMService(t *testing.T) {
 
 		// Verify results
 		assert.NoError(t, err)
-		assert.Equal(t, mockClient, client)
+		assert.Equal(t, adapter, client)
 		assert.Equal(t, mockService, service)
 	})
 }

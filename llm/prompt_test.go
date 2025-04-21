@@ -22,11 +22,6 @@ func TestDefaultTemplate(t *testing.T) {
 	assert.Contains(t, template, "highlight purpose")
 }
 
-func TestLoadTemplateDeprecated(t *testing.T) {
-	// Skip as LoadTemplate is now deprecated
-	t.Skip("LoadTemplate is deprecated, tests are now in config/template_test.go")
-}
-
 func TestGeneratePrompt(t *testing.T) {
 	// Test data
 	data := &PromptData{
