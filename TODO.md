@@ -2,7 +2,7 @@
 
 This document outlines the specific tasks required to migrate the Glance project from `github.com/google/generative-ai-go/genai` to `google.golang.org/genai`, following the implementation plan.
 
-## [X] [T001] Add New Dependency: `google.golang.org/genai`
+## [x] [T001] Add New Dependency: `google.golang.org/genai`
 
 **Description:**
 Add the official `google.golang.org/genai` package to the project's `go.mod` file.
@@ -16,7 +16,7 @@ Add the official `google.golang.org/genai` package to the project's `go.mod` fil
 
 **Estimated Effort:** Low
 
-## [X] [T002] Update Imports and Client Initialization in `llm/client.go`
+## [x] [T002] Update Imports and Client Initialization in `llm/client.go`
 
 **Description:**
 Replace imports of the old `genai` package with `google.golang.org/genai` in `llm/client.go`. Update the `NewClient` function signature and internal logic to use the new package's `genai.NewClient` function and associated options/types.
@@ -31,7 +31,7 @@ Replace imports of the old `genai` package with `google.golang.org/genai` in `ll
 
 **Estimated Effort:** Medium
 
-## [X] [T003] Update Model Selection Logic in `llm/client.go`
+## [x] [T003] Update Model Selection Logic in `llm/client.go`
 
 **Description:**
 Modify the code within the LLM client implementation (`llm/client.go`) that selects or retrieves the generative model instance. This typically involves replacing calls like `client.GetModel` or similar with the new `client.GenerativeModel` pattern.
@@ -44,7 +44,7 @@ Modify the code within the LLM client implementation (`llm/client.go`) that sele
 
 **Estimated Effort:** Low
 
-## [X] [T004] Refactor Non-Streaming API Calls in `llm/client.go`
+## [x] [T004] Refactor Non-Streaming API Calls in `llm/client.go`
 
 **Description:**
 Update the client methods responsible for making non-streaming (synchronous) API calls (e.g., `GenerateContent`). Adapt the request construction (prompt, parts, safety settings) and response handling (extracting text content, checking errors) to match the new `GenerativeModel.GenerateContent` API.
@@ -59,7 +59,7 @@ Update the client methods responsible for making non-streaming (synchronous) API
 
 **Estimated Effort:** Medium
 
-## [X] [T005] Refactor Streaming API Calls in `llm/client.go`
+## [x] [T005] Refactor Streaming API Calls in `llm/client.go`
 
 **Description:**
 Update the client methods responsible for making streaming API calls (e.g., `GenerateContentStream`). Adapt the request construction and response handling logic to use the new `GenerativeModel.GenerateContentStream` API, including iterator patterns and handling of streamed `GenerateContentResponse` chunks.
@@ -75,7 +75,7 @@ Update the client methods responsible for making streaming API calls (e.g., `Gen
 
 **Estimated Effort:** Medium
 
-## [X] [T006] Update Token Counting Logic in `llm/client.go`
+## [x] [T006] Update Token Counting Logic in `llm/client.go`
 
 **Description:**
 Update the code responsible for counting tokens to use the corresponding functionality in the new `google.golang.org/genai` package (e.g., `client.CountTokens`). Adapt the request structure as needed for this specific API call.
@@ -89,7 +89,7 @@ Update the code responsible for counting tokens to use the corresponding functio
 
 **Estimated Effort:** Medium
 
-## [X] [T007] Update Error Handling Logic in `llm/client.go`
+## [x] [T007] Update Error Handling Logic in `llm/client.go`
 
 **Description:**
 Review and adapt all error checking and handling within `llm/client.go` to match the error types, patterns, and specific error conditions returned by the new `google.golang.org/genai` package. Ensure errors are appropriately wrapped or propagated.
@@ -103,7 +103,7 @@ Review and adapt all error checking and handling within `llm/client.go` to match
 
 **Estimated Effort:** Medium
 
-## [X] [T008] Update Functional Options and Configuration in `llm/client.go`
+## [x] [T008] Update Functional Options and Configuration in `llm/client.go`
 
 **Description:**
 Review and update any functional options used during client/model setup or API calls (e.g., for setting temperature, topP, topK, safety settings, timeouts, retries). Map existing configuration values to the equivalent options in the new package.
@@ -117,7 +117,7 @@ Review and update any functional options used during client/model setup or API c
 
 **Estimated Effort:** Medium
 
-## [X] [T009] Update `llm.Client` Interface
+## [x] [T009] Update `llm.Client` Interface
 
 **Description:**
 Review the `llm.Client` interface definition in `llm/client.go` (or wherever it's defined). Update method signatures (parameters, return types) if they have changed as a result of the refactoring in T002-T008 to accurately reflect the capabilities and types of the new implementation.
@@ -131,7 +131,7 @@ Review the `llm.Client` interface definition in `llm/client.go` (or wherever it'
 
 **Estimated Effort:** Low
 
-## [X] [T010] Update Mocks for `llm.Client`
+## [x] [T010] Update Mocks for `llm.Client`
 
 **Description:**
 Regenerate or manually update any mock implementations of the `llm.Client` interface (e.g., using `gomock` or similar, likely in `internal/mocks`). Ensure the mocks align with the updated interface definition from T009.
@@ -145,7 +145,7 @@ Regenerate or manually update any mock implementations of the `llm.Client` inter
 
 **Estimated Effort:** Medium
 
-## [X] [T011] Update `llm/service.go` to Use Refactored Client
+## [x] [T011] Update `llm/service.go` to Use Refactored Client
 
 **Description:**
 Modify the LLM service layer (`llm/service.go`) to work with the updated `llm.Client` interface (T009). Adjust how service methods call the client, handle returned data types, and manage errors based on the changes introduced by the new client implementation.
@@ -160,7 +160,7 @@ Modify the LLM service layer (`llm/service.go`) to work with the updated `llm.Cl
 
 **Estimated Effort:** Medium
 
-## [T012] Update Main Application/CLI Code and Call Sites
+## [x] [T012] Update Main Application/CLI Code and Call Sites
 
 **Description:**
 Review and update code in the main application entry points (`cmd/`, `main.go`, etc.) or any other locations that directly instantiate or interact with the `llm.Client` or `llm.Service`. Ensure configuration is passed correctly, context handling is appropriate, and any direct usage of old types/methods is removed or updated.
@@ -175,7 +175,7 @@ Review and update code in the main application entry points (`cmd/`, `main.go`, 
 
 **Estimated Effort:** Medium
 
-## [T013] Update Unit Tests for `llm/client_test.go`
+## [ ] [T013] Update Unit Tests for `llm/client_test.go`
 
 **Description:**
 Modify the unit tests in `llm/client_test.go` to align with the refactored client implementation (T002-T008). Update test setup, assertions, and potentially use updated mocks (T010 is implicitly needed, but tests depend on the *implementation*). Ensure tests cover the behavior of the client using the new `google.golang.org/genai` API.
@@ -190,7 +190,7 @@ Modify the unit tests in `llm/client_test.go` to align with the refactored clien
 
 **Estimated Effort:** High
 
-## [T014] Update Unit Tests for `llm/service_test.go`
+## [ ] [T014] Update Unit Tests for `llm/service_test.go`
 
 **Description:**
 Modify the unit tests in `llm/service_test.go` to align with the refactored service implementation (T011). Update test setup, assertions, and ensure the tests correctly use the updated `llm.Client` mock (T010).
@@ -204,7 +204,7 @@ Modify the unit tests in `llm/service_test.go` to align with the refactored serv
 
 **Estimated Effort:** Medium
 
-## [T015] Update Other Relevant Unit Tests
+## [ ] [T015] Update Other Relevant Unit Tests
 
 **Description:**
 Review and update any other unit tests throughout the codebase (e.g., in `cmd/` tests) that might be indirectly affected by the changes in the LLM client/service interfaces, types, or behavior.
@@ -216,7 +216,7 @@ Review and update any other unit tests throughout the codebase (e.g., in `cmd/` 
 
 **Estimated Effort:** Medium
 
-## [T016] Run and Update Integration/E2E Tests
+## [ ] [T016] Run and Update Integration/E2E Tests
 
 **Description:**
 Execute the project's full suite of integration and end-to-end (E2E) tests. Identify any failures caused by the migration to the new `genai` package. Update test setup, execution steps, or assertions as needed to ensure they pass with the refactored code. This may involve running against a real API endpoint or carefully mocked integration environment.
@@ -230,7 +230,7 @@ Execute the project's full suite of integration and end-to-end (E2E) tests. Iden
 
 **Estimated Effort:** High
 
-## [T017] Update README and Documentation Files
+## [ ] [T017] Update README and Documentation Files
 
 **Description:**
 Search and replace all references to the old package path (`github.com/google/generative-ai-go/genai`) with the new path (`google.golang.org/genai`) in the main `README.md` file and any other documentation files (e.g., under a `docs/` directory). Update any setup instructions, environment variable mentions, or usage examples that might have changed due to the migration.
@@ -244,7 +244,7 @@ Search and replace all references to the old package path (`github.com/google/ge
 
 **Estimated Effort:** Medium
 
-## [T018] Update Inline Code Comments
+## [ ] [T018] Update Inline Code Comments
 
 **Description:**
 Review code comments, particularly within the `llm` package and related areas. Update any comments that specifically mention the old package path, its types, or methods to accurately reflect the new `google.golang.org/genai` implementation.
@@ -257,7 +257,7 @@ Review code comments, particularly within the `llm` package and related areas. U
 
 **Estimated Effort:** Low
 
-## [T019] Review and Update Developer Scripts
+## [ ] [T019] Review and Update Developer Scripts
 
 **Description:**
 Check any scripts used for development (e.g., build scripts, test runners, setup scripts in `scripts/` or `Makefile`) for hardcoded references to the old package path (`github.com/google/generative-ai-go/genai`) and update them if necessary.
@@ -270,7 +270,7 @@ Check any scripts used for development (e.g., build scripts, test runners, setup
 
 **Estimated Effort:** Low
 
-## [T020] Remove Old Dependency and Tidy `go.mod`
+## [ ] [T020] Remove Old Dependency and Tidy `go.mod`
 
 **Description:**
 Remove the line requiring `github.com/google/generative-ai-go/genai` from the `go.mod` file. Run `go mod tidy` to clean up the module file and ensure consistency.
@@ -284,7 +284,7 @@ Remove the line requiring `github.com/google/generative-ai-go/genai` from the `g
 
 **Estimated Effort:** Low
 
-## [T021] Remove Dead Code Related to Old API
+## [ ] [T021] Remove Dead Code Related to Old API
 
 **Description:**
 Identify and remove any helper functions, types, constants, or variables that were specifically created to support or workaround aspects of the old `github.com/google/generative-ai-go/genai` package and are no longer needed with the new `google.golang.org/genai` package.
@@ -298,7 +298,7 @@ Identify and remove any helper functions, types, constants, or variables that we
 
 **Estimated Effort:** Low
 
-## [T022] Run Code Formatting and Quality Checks
+## [ ] [T022] Run Code Formatting and Quality Checks
 
 **Description:**
 Run all standard code formatting (`go fmt ./...`), linting (`golangci-lint run`), and any other configured pre-commit hooks or CI quality checks across the entire codebase. Fix any issues reported by these tools.
@@ -312,7 +312,7 @@ Run all standard code formatting (`go fmt ./...`), linting (`golangci-lint run`)
 
 **Estimated Effort:** Low
 
-## [T023] Perform Final Code Review and Manual Test
+## [ ] [T023] Perform Final Code Review and Manual Test
 
 **Description:**
 Conduct a final, holistic code review focusing on the changes made during the migration. Ensure consistency, correctness, and adherence to project standards. Perform a manual test run of the application's core functionality (e.g., running the Glance CLI against a sample directory with a valid API key) to provide a final sanity check.
