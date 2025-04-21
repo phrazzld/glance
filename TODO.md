@@ -117,7 +117,7 @@ Review and update any functional options used during client/model setup or API c
 
 **Estimated Effort:** Medium
 
-## [T009] Update `llm.Client` Interface
+## [X] [T009] Update `llm.Client` Interface
 
 **Description:**
 Review the `llm.Client` interface definition in `llm/client.go` (or wherever it's defined). Update method signatures (parameters, return types) if they have changed as a result of the refactoring in T002-T008 to accurately reflect the capabilities and types of the new implementation.
