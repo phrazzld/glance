@@ -216,7 +216,7 @@ Review and update any other unit tests throughout the codebase (e.g., in `cmd/` 
 
 **Estimated Effort:** Medium
 
-## [ ] [T016] Run and Update Integration/E2E Tests
+## [x] [T016] Run and Update Integration/E2E Tests
 
 **Description:**
 Execute the project's full suite of integration and end-to-end (E2E) tests. Identify any failures caused by the migration to the new `genai` package. Update test setup, execution steps, or assertions as needed to ensure they pass with the refactored code. This may involve running against a real API endpoint or carefully mocked integration environment.
