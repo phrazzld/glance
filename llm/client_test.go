@@ -9,30 +9,47 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/api/iterator"
+
+	"glance/internal/mocks"
 )
 
-// MockClient is a mock implementation of the Client interface for testing
-type MockClient struct {
-	mock.Mock
+// We're using the LLMClient from internal/mocks package
+
+// Test the function variable pattern for client creation
+func TestClientCreation(t *testing.T) {
+	t.Run("Default function creates client", func(t *testing.T) {
+		// Test with the real function but invalid API key - should fail cleanly
+		origFunc := createGeminiClient
+		defer func() { createGeminiClient = origFunc }()
+
+		client, err := NewGeminiClient("")
+		assert.Error(t, err)
+		assert.Nil(t, client)
+	})
+
+	t.Run("Mocked function returns predetermined client", func(t *testing.T) {
+		// Set up a mock client to return
+		mockClient := new(mocks.LLMClient)
+
+		// Create a mock function that returns our mock client
+		mockCreateFunc := func(apiKey string, options ...ClientOption) (Client, error) {
+			return mockClient, nil
+		}
+
+		// Replace the default function with our mock
+		origFunc := createGeminiClient
+		createGeminiClient = mockCreateFunc
+		defer func() { createGeminiClient = origFunc }()
+
+		// Now using NewGeminiClient should use our mock function
+		client, err := NewGeminiClient("any-api-key")
+		assert.NoError(t, err)
+		assert.Same(t, mockClient, client)
+	})
 }
 
-func (m *MockClient) Generate(ctx context.Context, prompt string) (string, error) {
-	args := m.Called(ctx, prompt)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockClient) CountTokens(ctx context.Context, prompt string) (int, error) {
-	args := m.Called(ctx, prompt)
-	return args.Int(0), args.Error(1)
-}
-
-func (m *MockClient) Close() {
-	m.Called()
-}
-
-// Test the interface definition with the mock implementation
 func TestClientInterface(t *testing.T) {
-	mockClient := new(MockClient)
+	mockClient := new(mocks.LLMClient)
 
 	ctx := context.Background()
 	testPrompt := "Test prompt"
@@ -68,59 +85,71 @@ func TestClientInterface(t *testing.T) {
 func TestClientOptions(t *testing.T) {
 	// Test default options
 	options := DefaultClientOptions()
-	assert.Equal(t, "gemini-2.0-flash", options.ModelName)
+	assert.Equal(t, "gemini-2.5-flash-preview-04-17", options.ModelName)
 	assert.Greater(t, options.MaxRetries, 0)
 	assert.Greater(t, options.Timeout, 0)
 
-	// Test WithModelName
+	// Test WithModelName option function
 	customModel := "custom-model"
-	updatedOpts := options.WithModelName(customModel)
-	assert.Equal(t, customModel, updatedOpts.ModelName)
-	assert.NotEqual(t, &options, &updatedOpts, "Should create a new options instance")
+	modelOption := WithModelName(customModel)
 
-	// Test WithMaxRetries
+	// Apply option to default options
+	testOpts := DefaultClientOptions()
+	modelOption(&testOpts)
+	assert.Equal(t, customModel, testOpts.ModelName)
+
+	// Test WithMaxRetries option function
 	customRetries := 10
-	updatedOpts = options.WithMaxRetries(customRetries)
-	assert.Equal(t, customRetries, updatedOpts.MaxRetries)
-	assert.NotEqual(t, &options, &updatedOpts, "Should create a new options instance")
+	retriesOption := WithMaxRetries(customRetries)
 
-	// Test WithTimeout
+	testOpts = DefaultClientOptions()
+	retriesOption(&testOpts)
+	assert.Equal(t, customRetries, testOpts.MaxRetries)
+
+	// Test WithTimeout option function
 	customTimeout := 120
-	updatedOpts = options.WithTimeout(customTimeout)
-	assert.Equal(t, customTimeout, updatedOpts.Timeout)
-	assert.NotEqual(t, &options, &updatedOpts, "Should create a new options instance")
+	timeoutOption := WithTimeout(customTimeout)
 
-	// Test chain of option modifications
-	fullyCustomized := options.
-		WithModelName("custom-model-2").
-		WithMaxRetries(5).
-		WithTimeout(30)
+	testOpts = DefaultClientOptions()
+	timeoutOption(&testOpts)
+	assert.Equal(t, customTimeout, testOpts.Timeout)
 
-	assert.Equal(t, "custom-model-2", fullyCustomized.ModelName)
-	assert.Equal(t, 5, fullyCustomized.MaxRetries)
-	assert.Equal(t, 30, fullyCustomized.Timeout)
+	// Test applying multiple options
+	testOpts = DefaultClientOptions()
+	WithModelName("custom-model-2")(&testOpts)
+	WithMaxRetries(5)(&testOpts)
+	WithTimeout(30)(&testOpts)
+
+	assert.Equal(t, "custom-model-2", testOpts.ModelName)
+	assert.Equal(t, 5, testOpts.MaxRetries)
+	assert.Equal(t, 30, testOpts.Timeout)
 }
 
 // TestNewGeminiClient tests the client creation functionality
 func TestNewGeminiClient(t *testing.T) {
 	// Test with empty API key
 	t.Run("Empty API key", func(t *testing.T) {
-		client, err := NewGeminiClient("", nil)
+		client, err := NewGeminiClient("")
 		assert.Error(t, err)
 		assert.Nil(t, client)
 		assert.Contains(t, err.Error(), "API key is required")
 	})
 
-	// Test with default options (nil options should use defaults)
-	t.Run("Default options", func(t *testing.T) {
+	// Test with custom options
+	t.Run("Custom options", func(t *testing.T) {
 		// Note: This test will behave differently depending on whether the API key
 		// is accepted or rejected by the Gemini API. For reliable testing, we focus
-		// on testing that nil options uses defaults, not on API key validation.
+		// on testing validation, not actual API calls.
 
-		// First, ensure empty API key fails regardless of options
-		client, err := NewGeminiClient("", nil)
+		// First, ensure empty API key fails even with custom options
+		client, err := NewGeminiClient("",
+			WithModelName("custom-model"),
+			WithMaxRetries(5),
+			WithTimeout(30),
+		)
 		assert.Error(t, err)
 		assert.Nil(t, client)
+		assert.Contains(t, err.Error(), "API key is required")
 	})
 }
 
@@ -153,10 +182,11 @@ func TestGeminiClientGenerate(t *testing.T) {
 
 	// Test uninitialized client
 	t.Run("Uninitialized client", func(t *testing.T) {
+		opts := DefaultClientOptions()
 		client := &GeminiClient{
 			client:  nil,
 			model:   nil,
-			options: DefaultClientOptions(),
+			options: &opts,
 		}
 
 		result, err := client.Generate(context.Background(), "test prompt")
@@ -170,10 +200,11 @@ func TestGeminiClientGenerate(t *testing.T) {
 func TestGeminiClientCountTokens(t *testing.T) {
 	// Test uninitialized client
 	t.Run("Uninitialized client", func(t *testing.T) {
+		opts := DefaultClientOptions()
 		client := &GeminiClient{
 			client:  nil,
 			model:   nil,
-			options: DefaultClientOptions(),
+			options: &opts,
 		}
 
 		result, err := client.CountTokens(context.Background(), "test prompt")
@@ -187,10 +218,11 @@ func TestGeminiClientCountTokens(t *testing.T) {
 func TestGeminiClientClose(t *testing.T) {
 	// Test safe close (even if client is nil)
 	t.Run("Safe close with nil client", func(t *testing.T) {
+		opts := DefaultClientOptions()
 		client := &GeminiClient{
 			client:  nil,
 			model:   nil,
-			options: DefaultClientOptions(),
+			options: &opts,
 		}
 
 		// This should not panic
@@ -206,14 +238,15 @@ func TestGeminiClientClose(t *testing.T) {
 func TestGeminiClientTimeout(t *testing.T) {
 	t.Run("Context timeout behavior", func(t *testing.T) {
 		// Create a client with a very short timeout
+		options := ClientOptions{
+			ModelName:  "test-model",
+			MaxRetries: 1,
+			Timeout:    1, // 1 second timeout
+		}
 		client := &GeminiClient{
-			client: nil, // We won't use the actual client in this test
-			model:  nil,
-			options: &ClientOptions{
-				ModelName:  "test-model",
-				MaxRetries: 1,
-				Timeout:    1, // 1 second timeout
-			},
+			client:  nil, // We won't use the actual client in this test
+			model:   nil,
+			options: &options,
 		}
 
 		// Create a context with a cancellation function
@@ -232,14 +265,15 @@ func TestGeminiClientTimeout(t *testing.T) {
 func TestGeminiClientRetryLogic(t *testing.T) {
 	t.Run("Maximum retries reached", func(t *testing.T) {
 		// Create a client with a small number of retries for testing
+		options := ClientOptions{
+			ModelName:  "test-model",
+			MaxRetries: 2,
+			Timeout:    1,
+		}
 		client := &GeminiClient{
-			client: nil, // We won't use the actual client in this test
-			model:  nil,
-			options: &ClientOptions{
-				ModelName:  "test-model",
-				MaxRetries: 2,
-				Timeout:    1,
-			},
+			client:  nil, // We won't use the actual client in this test
+			model:   nil,
+			options: &options,
 		}
 
 		// Test Generate retry logic (will fail due to uninitialized client)
@@ -261,7 +295,7 @@ func TestGeminiClient_Integration(t *testing.T) {
 
 	// Setup
 	apiKey := "your-api-key-here" // Replace with an actual key for manual testing
-	client, err := NewGeminiClient(apiKey, DefaultClientOptions())
+	client, err := NewGeminiClient(apiKey)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}

@@ -1,13 +1,10 @@
 package llm
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultTemplate(t *testing.T) {
@@ -25,103 +22,9 @@ func TestDefaultTemplate(t *testing.T) {
 	assert.Contains(t, template, "highlight purpose")
 }
 
-func TestLoadTemplate(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir := t.TempDir()
-
-	// Create a custom template file
-	customTemplate := "Custom template with {{.Directory}} and {{.SubGlances}} and {{.FileContents}}"
-	customTemplatePath := filepath.Join(tempDir, "custom.txt")
-	err := os.WriteFile(customTemplatePath, []byte(customTemplate), 0644)
-	require.NoError(t, err)
-
-	// Create a default location template file in current directory (will be cleaned up)
-	defaultLocTemplate := "Default location template with {{.Directory}}"
-	defaultPath := "prompt.txt"
-	currentDir, err := os.Getwd()
-	require.NoError(t, err)
-	fullDefaultPath := filepath.Join(currentDir, defaultPath)
-
-	// Use cleanup to ensure we remove the prompt.txt file after tests
-	t.Cleanup(func() {
-		os.Remove(fullDefaultPath)
-	})
-
-	// Test cases
-	tests := []struct {
-		name      string
-		setupFn   func() error // Setup function to run before the test
-		cleanupFn func() error // Cleanup function to run after the test
-		path      string
-		want      string
-		wantErr   bool
-	}{
-		{
-			name:      "Default template when path is empty and no prompt.txt exists",
-			setupFn:   func() error { return nil },
-			cleanupFn: func() error { return nil },
-			path:      "",
-			want:      DefaultTemplate(),
-			wantErr:   false,
-		},
-		{
-			name:      "Custom template from valid path",
-			setupFn:   func() error { return nil },
-			cleanupFn: func() error { return nil },
-			path:      customTemplatePath,
-			want:      customTemplate,
-			wantErr:   false,
-		},
-		{
-			name:      "Error with non-existent path",
-			setupFn:   func() error { return nil },
-			cleanupFn: func() error { return nil },
-			path:      filepath.Join(tempDir, "nonexistent.txt"),
-			want:      "",
-			wantErr:   true,
-		},
-		{
-			name: "Use prompt.txt from current directory when path is empty",
-			setupFn: func() error {
-				return os.WriteFile(fullDefaultPath, []byte(defaultLocTemplate), 0644)
-			},
-			cleanupFn: func() error {
-				return os.Remove(fullDefaultPath)
-			},
-			path:    "",
-			want:    defaultLocTemplate,
-			wantErr: false,
-		},
-	}
-
-	// Run tests
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Run setup
-			if tt.setupFn != nil {
-				err := tt.setupFn()
-				require.NoError(t, err)
-			}
-
-			// Test cleanup
-			if tt.cleanupFn != nil {
-				defer func() {
-					err := tt.cleanupFn()
-					if err != nil {
-						t.Logf("cleanup error: %v", err)
-					}
-				}()
-			}
-
-			got, err := LoadTemplate(tt.path)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
-		})
-	}
+func TestLoadTemplateDeprecated(t *testing.T) {
+	// Skip as LoadTemplate is now deprecated
+	t.Skip("LoadTemplate is deprecated, tests are now in config/template_test.go")
 }
 
 func TestGeneratePrompt(t *testing.T) {

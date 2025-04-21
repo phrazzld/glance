@@ -3,17 +3,15 @@ package llm
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+
+	"glance/internal/mocks"
 )
 
-// We're using the MockClient defined in client_test.go
+// We're using the LLMClient defined in internal/mocks package
 
 func TestNewService(t *testing.T) {
 	// Test with nil client
@@ -26,46 +24,46 @@ func TestNewService(t *testing.T) {
 
 	// Test with valid client and default options
 	t.Run("Valid client with default options", func(t *testing.T) {
-		mockClient := new(MockClient)
+		mockClient := new(mocks.LLMClient)
 		service, err := NewService(mockClient)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		assert.Equal(t, mockClient, service.client)
-		assert.Equal(t, DefaultServiceOptions().MaxRetries, service.options.MaxRetries)
-		assert.Equal(t, DefaultServiceOptions().ModelName, service.options.ModelName)
-		assert.Equal(t, DefaultServiceOptions().Verbose, service.options.Verbose)
+		assert.Equal(t, DefaultServiceConfig().MaxRetries, service.maxRetries)
+		assert.Equal(t, DefaultServiceConfig().ModelName, service.modelName)
+		assert.Equal(t, DefaultServiceConfig().Verbose, service.verbose)
 	})
 
 	// Test with valid client and custom options
 	t.Run("Valid client with custom options", func(t *testing.T) {
-		mockClient := new(MockClient)
+		mockClient := new(mocks.LLMClient)
 		customRetries := 10
-		service, err := NewService(mockClient, WithMaxRetries(customRetries))
+		service, err := NewService(mockClient, WithServiceMaxRetries(customRetries))
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
-		assert.Equal(t, customRetries, service.options.MaxRetries)
+		assert.Equal(t, customRetries, service.maxRetries)
 	})
 
 	// Test with multiple options
 	t.Run("Multiple options", func(t *testing.T) {
-		mockClient := new(MockClient)
+		mockClient := new(mocks.LLMClient)
 		service, err := NewService(mockClient,
-			WithMaxRetries(5),
-			WithModelName("custom-model"),
+			WithServiceMaxRetries(5),
+			WithServiceModelName("custom-model"),
 			WithVerbose(true))
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
-		assert.Equal(t, 5, service.options.MaxRetries)
-		assert.Equal(t, "custom-model", service.options.ModelName)
-		assert.True(t, service.options.Verbose)
+		assert.Equal(t, 5, service.maxRetries)
+		assert.Equal(t, "custom-model", service.modelName)
+		assert.True(t, service.verbose)
 	})
 }
 
 func TestGenerateGlanceMarkdown(t *testing.T) {
-	mockClient := new(MockClient)
+	mockClient := new(mocks.LLMClient)
 	ctx := context.Background()
 
 	// Test data
@@ -79,8 +77,9 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 
 	// Test successful generation on first attempt
 	t.Run("Successful generation", func(t *testing.T) {
-		// Setup service with mock client
-		service, err := NewService(mockClient)
+		// Setup service with mock client and custom template
+		customTemplate := "Custom template for test {{.Directory}}"
+		service, err := NewService(mockClient, WithPromptTemplate(customTemplate))
 		assert.NoError(t, err)
 
 		// Setup expectations for the mock
@@ -99,10 +98,10 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	// Test with retries
 	t.Run("Generation succeeds after retries", func(t *testing.T) {
 		// Reset mock
-		mockClient = new(MockClient)
+		mockClient = new(mocks.LLMClient)
 
 		// Setup service with mock client and 3 retries
-		service, err := NewService(mockClient, WithMaxRetries(3))
+		service, err := NewService(mockClient, WithServiceMaxRetries(3), WithPromptTemplate("test template"))
 		assert.NoError(t, err)
 
 		// Setup expectations - first 2 attempts fail, 3rd succeeds
@@ -123,10 +122,10 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 	// Test with all retries failing
 	t.Run("All retries fail", func(t *testing.T) {
 		// Reset mock
-		mockClient = new(MockClient)
+		mockClient = new(mocks.LLMClient)
 
 		// Setup service with mock client and 2 retries
-		service, err := NewService(mockClient, WithMaxRetries(2))
+		service, err := NewService(mockClient, WithServiceMaxRetries(2), WithPromptTemplate("test template"))
 		assert.NoError(t, err)
 
 		// Setup expectations - all attempts fail
@@ -144,195 +143,137 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient.AssertExpectations(t)
 	})
 
-	// Test with custom template
-	t.Run("Custom template", func(t *testing.T) {
-		// Reset mock
-		mockClient = new(MockClient)
+	// Test with template generation error
+	t.Run("Template generation error", func(t *testing.T) {
+		// Create a service with a mock client
+		mockClient = new(mocks.LLMClient)
 
-		// Create a temporary directory for the test
-		tempDir := t.TempDir()
-
-		// Create a custom template file
-		customTemplate := "Custom template with {{.Directory}} and {{.SubGlances}} and {{.FileContents}}"
-		customTemplatePath := filepath.Join(tempDir, "custom_template.txt")
-		err := os.WriteFile(customTemplatePath, []byte(customTemplate), 0644)
-		require.NoError(t, err)
-
-		// Create temp prompt.txt in current directory to test template loading
-		currentDir, err := os.Getwd()
-		require.NoError(t, err)
-		promptPath := filepath.Join(currentDir, "prompt.txt")
-		err = os.WriteFile(promptPath, []byte(customTemplate), 0644)
-		require.NoError(t, err)
-
-		// Clean up the prompt.txt file after the test
-		defer os.Remove(promptPath)
-
-		// Setup service with mock client
-		service, err := NewService(mockClient)
-		assert.NoError(t, err)
-
-		// Setup expectations for the mock
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
-		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
-
-		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
-
-		// Verify results
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, result)
-		mockClient.AssertExpectations(t)
-	})
-
-	// Test with verbose mode enabled
-	t.Run("Verbose mode enabled", func(t *testing.T) {
-		// Reset mock
-		mockClient = new(MockClient)
-
-		// Save current log level and restore it after test
-		originalLevel := logrus.GetLevel()
-		logrus.SetLevel(logrus.DebugLevel)
-		defer logrus.SetLevel(originalLevel)
-
-		// Setup service with mock client and verbose mode
-		service, err := NewService(mockClient, WithVerbose(true))
-		assert.NoError(t, err)
-
-		// Setup expectations for the mock - include token counting since verbose is enabled
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
-		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Once() // Should be called with verbose=true
-
-		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
-
-		// Verify results
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, result)
-		mockClient.AssertExpectations(t)
-	})
-
-	// Test with token counting error in verbose mode
-	t.Run("Token counting error in verbose mode", func(t *testing.T) {
-		// Reset mock
-		mockClient = new(MockClient)
-
-		// Save current log level and restore it after test
-		originalLevel := logrus.GetLevel()
-		logrus.SetLevel(logrus.DebugLevel)
-		defer logrus.SetLevel(originalLevel)
-
-		// Setup service with mock client and verbose mode
-		service, err := NewService(mockClient, WithVerbose(true))
-		assert.NoError(t, err)
-
-		// Setup expectations for the mock
-		tokenError := errors.New("token counting error")
-		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(0, tokenError).Once()
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
-
-		// Call the method - should still work despite token counting error
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
-
-		// Verify results - generation should succeed despite token counting error
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, result)
-		mockClient.AssertExpectations(t)
-	})
-
-	// Test with template loading error
-	t.Run("Template loading error", func(t *testing.T) {
-		// Create a service with a mock client that expects nothing to be called
-		// because we'll error before reaching the client
-		mockClient = new(MockClient)
-		service, err := NewService(mockClient)
-		assert.NoError(t, err)
-
-		// Create a directory where we can't read files (no permissions)
-		// This is tricky to do in a test, so we'll mock the behavior by
-		// patching the LoadTemplate function (not easy in Go)
-		// Instead, we'll test error handling for prompt generation
-
-		// Create an invalid template to cause an error
+		// Create an invalid template to cause an error in prompt generation
 		invalidTemplate := "Invalid template with {{.MissingVar}}"
-		customTemplatePath := filepath.Join(t.TempDir(), "invalid_template.txt")
-		err = os.WriteFile(customTemplatePath, []byte(invalidTemplate), 0644)
-		require.NoError(t, err)
+		service, err := NewService(mockClient, WithPromptTemplate(invalidTemplate))
+		assert.NoError(t, err)
 
-		// Set mock expectations for nil fileMap case
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
+		// This should fail due to invalid template with .MissingVar
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+
+		// Now we expect an error from template generation
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "template")
+		assert.Empty(t, result) // No result since template failed
+	})
+
+	// Test with prompt template from options
+	t.Run("Use prompt template from options", func(t *testing.T) {
+		// Reset mock
+		mockClient = new(mocks.LLMClient)
+
+		// Create a custom template
+		customTemplate := "Custom template from options with {{.Directory}}"
+
+		// Setup service with mock client and custom template option
+		service, err := NewService(mockClient, WithPromptTemplate(customTemplate))
+		assert.NoError(t, err)
+
+		// Setup expectations for the mock
+		// The mock would receive a prompt generated from the custom template
+		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Run(func(args mock.Arguments) {
+			// Verify that the prompt contains the custom template
+			prompt := args.String(1)
+			assert.Contains(t, prompt, "Custom template from options with")
+			assert.Contains(t, prompt, dir) // Should contain the directory name
+		}).Return(expectedResponse, nil).Once()
+
 		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
 
-		// Test handling of nil fileMap
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, nil, subGlances)
-		assert.NoError(t, err) // Should handle nil fileMap gracefully
+		// Call the method
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+
+		// Verify results
+		assert.NoError(t, err)
 		assert.Equal(t, expectedResponse, result)
+		mockClient.AssertExpectations(t)
 	})
 }
 
-func TestServiceOptions(t *testing.T) {
-	// Test default options
-	defaults := DefaultServiceOptions()
+func TestServiceConfig(t *testing.T) {
+	// Test default config
+	defaults := DefaultServiceConfig()
 	assert.Greater(t, defaults.MaxRetries, 0)
 	assert.NotEmpty(t, defaults.ModelName)
 	assert.False(t, defaults.Verbose)
 
-	// Test WithMaxRetries
-	retries := 5
-	options := DefaultServiceOptions().WithMaxRetries(retries)
-	assert.Equal(t, retries, options.MaxRetries)
-	assert.NotEqual(t, &defaults, &options, "Should create a new options instance")
+	// Test config option functions
+	// Create test config instance
+	testConfig := DefaultServiceConfig()
 
-	// Test WithModelName
+	// Test WithServiceMaxRetries
+	retries := 5
+	retriesOption := WithServiceMaxRetries(retries)
+	retriesOption(&testConfig)
+	assert.Equal(t, retries, testConfig.MaxRetries)
+
+	// Test WithServiceModelName
 	modelName := "custom-model"
-	options = DefaultServiceOptions().WithModelName(modelName)
-	assert.Equal(t, modelName, options.ModelName)
-	assert.NotEqual(t, &defaults, &options, "Should create a new options instance")
+	modelOption := WithServiceModelName(modelName)
+
+	// Reset test config
+	testConfig = DefaultServiceConfig()
+	modelOption(&testConfig)
+	assert.Equal(t, modelName, testConfig.ModelName)
 
 	// Test WithVerbose
-	options = DefaultServiceOptions().WithVerbose(true)
-	assert.True(t, options.Verbose)
-	assert.NotEqual(t, &defaults, &options, "Should create a new options instance")
+	verboseOption := WithVerbose(true)
 
-	// Test chaining options
-	chainedOptions := DefaultServiceOptions().
-		WithMaxRetries(10).
-		WithModelName("chained-model").
-		WithVerbose(true)
+	// Reset test config
+	testConfig = DefaultServiceConfig()
+	verboseOption(&testConfig)
+	assert.True(t, testConfig.Verbose)
 
-	assert.Equal(t, 10, chainedOptions.MaxRetries)
-	assert.Equal(t, "chained-model", chainedOptions.ModelName)
-	assert.True(t, chainedOptions.Verbose)
+	// Test applying multiple options
+	testConfig = DefaultServiceConfig()
+	retriesOption(&testConfig)
+	modelOption(&testConfig)
+	verboseOption(&testConfig)
+
+	assert.Equal(t, retries, testConfig.MaxRetries)
+	assert.Equal(t, modelName, testConfig.ModelName)
+	assert.True(t, testConfig.Verbose)
 }
 
-func TestServiceOptionFunctions(t *testing.T) {
-	// Test the functional option pattern functions directly
-	// Create base options
-	options := DefaultServiceOptions()
+func TestServiceConfigFunctions(t *testing.T) {
+	// Test the config functions directly
+	// Create base config
+	config := DefaultServiceConfig()
 
-	// Apply WithMaxRetries
-	maxRetriesOption := WithMaxRetries(7)
-	maxRetriesOption(options)
-	assert.Equal(t, 7, options.MaxRetries)
+	// Apply WithServiceMaxRetries
+	maxRetriesOption := WithServiceMaxRetries(7)
+	maxRetriesOption(&config)
+	assert.Equal(t, 7, config.MaxRetries)
 
-	// Apply WithModelName
-	modelNameOption := WithModelName("functional-option-model")
-	modelNameOption(options)
-	assert.Equal(t, "functional-option-model", options.ModelName)
+	// Apply WithServiceModelName
+	modelNameOption := WithServiceModelName("functional-option-model")
+	modelNameOption(&config)
+	assert.Equal(t, "functional-option-model", config.ModelName)
 
 	// Apply WithVerbose
 	verboseOption := WithVerbose(true)
-	verboseOption(options)
-	assert.True(t, options.Verbose)
+	verboseOption(&config)
+	assert.True(t, config.Verbose)
+
+	// Apply WithPromptTemplate
+	promptTemplate := "Custom prompt template"
+	promptTemplateOption := WithPromptTemplate(promptTemplate)
+	promptTemplateOption(&config)
+	assert.Equal(t, promptTemplate, config.PromptTemplate)
 
 	// Test invalid option values (should still work)
-	negativeRetries := WithMaxRetries(-1)
-	negativeRetries(options)
-	assert.Equal(t, -1, options.MaxRetries) // Should allow negative values even if they're invalid
+	negativeRetries := WithServiceMaxRetries(-1)
+	negativeRetries(&config)
+	assert.Equal(t, -1, config.MaxRetries) // Should allow negative values even if they're invalid
 
-	emptyModel := WithModelName("")
-	emptyModel(options)
-	assert.Equal(t, "", options.ModelName) // Should allow empty string even if it's invalid
+	emptyModel := WithServiceModelName("")
+	emptyModel(&config)
+	assert.Equal(t, "", config.ModelName) // Should allow empty string even if it's invalid
 }
 
 // Test the end-to-end workflow from prompt creation to generation

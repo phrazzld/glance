@@ -1,0 +1,55 @@
+name: Pre-commit Checks
+
+# Trigger configuration:
+# - On push to master branch
+# - On pull requests to master branch
+# - Weekly security scan (Sunday at 00:00 UTC)
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+  pull_request:
+    branches: [ master ]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly Security Compliance Scan (Sunday at 00:00 UTC)
+
+# Prevent multiple identical workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      # golangci-lint is installed automatically by pre-commit
+
+      - name: Install Go tools
+        run: |
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Install pre-commit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pre-commit --version
+
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files

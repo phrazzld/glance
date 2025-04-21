@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/schollz/progressbar/v3"
+	progressbar "github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 )
 
@@ -238,9 +238,5 @@ func ReportError(err error, verbose bool, context string) {
 		return
 	}
 
-	if verbose {
-		logrus.Errorf("❌ %s: %v", context, err)
-	} else {
-		logrus.Errorf("❌ %s", context)
-	}
+	logrus.Errorf("❌ %s: %v", context, err)
 }

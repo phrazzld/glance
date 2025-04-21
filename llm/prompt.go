@@ -5,7 +5,6 @@ package llm
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"strings"
 	"text/template"
 )
@@ -43,33 +42,13 @@ local file contents:
 `
 }
 
-// LoadTemplate loads a prompt template from the specified file path.
-// If the path is empty, it attempts to load from "prompt.txt" in the current directory.
-// If neither is available, it returns the default template.
+// LoadTemplate is deprecated.
+// Use config.LoadPromptTemplate instead, which provides the same functionality
+// with centralized security validation.
 //
-// Parameters:
-//   - path: The path to the template file (can be empty)
-//
-// Returns:
-//   - The template content as a string
-//   - An error if loading fails
+// Deprecated: Use config.LoadPromptTemplate instead.
 func LoadTemplate(path string) (string, error) {
-	// If path is provided, try to load from it
-	if path != "" {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", path, err)
-		}
-		return string(data), nil
-	}
-
-	// No path provided, try to load from default location
-	if data, err := os.ReadFile("prompt.txt"); err == nil {
-		return string(data), nil
-	}
-
-	// Fall back to the default template
-	return DefaultTemplate(), nil
+	return "", fmt.Errorf("LoadTemplate is deprecated, use config.LoadPromptTemplate instead")
 }
 
 // GeneratePrompt generates a prompt by filling the template with the provided data.

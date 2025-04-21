@@ -3,13 +3,23 @@
 package filesystem
 
 import (
+	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
+
+// DefaultFileMode defines the file permission mode for files created by the application.
+// Value 0o600 (rw-------) ensures files are only readable and writable by the owner
+// and not accessible to group members or other users. This is important for security
+// as glance.md files may contain sensitive code analysis or information derived
+// from private code repositories.
+const DefaultFileMode = 0o600
 
 // LatestModTime finds the most recent modification time of any file or directory
 // in the specified directory (recursively searched).
@@ -133,4 +143,133 @@ func BubbleUpParents(dir, root string, needs map[string]bool) {
 		// Move up to the next parent
 		dir = parent
 	}
+}
+
+// ErrPathOutsideBase indicates a path is outside the allowed base directory
+var ErrPathOutsideBase = errors.New("path is outside of allowed base directory")
+
+// ErrInvalidPath indicates a general path validation error
+var ErrInvalidPath = errors.New("invalid path")
+
+// ErrNotDirectory indicates a path exists but is not a directory
+var ErrNotDirectory = errors.New("path is not a directory")
+
+// ErrNotFile indicates a path exists but is not a file
+var ErrNotFile = errors.New("path is not a file")
+
+// ValidatePathWithinBase checks if a path is strictly contained within a base directory.
+// It normalizes and absolutizes the path, then verifies it doesn't escape the base directory.
+//
+// Parameters:
+//   - path: The path to validate
+//   - baseDir: The base directory that the path must be contained within. MUST be non-empty.
+//   - allowBaseDir: Whether the base directory itself is an acceptable path (true) or only subdirectories (false)
+//
+// Returns:
+//   - The cleaned, absolute path if valid
+//   - An error if the path is invalid or outside the base directory
+func ValidatePathWithinBase(path, baseDir string, allowBaseDir bool) (string, error) {
+	// Step 1: Clean the path to normalize it
+	cleanPath := filepath.Clean(path)
+
+	// Step 2: Convert to absolute path
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrInvalidPath, err)
+	}
+
+	// Require a non-empty baseDir for proper validation
+	if baseDir == "" {
+		return "", errors.New("baseDir cannot be empty for validation")
+	}
+
+	// Get absolute base directory if it's not already
+	absBaseDir, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", fmt.Errorf("invalid base directory: %w", err)
+	}
+
+	// Step 3: Check path is within allowed boundary
+	if !allowBaseDir && absPath == absBaseDir {
+		return "", fmt.Errorf("%w: path %q cannot be the base directory %q",
+			ErrPathOutsideBase, path, baseDir)
+	}
+
+	// Check if the path starts with the base directory
+	if !strings.HasPrefix(absPath, absBaseDir+string(os.PathSeparator)) && absPath != absBaseDir {
+		return "", fmt.Errorf("%w: path %q is outside of allowed directory %q",
+			ErrPathOutsideBase, path, baseDir)
+	}
+
+	return absPath, nil
+}
+
+// ValidateFilePath checks if a path exists, is a file (not a directory), and is under the base directory.
+// It fully validates the path, including normalization, absolutization, and containment verification.
+//
+// Parameters:
+//   - path: The file path to validate
+//   - baseDir: The base directory that the path must be contained within. MUST be non-empty.
+//   - allowBaseDir: Whether the base directory itself is an acceptable path
+//   - mustExist: Whether the file must exist (true) or not (false)
+//
+// Returns:
+//   - The cleaned, absolute path if valid
+//   - An error if the path is invalid, outside the base directory, or not a file
+func ValidateFilePath(path, baseDir string, allowBaseDir, mustExist bool) (string, error) {
+	// First validate the general path constraints
+	absPath, err := ValidatePathWithinBase(path, baseDir, allowBaseDir)
+	if err != nil {
+		return "", err
+	}
+
+	// If the file must exist, check it exists and is a file
+	if mustExist {
+		info, err := os.Stat(absPath)
+		if err != nil {
+			return "", fmt.Errorf("cannot access path %q: %w", path, err)
+		}
+
+		if info.IsDir() {
+			return "", fmt.Errorf("%w: path %q is a directory, expected a file",
+				ErrNotFile, path)
+		}
+	}
+
+	return absPath, nil
+}
+
+// ValidateDirPath checks if a path exists, is a directory, and is under the base directory.
+// It fully validates the path, including normalization, absolutization, and containment verification.
+//
+// Parameters:
+//   - path: The directory path to validate
+//   - baseDir: The base directory that the path must be contained within. MUST be non-empty.
+//   - allowBaseDir: Whether the base directory itself is an acceptable path
+//   - mustExist: Whether the directory must exist (true) or not (false)
+//
+// Returns:
+//   - The cleaned, absolute path if valid
+//   - An error if the path is invalid, outside the base directory, or not a directory
+func ValidateDirPath(path, baseDir string, allowBaseDir, mustExist bool) (string, error) {
+	// First validate the general path constraints
+	absPath, err := ValidatePathWithinBase(path, baseDir, allowBaseDir)
+	if err != nil {
+		return "", err
+	}
+
+	// If the directory must exist, check it exists and is a directory
+	if mustExist {
+		info, err := os.Stat(absPath)
+		if err != nil {
+			return "", fmt.Errorf("cannot access path %q: %w", path, err)
+		}
+
+		if !info.IsDir() {
+			return "", fmt.Errorf("%w: path %q is not a directory",
+				ErrNotDirectory, path)
+		}
+	}
+
+	return absPath, nil
 }

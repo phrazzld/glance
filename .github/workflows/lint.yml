@@ -1,0 +1,83 @@
+name: Go Linting
+
+# Trigger configuration:
+# - On push to master branch (ignoring documentation changes)
+# - On pull requests to master branch
+# - Monthly dependency check (1st of each month at 01:00 UTC)
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: '0 1 1 * *'  # Monthly Dependency Vulnerability Scan (1st of each month at 01:00 UTC)
+
+# Prevent multiple identical workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  golangci-lint:
+    name: Run golangci-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'  # Updated to match local development environment
+          cache: true
+
+      # Use the official GitHub Action as per our standardized approach in docs/LINTING.md
+      - name: Install and run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          # IMPORTANT: This version MUST match the one in .pre-commit-config.yaml
+          # See docs/LINTING.md for details on version standardization
+          version: v2.1.2
+          # Only include necessary arguments - the action handles paths and output format
+          args: --timeout=2m --verbose
+
+  additional-checks:
+    name: Run additional static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'  # Updated to match local development environment
+          cache: true
+
+      - name: Go Vet
+        run: go vet ./...
+
+      - name: Go Mod Verify
+        run: go mod verify
+
+      - name: Check Go mod tidiness
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum || (echo "go.mod or go.sum not tidy - run 'go mod tidy' locally" && exit 1)
+
+      - name: Check for misspellings
+        run: |
+          go install github.com/client9/misspell/cmd/misspell@latest
+          $(go env GOPATH)/bin/misspell -error -locale US .

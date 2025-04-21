@@ -79,7 +79,9 @@ func TestReadTextFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			content, err := ReadTextFile(tc.path, tc.maxBytes)
+			// Use the parent directory of the file as baseDir
+			baseDir := filepath.Dir(tc.path)
+			content, err := ReadTextFile(tc.path, tc.maxBytes, baseDir)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -227,7 +229,9 @@ func TestIsTextFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			isText, err := IsTextFile(tc.path)
+			// Use the parent directory of the file as baseDir
+			baseDir := filepath.Dir(tc.path)
+			isText, err := IsTextFile(tc.path, baseDir)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {

@@ -9,27 +9,35 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+
+	"glance/llm"
 )
 
 // directoryChecker defines an interface for checking directory existence
 // This allows for easier testing by substituting a mock implementation
 type directoryChecker interface {
-	CheckDirectory(path string) error
+	// CheckDirectory verifies the path exists and is a directory
+	// Returns the validated path (can be relative or absolute) and any error
+	CheckDirectory(path string) (string, error)
 }
 
 // defaultChecker implements the directoryChecker interface using the real filesystem
 type defaultChecker struct{}
 
 // CheckDirectory verifies the path exists and is a directory
-func (d *defaultChecker) CheckDirectory(path string) error {
-	stat, err := os.Stat(path)
+// It accepts and preserves relative paths rather than forcing absolute conversion
+func (d *defaultChecker) CheckDirectory(path string) (string, error) {
+	// Clean the path to normalize it, but preserve its relative/absolute state
+	cleanPath := filepath.Clean(path)
+
+	stat, err := os.Stat(cleanPath)
 	if err != nil {
-		return fmt.Errorf("cannot access directory %q: %w", path, err)
+		return "", fmt.Errorf("cannot access directory %q: %w", cleanPath, err)
 	}
 	if !stat.IsDir() {
-		return fmt.Errorf("path %q is a file, not a directory", path)
+		return "", fmt.Errorf("path %q is a file, not a directory", cleanPath)
 	}
-	return nil
+	return cleanPath, nil
 }
 
 // Global variable to allow tests to override the directory checker
@@ -72,17 +80,28 @@ func LoadConfig(args []string) (*Config, error) {
 		return nil, errors.New("missing target directory: exactly one directory must be specified")
 	}
 
-	// Get target directory
+	// Get target directory and validate it
 	targetDir := cmdFlags.Arg(0)
-	absDir, err := filepath.Abs(targetDir)
-	if err != nil {
-		return nil, fmt.Errorf("invalid target directory: %w", err)
-	}
 
 	// Check if directory exists and is actually a directory
-	if err := dirChecker.CheckDirectory(absDir); err != nil {
+	// The directoryChecker will clean the path and verify it's a directory
+	validatedDir, err := dirChecker.CheckDirectory(targetDir)
+	if err != nil {
 		return nil, err
 	}
+
+	// Convert to absolute path only if needed for validation boundary
+	// This is only needed when we need absolute paths for security validation
+	absDir := validatedDir
+	if !filepath.IsAbs(validatedDir) {
+		absDir, err = filepath.Abs(validatedDir)
+		if err != nil {
+			return nil, fmt.Errorf("invalid target directory: %w", err)
+		}
+	}
+
+	// Store the validated directory as our trusted root
+	// This is safe since we've already verified it exists and is a directory
 
 	// Load .env if present (but don't fail if not found)
 	if err := godotenv.Load(); err != nil {
@@ -95,10 +114,15 @@ func LoadConfig(args []string) (*Config, error) {
 		return nil, errors.New("GEMINI_API_KEY is missing: please set this environment variable or add it to your .env file")
 	}
 
-	// Load prompt template
-	promptTemplate, err := loadPromptTemplate(promptFile)
+	// Load prompt template using the centralized function
+	promptTemplate, err := LoadPromptTemplate(promptFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load prompt template: %w", err)
+	}
+
+	// If no template was found, use the default from llm package
+	if promptTemplate == "" {
+		promptTemplate = llm.DefaultTemplate()
 	}
 
 	// Apply all configuration settings using the builder pattern
@@ -110,22 +134,4 @@ func LoadConfig(args []string) (*Config, error) {
 		WithPromptTemplate(promptTemplate)
 
 	return cfg, nil
-}
-
-// loadPromptTemplate tries to read from the specified file path, then "prompt.txt",
-// and falls back to the default prompt template if neither is available.
-func loadPromptTemplate(path string) (string, error) {
-	if path != "" {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return "", fmt.Errorf("failed to read custom prompt template from '%s': %w", path, err)
-		}
-		return string(data), nil
-	}
-
-	if data, err := os.ReadFile("prompt.txt"); err == nil {
-		return string(data), nil
-	}
-
-	return defaultPromptTemplate, nil
 }
