@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/generative-ai-go/genai"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/api/iterator"
+	"google.golang.org/genai"
 
 	"glance/internal/mocks"
 )
@@ -121,6 +121,18 @@ func TestClientOptions(t *testing.T) {
 	assert.Greater(t, options.MaxRetries, 0)
 	assert.Greater(t, options.Timeout, 0)
 
+	// Verify default generation parameters have sensible values
+	assert.InDelta(t, 0.7, float64(options.Temperature), 0.01)
+	assert.InDelta(t, 0.95, float64(options.TopP), 0.01)
+	assert.Greater(t, options.TopK, float32(0))
+	assert.Greater(t, options.MaxOutputTokens, int32(0))
+	assert.Equal(t, int32(1), options.CandidateCount)
+	assert.Empty(t, options.StopSequences)
+	assert.Empty(t, options.SafetySettings)
+	assert.Empty(t, options.SystemInstructions)
+
+	// Test basic configuration options
+
 	// Test WithModelName option function
 	customModel := "custom-model"
 	modelOption := WithModelName(customModel)
@@ -146,15 +158,94 @@ func TestClientOptions(t *testing.T) {
 	timeoutOption(&testOpts)
 	assert.Equal(t, customTimeout, testOpts.Timeout)
 
+	// Test generation parameter options
+
+	// Test WithTemperature option
+	customTemp := float32(0.2)
+	tempOption := WithTemperature(customTemp)
+
+	testOpts = DefaultClientOptions()
+	tempOption(&testOpts)
+	assert.Equal(t, customTemp, testOpts.Temperature)
+
+	// Test WithTopP option
+	customTopP := float32(0.8)
+	topPOption := WithTopP(customTopP)
+
+	testOpts = DefaultClientOptions()
+	topPOption(&testOpts)
+	assert.Equal(t, customTopP, testOpts.TopP)
+
+	// Test WithTopK option
+	customTopK := float32(20.0)
+	topKOption := WithTopK(customTopK)
+
+	testOpts = DefaultClientOptions()
+	topKOption(&testOpts)
+	assert.Equal(t, customTopK, testOpts.TopK)
+
+	// Test WithMaxOutputTokens option
+	customMaxTokens := int32(1000)
+	maxTokensOption := WithMaxOutputTokens(customMaxTokens)
+
+	testOpts = DefaultClientOptions()
+	maxTokensOption(&testOpts)
+	assert.Equal(t, customMaxTokens, testOpts.MaxOutputTokens)
+
+	// Test WithCandidateCount option
+	customCandidates := int32(3)
+	candidatesOption := WithCandidateCount(customCandidates)
+
+	testOpts = DefaultClientOptions()
+	candidatesOption(&testOpts)
+	assert.Equal(t, customCandidates, testOpts.CandidateCount)
+
+	// Test WithStopSequences option
+	customStops := []string{"STOP", "END"}
+	stopsOption := WithStopSequences(customStops)
+
+	testOpts = DefaultClientOptions()
+	stopsOption(&testOpts)
+	assert.Equal(t, customStops, testOpts.StopSequences)
+
+	// Test WithSafetySetting option
+	testOpts = DefaultClientOptions()
+	WithSafetySetting(HarmCategoryHateSpeech, HarmBlockHighAndAbove)(&testOpts)
+	assert.Len(t, testOpts.SafetySettings, 1)
+	assert.Equal(t, HarmCategoryHateSpeech, testOpts.SafetySettings[0].Category)
+	assert.Equal(t, HarmBlockHighAndAbove, testOpts.SafetySettings[0].Threshold)
+
+	// Test adding multiple safety settings
+	testOpts = DefaultClientOptions()
+	WithSafetySetting(HarmCategoryHateSpeech, HarmBlockHighAndAbove)(&testOpts)
+	WithSafetySetting(HarmCategorySexuallyExplicit, HarmBlockMediumAndAbove)(&testOpts)
+	assert.Len(t, testOpts.SafetySettings, 2)
+
+	// Test WithSystemInstructions option
+	customInstructions := "You are a helpful assistant."
+	instructionsOption := WithSystemInstructions(customInstructions)
+
+	testOpts = DefaultClientOptions()
+	instructionsOption(&testOpts)
+	assert.Equal(t, customInstructions, testOpts.SystemInstructions)
+
 	// Test applying multiple options
 	testOpts = DefaultClientOptions()
 	WithModelName("custom-model-2")(&testOpts)
 	WithMaxRetries(5)(&testOpts)
 	WithTimeout(30)(&testOpts)
+	WithTemperature(0.5)(&testOpts)
+	WithTopP(0.9)(&testOpts)
+	WithMaxOutputTokens(500)(&testOpts)
+	WithSystemInstructions("Be concise")(&testOpts)
 
 	assert.Equal(t, "custom-model-2", testOpts.ModelName)
 	assert.Equal(t, 5, testOpts.MaxRetries)
 	assert.Equal(t, 30, testOpts.Timeout)
+	assert.Equal(t, float32(0.5), testOpts.Temperature)
+	assert.Equal(t, float32(0.9), testOpts.TopP)
+	assert.Equal(t, int32(500), testOpts.MaxOutputTokens)
+	assert.Equal(t, "Be concise", testOpts.SystemInstructions)
 }
 
 // TestNewGeminiClient tests the client creation functionality

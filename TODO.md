@@ -89,7 +89,7 @@ Update the code responsible for counting tokens to use the corresponding functio
 
 **Estimated Effort:** Medium
 
-## [T007] Update Error Handling Logic in `llm/client.go`
+## [X] [T007] Update Error Handling Logic in `llm/client.go`
 
 **Description:**
 Review and adapt all error checking and handling within `llm/client.go` to match the error types, patterns, and specific error conditions returned by the new `google.golang.org/genai` package. Ensure errors are appropriately wrapped or propagated.
@@ -103,7 +103,7 @@ Review and adapt all error checking and handling within `llm/client.go` to match
 
 **Estimated Effort:** Medium
 
-## [T008] Update Functional Options and Configuration in `llm/client.go`
+## [X] [T008] Update Functional Options and Configuration in `llm/client.go`
 
 **Description:**
 Review and update any functional options used during client/model setup or API calls (e.g., for setting temperature, topP, topK, safety settings, timeouts, retries). Map existing configuration values to the equivalent options in the new package.
