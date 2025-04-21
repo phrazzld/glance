@@ -270,7 +270,7 @@ Check any scripts used for development (e.g., build scripts, test runners, setup
 
 **Estimated Effort:** Low
 
-## [ ] [T020] Remove Old Dependency and Tidy `go.mod`
+## [x] [T020] Remove Old Dependency and Tidy `go.mod`
 
 **Description:**
 Remove the line requiring `github.com/google/generative-ai-go/genai` from the `go.mod` file. Run `go mod tidy` to clean up the module file and ensure consistency.
