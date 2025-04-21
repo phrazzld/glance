@@ -102,25 +102,6 @@ func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain, verbo
 	return false
 }
 
-// ShouldIgnorePath is a generic function that determines if a path should be ignored
-// during processing, handling both files and directories.
-//
-// Parameters:
-//   - path: The absolute path to check
-//   - baseDir: The base directory relative to which the path is being evaluated
-//   - ignoreChain: A chain of gitignore matchers to check for ignored paths
-//   - isDir: Whether the path is a directory
-//   - verbose: Whether to log verbose debug information
-//
-// Returns:
-//   - true if the path should be ignored, false otherwise
-func ShouldIgnorePath(path string, baseDir string, ignoreChain IgnoreChain, isDir bool, verbose bool) bool {
-	if isDir {
-		return ShouldIgnoreDir(path, baseDir, ignoreChain, verbose)
-	}
-	return ShouldIgnoreFile(path, baseDir, ignoreChain, verbose)
-}
-
 // MatchesGitignore checks if a path matches any gitignore rule in the provided chain.
 //
 // Parameters:

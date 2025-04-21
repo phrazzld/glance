@@ -305,7 +305,7 @@
         2. The application uses `filesystem.DefaultFileMode` consistently.
     - **depends‑on:** []
 
-- [ ] **T224 · refactor · p3: Remove Unnecessary ShouldIgnorePath Function**
+- [x] **T224 · refactor · p3: Remove Unnecessary ShouldIgnorePath Function**
     - **context:** The `ShouldIgnorePath` function adds unnecessary indirection and complexity.
     - **action:**
         1. Identify usage of `ShouldIgnorePath` in the codebase.
@@ -315,3 +315,4 @@
         1. `ShouldIgnorePath` is removed from the codebase.
         2. All callers have been updated to use the appropriate direct function.
     - **depends‑on:** []
+    - **note:** Removed the function and its test. Found that it wasn't being used anywhere in the codebase except in its own test file.
