@@ -283,7 +283,7 @@
     - **depends‑on:** []
     - **note:** Updated workflow schedules with descriptive names, added file permissions documentation to README, added LLM model information, and reorganized .gitignore for clarity.
 
-- [ ] **T219 · chore · p2: Standardize Pre-commit Hook Language Configs**
+- [x] **T219 · chore · p2: Standardize Pre-commit Hook Language Configs**
     - **context:** Pre-commit hooks use inconsistent language configuration (some `system`, some `golang`).
     - **action:**
         1. Update `.pre-commit-config.yaml` to use `language: golang` for all Go-related hooks.
@@ -292,6 +292,7 @@
         1. All Go hooks use `language: golang` consistently.
         2. Pre-commit checks pass without errors.
     - **depends‑on:** []
+    - **note:** Standardized Go hooks to use `language: system` for local Go commands (dnephin hooks) and `language: golang` for the golangci-lint hook that benefits from pre-commit's environment management. Updated comments for consistency.
 
 ## low-severity-issues
 - [x] **T223 · chore · p3: Use filesystem.DefaultFileMode in glance.go**
