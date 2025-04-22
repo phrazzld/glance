@@ -82,7 +82,7 @@
         3. Relevant tests pass.
     - **Depends‑on:** none
 
-- [ ] **T008 · Chore · P2: clarify readme logging description**
+- [x] **T008 · Chore · P2: clarify readme logging description**
     - **Context:** cr-11 Clarify README Logging Description
     - **Action:**
         1. Update the "Logging" section in `README.md` to explain the default level (`info`).
