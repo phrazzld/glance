@@ -13,7 +13,7 @@
         2. `.gitignore` prevents future tracking of `*.bak` files.
     - **Depends‑on:** none
 
-- [ ] **T002 · Feature · P1: make logging level configurable via environment variable**
+- [x] **T002 · Feature · P1: make logging level configurable via environment variable**
     - **Context:** cr-02 Make Logging Level Configurable
     - **Action:**
         1. Modify logging setup (`setupLogging` or `config.LoadConfig`) to read `GLANCE_LOG_LEVEL` env var.

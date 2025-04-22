@@ -71,10 +71,30 @@ func main() {
 // Main function components
 // -----------------------------------------------------------------------------
 
-// setupLogging configures the logger with debug level
+// setupLogging configures the logger with level based on environment variable
 func setupLogging() {
-	// Always set log level to debug
-	logrus.SetLevel(logrus.DebugLevel)
+	// Get logging level from environment variable, default to info level
+	logLevelStr := os.Getenv("GLANCE_LOG_LEVEL")
+
+	// Parse log level string to logrus.Level
+	var logLevel logrus.Level
+	switch strings.ToLower(logLevelStr) {
+	case "debug":
+		logLevel = logrus.DebugLevel
+	case "info", "":
+		logLevel = logrus.InfoLevel
+	case "warn", "warning":
+		logLevel = logrus.WarnLevel
+	case "error":
+		logLevel = logrus.ErrorLevel
+	default:
+		// Invalid level defaults to info and logs a warning
+		logLevel = logrus.InfoLevel
+		fmt.Printf("Invalid log level: %s. Using default (info) instead.\n", logLevelStr)
+	}
+
+	// Set the configured log level
+	logrus.SetLevel(logLevel)
 
 	// Configure formatter with custom settings
 	logrus.SetFormatter(&logrus.TextFormatter{
