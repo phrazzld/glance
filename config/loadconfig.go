@@ -62,12 +62,10 @@ func LoadConfig(args []string) (*Config, error) {
 	cmdFlags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	var (
 		force      bool
-		verbose    bool
 		promptFile string
 	)
 
 	cmdFlags.BoolVar(&force, "force", false, "regenerate glance.md even if it already exists")
-	cmdFlags.BoolVar(&verbose, "verbose", false, "enable verbose logging (debug level)")
 	cmdFlags.StringVar(&promptFile, "prompt-file", "", "path to custom prompt file (overrides default)")
 
 	// Parse flags
@@ -105,7 +103,7 @@ func LoadConfig(args []string) (*Config, error) {
 
 	// Load .env if present (but don't fail if not found)
 	if err := godotenv.Load(); err != nil {
-		logrus.Warn("📝 No .env file found or couldn't load it. Using system environment variables instead.")
+		logrus.Warn("No .env file found or couldn't load it. Using system environment variables instead.")
 	}
 
 	// Get API key from environment
@@ -130,7 +128,6 @@ func LoadConfig(args []string) (*Config, error) {
 		WithAPIKey(apiKey).
 		WithTargetDir(absDir).
 		WithForce(force).
-		WithVerbose(verbose).
 		WithPromptTemplate(promptTemplate)
 
 	return cfg, nil
