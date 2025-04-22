@@ -33,7 +33,6 @@ func TestNewService(t *testing.T) {
 		assert.Equal(t, adapter, service.client)
 		assert.Equal(t, DefaultServiceConfig().MaxRetries, service.maxRetries)
 		assert.Equal(t, DefaultServiceConfig().ModelName, service.modelName)
-		assert.Equal(t, DefaultServiceConfig().Verbose, service.verbose)
 	})
 
 	// Test with valid client and custom options
@@ -54,14 +53,12 @@ func TestNewService(t *testing.T) {
 		adapter := NewMockClientAdapter(mockClient)
 		service, err := NewService(adapter,
 			WithServiceMaxRetries(5),
-			WithServiceModelName("custom-model"),
-			WithVerbose(true))
+			WithServiceModelName("custom-model"))
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		assert.Equal(t, 5, service.maxRetries)
 		assert.Equal(t, "custom-model", service.modelName)
-		assert.True(t, service.verbose)
 	})
 }
 
@@ -208,7 +205,6 @@ func TestServiceConfig(t *testing.T) {
 	defaults := DefaultServiceConfig()
 	assert.Greater(t, defaults.MaxRetries, 0)
 	assert.NotEmpty(t, defaults.ModelName)
-	assert.False(t, defaults.Verbose)
 
 	// Test config option functions
 	// Create test config instance
@@ -229,23 +225,14 @@ func TestServiceConfig(t *testing.T) {
 	modelOption(&testConfig)
 	assert.Equal(t, modelName, testConfig.ModelName)
 
-	// Test WithVerbose
-	verboseOption := WithVerbose(true)
-
-	// Reset test config
-	testConfig = DefaultServiceConfig()
-	verboseOption(&testConfig)
-	assert.True(t, testConfig.Verbose)
 
 	// Test applying multiple options
 	testConfig = DefaultServiceConfig()
 	retriesOption(&testConfig)
 	modelOption(&testConfig)
-	verboseOption(&testConfig)
 
 	assert.Equal(t, retries, testConfig.MaxRetries)
 	assert.Equal(t, modelName, testConfig.ModelName)
-	assert.True(t, testConfig.Verbose)
 }
 
 func TestServiceConfigFunctions(t *testing.T) {
@@ -263,10 +250,6 @@ func TestServiceConfigFunctions(t *testing.T) {
 	modelNameOption(&config)
 	assert.Equal(t, "functional-option-model", config.ModelName)
 
-	// Apply WithVerbose
-	verboseOption := WithVerbose(true)
-	verboseOption(&config)
-	assert.True(t, config.Verbose)
 
 	// Apply WithPromptTemplate
 	promptTemplate := "Custom prompt template"

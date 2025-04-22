@@ -17,7 +17,6 @@ type Service struct {
 	client         Client
 	maxRetries     int
 	modelName      string
-	verbose        bool
 	promptTemplate string
 }
 
@@ -30,9 +29,6 @@ type ServiceConfig struct {
 	// ModelName is the name of the LLM model to use
 	ModelName string
 
-	// Verbose enables detailed logging for LLM operations
-	Verbose bool
-
 	// PromptTemplate is the template string to use for generating prompts
 	PromptTemplate string
 }
@@ -43,7 +39,6 @@ func DefaultServiceConfig() ServiceConfig {
 	return ServiceConfig{
 		MaxRetries:     3,
 		ModelName:      "gemini-2.0-flash", // Make sure this matches the client default
-		Verbose:        false,
 		PromptTemplate: "",
 	}
 }
@@ -62,12 +57,6 @@ func WithServiceModelName(modelName string) func(*ServiceConfig) {
 	}
 }
 
-// WithVerbose configures verbose logging for the service.
-func WithVerbose(verbose bool) func(*ServiceConfig) {
-	return func(c *ServiceConfig) {
-		c.Verbose = verbose
-	}
-}
 
 // WithPromptTemplate configures the prompt template for the service.
 func WithPromptTemplate(template string) func(*ServiceConfig) {
@@ -102,7 +91,6 @@ func NewService(client Client, options ...func(*ServiceConfig)) (*Service, error
 		client:         client,
 		maxRetries:     config.MaxRetries,
 		modelName:      config.ModelName,
-		verbose:        config.Verbose,
 		promptTemplate: config.PromptTemplate,
 	}, nil
 }
@@ -131,12 +119,12 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	}
 
 	// Optional token counting for debugging
-	if s.verbose {
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
 		tokens, tokenErr := s.client.CountTokens(ctx, prompt)
 		if tokenErr == nil {
-			logrus.Debugf("🔤 Token count for %s: %d tokens in prompt", dir, tokens)
+			logrus.Debugf("Token count for %s: %d tokens in prompt", dir, tokens)
 		} else {
-			logrus.Debugf("⚠️ Couldn't count tokens for %s: %v", dir, tokenErr)
+			logrus.Debugf("Couldn't count tokens for %s: %v", dir, tokenErr)
 		}
 	}
 
@@ -145,11 +133,11 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	maxAttempts := s.maxRetries + 1 // +1 for the initial attempt
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if s.verbose {
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			if attempt > 1 {
-				logrus.Debugf("🔄 Retry #%d/%d for %s", attempt-1, s.maxRetries, dir)
+				logrus.Debugf("Retry #%d/%d for %s", attempt-1, s.maxRetries, dir)
 			} else {
-				logrus.Debugf("🚀 Generating content for %s", dir)
+				logrus.Debugf("Generating content for %s", dir)
 			}
 		}
 
@@ -162,8 +150,8 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 
 		// Log error and retry
 		lastError = err
-		if s.verbose {
-			logrus.Debugf("❌ Attempt %d for %s failed: %v", attempt, dir, err)
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			logrus.Debugf("Attempt %d for %s failed: %v", attempt, dir, err)
 		}
 
 		// Simple backoff before retry

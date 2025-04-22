@@ -41,7 +41,7 @@
     - **Depends‑on:** none
 
 ## LLM
-- [ ] **T004 · Refactor · P1: remove verbose parameter/field and checks from llm package**
+- [x] **T004 · Refactor · P1: remove verbose parameter/field and checks from llm package**
     - **Context:** Plan Step 4: Update LLM Package
     - **Action:**
         1. Remove `Verbose bool` field and `WithVerbose` function from `llm.ClientOptions` and `llm.ServiceConfig`.
