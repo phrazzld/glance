@@ -13,6 +13,13 @@ import (
 	"glance/llm"
 )
 
+// LoadPromptTemplateFunc defines a function type for loading prompt templates
+// This allows us to replace it in tests
+type LoadPromptTemplateFunc func(path string) (string, error)
+
+// loadPromptTemplate is the function to use for loading prompt templates
+var loadPromptTemplate LoadPromptTemplateFunc = LoadPromptTemplate
+
 // directoryChecker defines an interface for checking directory existence
 // This allows for easier testing by substituting a mock implementation
 type directoryChecker interface {
@@ -113,7 +120,7 @@ func LoadConfig(args []string) (*Config, error) {
 	}
 
 	// Load prompt template using the centralized function
-	promptTemplate, err := LoadPromptTemplate(promptFile)
+	promptTemplate, err := loadPromptTemplate(promptFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load prompt template: %w", err)
 	}

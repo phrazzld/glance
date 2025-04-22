@@ -37,7 +37,7 @@
         3. All existing tests for the `filesystem` package pass.
     - **Depends‑on:** none
 
-- [ ] **T004 · Test · P1: fix skipped configuration and template tests**
+- [x] **T004 · Test · P1: fix skipped configuration and template tests**
     - **Context:** cr-04 Fix Skipped Configuration Tests
     - **Action:**
         1. Identify skipped tests in `config/loadconfig_test.go` and `config/template_test.go`.
