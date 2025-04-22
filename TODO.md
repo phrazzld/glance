@@ -81,7 +81,7 @@
     - **Depends‑on:** [T001, T002, T003, T004, T005]
 
 ## Logging
-- [ ] **T007 · Feature · P2: implement structured logging using logrus fields**
+- [x] **T007 · Feature · P2: implement structured logging using logrus fields**
     - **Context:** Plan Step 7: Introduce Structured Logging; Logging & Observability Section
     - **Action:**
         1. Identify key logging points (e.g., directory processing, file reads, LLM calls, errors) in `glance.go`, `filesystem`, `llm`.
