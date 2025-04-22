@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // MaxDefaultFileSize is the default maximum file size in bytes for file reading (5MB)
@@ -192,39 +194,51 @@ func GatherLocalFiles(dir string, ignoreChain IgnoreChain, maxFileBytes int64) (
 		// But this validates file existence
 		validPath, err := ValidateFilePath(path, validDir, true, true)
 		if err != nil {
-			log.Debugf("Path validation failed for %s: %v", path, err)
+			log.WithFields(logrus.Fields{
+				"path":  path,
+				"error": err,
+			}).Debug("Path validation failed")
 			return nil
 		}
 
 		// Get relative path
 		relPath, err := filepath.Rel(validDir, validPath)
 		if err != nil {
-			log.Debugf("Error calculating relative path for %s from %s: %v",
-				validPath, validDir, err)
+			log.WithFields(logrus.Fields{
+				"path":     validPath,
+				"base_dir": validDir,
+				"error":    err,
+			}).Debug("Error calculating relative path")
 			return nil
 		}
 
 		// Check if the file should be ignored using the standardized function
 		if ShouldIgnoreFile(validPath, validDir, ignoreChain) {
-			log.Debugf("Ignoring file: %s", relPath)
+			log.WithField("file", relPath).Debug("Ignoring file")
 			return nil
 		}
 
 		// Check if file is text-based (pass base directory for validation)
 		isText, errCheck := IsTextFile(validPath, validDir)
 		if errCheck != nil {
-			log.Debugf("Error checking if file is text: %s => %v", validPath, errCheck)
+			log.WithFields(logrus.Fields{
+				"file":  validPath,
+				"error": errCheck,
+			}).Debug("Error checking if file is text")
 		}
 
 		if !isText {
-			log.Debugf("Skipping binary/non-text file: %s", validPath)
+			log.WithField("file", validPath).Debug("Skipping binary/non-text file")
 			return nil
 		}
 
 		// Read file content (pass base directory for validation)
 		content, err := ReadTextFile(validPath, maxFileBytes, validDir)
 		if err != nil {
-			log.Debugf("Error reading file %s: %v", validPath, err)
+			log.WithFields(logrus.Fields{
+				"file":  validPath,
+				"error": err,
+			}).Debug("Error reading file")
 			return nil
 		}
 

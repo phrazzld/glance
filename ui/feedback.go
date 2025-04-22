@@ -238,5 +238,8 @@ func ReportError(err error, context string) {
 		return
 	}
 
-	logrus.Errorf("%s: %v", context, err)
+	logrus.WithFields(logrus.Fields{
+		"context": context,
+		"error":   err,
+	}).Error("Operation failed")
 }

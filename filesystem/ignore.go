@@ -5,6 +5,8 @@ package filesystem
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Constants for default ignore patterns
@@ -35,13 +37,13 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain) bool
 
 	// Always ignore hidden files
 	if strings.HasPrefix(filename, ".") {
-		log.Debugf("Ignoring hidden file: %s", path)
+		log.WithField("file", path).Debug("Ignoring hidden file")
 		return true
 	}
 
 	// Always ignore glance.md files (our output files)
 	if filename == GlanceFilename {
-		log.Debugf("Ignoring glance.md file: %s", path)
+		log.WithField("file", path).Debug("Ignoring glance.md file")
 		return true
 	}
 
@@ -72,13 +74,13 @@ func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain) bool 
 
 	// Always ignore hidden directories
 	if strings.HasPrefix(dirname, ".") {
-		log.Debugf("Ignoring hidden directory: %s", path)
+		log.WithField("directory", path).Debug("Ignoring hidden directory")
 		return true
 	}
 
 	// Always ignore node_modules
 	if dirname == NodeModulesDir {
-		log.Debugf("Ignoring node_modules directory: %s", path)
+		log.WithField("directory", path).Debug("Ignoring node_modules directory")
 		return true
 	}
 
@@ -111,8 +113,11 @@ func MatchesGitignore(path string, baseDir string, ignoreChain IgnoreChain, isDi
 		// Get the path relative to the rule's origin
 		relPath, err := filepath.Rel(rule.OriginDir, path)
 		if err != nil {
-			log.Debugf("Error calculating relative path for %s from %s: %v",
-				path, rule.OriginDir, err)
+			log.WithFields(logrus.Fields{
+				"path":       path,
+				"origin_dir": rule.OriginDir,
+				"error":      err,
+			}).Debug("Error calculating relative path")
 			continue
 		}
 
@@ -123,12 +128,18 @@ func MatchesGitignore(path string, baseDir string, ignoreChain IgnoreChain, isDi
 		// because gitignore patterns like "dir/" only match "dir/" and not "dir"
 		if isDir {
 			if rule.Matcher.MatchesPath(relPath) || rule.Matcher.MatchesPath(relPath+"/") {
-				log.Debugf("Path %s matched by gitignore rule from %s", path, rule.OriginDir)
+				log.WithFields(logrus.Fields{
+					"path":       path,
+					"origin_dir": rule.OriginDir,
+				}).Debug("Path matched by gitignore rule")
 				return true
 			}
 		} else {
 			if rule.Matcher.MatchesPath(relPath) {
-				log.Debugf("Path %s matched by gitignore rule from %s", path, rule.OriginDir)
+				log.WithFields(logrus.Fields{
+					"path":       path,
+					"origin_dir": rule.OriginDir,
+				}).Debug("Path matched by gitignore rule")
 				return true
 			}
 		}

@@ -59,7 +59,7 @@
         2. Logging behavior remains unchanged (correct level filtering still occurs).
     - **Depends‑on:** [T003]
 
-- [ ] **T006 · Refactor · P2: standardize log messages to structured format**
+- [x] **T006 · Refactor · P2: standardize log messages to structured format**
     - **Context:** cr-06 Standardize Log Message Formatting
     - **Action:**
         1. Identify all logging calls using simple string formatting (e.g., `logrus.Infof("User %s logged in", user)`).

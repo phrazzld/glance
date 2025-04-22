@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // DefaultFileMode defines the file permission mode for files created by the application.
@@ -48,7 +50,10 @@ func LatestModTime(dir string, ignoreChain IgnoreChain) (time.Time, error) {
 		// Get file info for modification time
 		info, errStat := d.Info()
 		if errStat != nil {
-			log.Debugf("Error getting file info for %s: %v", path, errStat)
+			log.WithFields(logrus.Fields{
+				"path":  path,
+				"error": errStat,
+			}).Debug("Error getting file info")
 			return nil
 		}
 
@@ -80,7 +85,7 @@ func LatestModTime(dir string, ignoreChain IgnoreChain) (time.Time, error) {
 func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bool, error) {
 	// Always regenerate if force is true
 	if globalForce {
-		log.Debugf("Force regeneration for %s", dir)
+		log.WithField("directory", dir).Debug("Force regeneration")
 		return true, nil
 	}
 
@@ -88,7 +93,7 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
-		log.Debugf("glance.md not found in %s, will generate", dir)
+		log.WithField("directory", dir).Debug("glance.md not found, will generate")
 		return true, nil
 	}
 
@@ -99,7 +104,7 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 	}
 
 	if latest.After(glanceInfo.ModTime()) {
-		log.Debugf("Found newer files in %s, will regenerate glance.md", dir)
+		log.WithField("directory", dir).Debug("Found newer files, will regenerate glance.md")
 		return true, nil
 	}
 

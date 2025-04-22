@@ -50,14 +50,14 @@ func main() {
 	// Set up the LLM client and service using the function variable
 	llmClient, llmService, err := setupLLMService(cfg)
 	if err != nil {
-		logrus.Fatalf("Failed to initialize LLM service: %v", err)
+		logrus.WithField("error", err).Fatal("Failed to initialize LLM service")
 	}
 	defer llmClient.Close()
 
 	// Scan directories and process them to generate glance.md files
 	dirs, ignoreChains, err := scanDirectories(cfg)
 	if err != nil {
-		logrus.Fatalf("Directory scan failed: %v - Check file permissions and disk space", err)
+		logrus.WithField("error", err).Fatal("Directory scan failed - Check file permissions and disk space")
 	}
 
 	// Process directories and generate glance.md files
@@ -190,7 +190,10 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 		// Check if we need to regenerate the glance.md file
 		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain) // Check if regeneration is needed
 		if errCheck != nil {
-			logrus.Warnf("Couldn't check modification time for %s: %v", d, errCheck)
+			logrus.WithFields(logrus.Fields{
+				"directory": d,
+				"error":     errCheck,
+			}).Warn("Couldn't check modification time")
 		}
 
 		forceDir = forceDir || needsRegen[d]
@@ -200,7 +203,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 		finalResults = append(finalResults, r)
 
 		if err := bar.Increment(); err != nil {
-			logrus.Warnf("Failed to increment progress bar: %v", err)
+			logrus.WithField("error", err).Warn("Failed to increment progress bar")
 		}
 
 		// Bubble up parent's regeneration flag if needed
@@ -210,7 +213,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 	}
 
 	fmt.Println()
-	logrus.Infof("All done! glance.md files have been generated for your codebase up to: %s", cfg.TargetDir)
+	logrus.WithField("target_dir", cfg.TargetDir).Info("All done! glance.md files have been generated for your codebase")
 
 	return finalResults
 }
@@ -222,7 +225,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// forceDir already indicates if regeneration is needed based on filesystem.ShouldRegenerate
 	// called in processDirectories
 	if !forceDir && !cfg.Force {
-		logrus.Debugf("Skipping %s (glance.md already exists and looks fresh)", dir)
+		logrus.WithField("directory", dir).Debug("Skipping directory - glance.md already exists and looks fresh")
 		r.success = true
 		r.attempts = 0 // Explicitly mark that we didn't attempt to regenerate
 		return r
@@ -245,8 +248,12 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		return r
 	}
 
-	logrus.Debugf("Processing %s → Found %d subdirs, %d sub-glances, %d local files",
-		dir, len(subdirs), len(subGlances), len(fileContents))
+	logrus.WithFields(logrus.Fields{
+		"directory":        dir,
+		"subdirs_count":    len(subdirs),
+		"subglances_count": len(subGlances),
+		"files_count":      len(fileContents),
+	}).Debug("Processing directory")
 
 	// Create context for LLM operations
 	ctx := context.Background()
@@ -421,7 +428,11 @@ func printDebrief(results []result) {
 		}
 	}
 	logrus.Info("=== FINAL SUMMARY ===")
-	logrus.Infof("Processed %d directories → %d successes, %d failures", len(results), totalSuccess, totalFailed)
+	logrus.WithFields(logrus.Fields{
+		"total_dirs":    len(results),
+		"success_count": totalSuccess,
+		"failure_count": totalFailed,
+	}).Info("Directory processing summary")
 
 	if totalFailed == 0 {
 		logrus.Info("Perfect run! No failures detected. Your codebase is now well-documented!")

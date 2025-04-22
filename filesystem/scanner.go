@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	gitignore "github.com/sabhiram/go-gitignore"
+	"github.com/sirupsen/logrus"
 )
 
 // IgnoreRule stores a compiled gitignore matcher and its origin directory.
@@ -65,7 +66,7 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 				dirsList = append(dirsList, current.path)
 			} else {
 				// Skip this directory - don't process its children
-				log.Debugf("Skipping directory %s: matched by ignore rules", current.path)
+				log.WithField("directory", current.path).Debug("Skipping directory matched by ignore rules")
 				continue
 			}
 		}
@@ -73,7 +74,10 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 		// Load .gitignore in the current directory, if it exists
 		localIgnore, err := LoadGitignore(current.path)
 		if err != nil {
-			log.Debugf("Error loading .gitignore from %s: %v", current.path, err)
+			log.WithFields(logrus.Fields{
+				"directory": current.path,
+				"error":     err,
+			}).Debug("Error loading .gitignore")
 		}
 
 		// Build the combined chain for this directory's children
@@ -112,7 +116,7 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 			// This is an optimization to avoid creating queue items for directories
 			// we know will be excluded
 			if strings.HasPrefix(name, ".") || name == NodeModulesDir {
-				log.Debugf("Skipping hidden/node_modules directory: %s", fullChildPath)
+				log.WithField("directory", fullChildPath).Debug("Skipping hidden/node_modules directory")
 				continue
 			}
 

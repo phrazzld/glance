@@ -396,7 +396,10 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 	// Retry logic
 	for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
 		if attempt > 1 {
-			logrus.Debugf("Retry attempt %d/%d for generating content", attempt, c.options.MaxRetries)
+			logrus.WithFields(logrus.Fields{
+				"attempt":     attempt,
+				"max_retries": c.options.MaxRetries,
+			}).Debug("Retry attempt for generating content")
 		}
 
 		// Use non-streaming API with our configured generation options
@@ -520,7 +523,10 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 	// Retry logic
 	for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
 		if attempt > 1 {
-			logrus.Debugf("Retry attempt %d/%d for counting tokens", attempt, c.options.MaxRetries)
+			logrus.WithFields(logrus.Fields{
+				"attempt":     attempt,
+				"max_retries": c.options.MaxRetries,
+			}).Debug("Retry attempt for counting tokens")
 		}
 
 		// Call the CountTokens API with the model name, contents, and our configuration
@@ -644,7 +650,10 @@ func (c *GeminiClient) GenerateStream(ctx context.Context, prompt string) (<-cha
 		// Retry logic
 		for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
 			if attempt > 1 {
-				logrus.Debugf("Retry attempt %d/%d for streaming content", attempt, c.options.MaxRetries)
+				logrus.WithFields(logrus.Fields{
+					"attempt":     attempt,
+					"max_retries": c.options.MaxRetries,
+				}).Debug("Retry attempt for streaming content")
 			}
 
 			// Create a stream for the response using our configuration
