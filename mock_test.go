@@ -46,14 +46,14 @@ func TestMockExample(t *testing.T) {
 	mockClient := new(MockGeminiClient)
 
 	// Set up expectations
-	mockClient.On("GenerativeModel", "gemini-2.5-flash-preview-04-17").Return(mockClient)
+	mockClient.On("GenerativeModel", "gemini-2.0-flash").Return(mockClient)
 	mockClient.On("CountTokens", mock.Anything, mock.Anything).Return(map[string]interface{}{
 		"TotalTokens": int32(100),
 	})
 	mockClient.On("Close").Return(nil)
 
 	// Example usage
-	model := mockClient.GenerativeModel("gemini-2.5-flash-preview-04-17")
+	model := mockClient.GenerativeModel("gemini-2.0-flash")
 	assert.NotNil(t, model, "Should return a mock model")
 
 	tokenResponse := mockClient.CountTokens(context.Background(), "test prompt")

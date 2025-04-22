@@ -110,7 +110,7 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	// Create the client with functional options
 	client, err := llm.NewGeminiClient(
 		cfg.APIKey,
-		llm.WithModelName("gemini-2.5-flash-preview-04-17"),
+		llm.WithModelName("gemini-2.0-flash"),
 		llm.WithMaxRetries(cfg.MaxRetries),
 		llm.WithTimeout(60),
 	)

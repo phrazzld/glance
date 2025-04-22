@@ -138,7 +138,7 @@ type ClientOptions struct {
 func DefaultClientOptions() ClientOptions {
 	return ClientOptions{
 		// Basic configuration
-		ModelName:  "gemini-2.5-flash-preview-04-17",
+		ModelName:  "gemini-2.0-flash",
 		MaxRetries: 3,
 		Timeout:    60, // 60 seconds
 
