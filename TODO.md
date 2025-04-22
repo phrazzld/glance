@@ -94,7 +94,7 @@
     - **Depends‑on:** [T006]
 
 ## Testing
-- [ ] **T008 · Test · P1: update tests to reflect verbose removal and structured logging**
+- [x] **T008 · Test · P1: update tests to reflect verbose removal and structured logging**
     - **Context:** Plan Step 8: Update Tests; Testing Strategy
     - **Action:**
         1. Update `TestSetupLogging` to assert `logrus.DebugLevel` is always set.
