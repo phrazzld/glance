@@ -49,7 +49,7 @@
         2. All previously skipped tests in `config/template_test.go` now pass.
     - **Depends‑on:** none
 
-- [ ] **T005 · Refactor · P2: remove redundant log level checks**
+- [x] **T005 · Refactor · P2: remove redundant log level checks**
     - **Context:** cr-05 Remove Redundant Log Level Checks
     - **Action:**
         1. Find all instances of `if logrus.IsLevelEnabled(...) { logger.Level(...) }`.

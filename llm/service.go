@@ -153,25 +153,23 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	}
 
 	// Optional token counting for debugging
-	if logrus.IsLevelEnabled(logrus.DebugLevel) {
-		tokens, tokenErr := s.client.CountTokens(ctx, prompt)
-		if tokenErr == nil {
-			logrus.WithFields(logrus.Fields{
-				"directory":      dir,
-				"token_count":    tokens,
-				"model":          s.modelName,
-				"operation":      "count_tokens",
-				"correlation_id": correlationID,
-			}).Debug("Token count for prompt")
-		} else {
-			logrus.WithFields(logrus.Fields{
-				"directory":      dir,
-				"model":          s.modelName,
-				"operation":      "count_tokens",
-				"correlation_id": correlationID,
-				"error":          tokenErr,
-			}).Debug("Failed to count tokens")
-		}
+	tokens, tokenErr := s.client.CountTokens(ctx, prompt)
+	if tokenErr == nil {
+		logrus.WithFields(logrus.Fields{
+			"directory":      dir,
+			"token_count":    tokens,
+			"model":          s.modelName,
+			"operation":      "count_tokens",
+			"correlation_id": correlationID,
+		}).Debug("Token count for prompt")
+	} else {
+		logrus.WithFields(logrus.Fields{
+			"directory":      dir,
+			"model":          s.modelName,
+			"operation":      "count_tokens",
+			"correlation_id": correlationID,
+			"error":          tokenErr,
+		}).Debug("Failed to count tokens")
 	}
 
 	// Attempt generation with retries
@@ -179,67 +177,59 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	maxAttempts := s.maxRetries + 1 // +1 for the initial attempt
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			if attempt > 1 {
-				logrus.WithFields(logrus.Fields{
-					"directory":      dir,
-					"retry_number":   attempt - 1,
-					"max_retries":    s.maxRetries,
-					"model":          s.modelName,
-					"operation":      "generate_content",
-					"correlation_id": correlationID,
-				}).Debug("Retrying content generation")
-			} else {
-				logrus.WithFields(logrus.Fields{
-					"directory":      dir,
-					"model":          s.modelName,
-					"operation":      "generate_content",
-					"correlation_id": correlationID,
-				}).Debug("Generating content")
-			}
+		if attempt > 1 {
+			logrus.WithFields(logrus.Fields{
+				"directory":      dir,
+				"retry_number":   attempt - 1,
+				"max_retries":    s.maxRetries,
+				"model":          s.modelName,
+				"operation":      "generate_content",
+				"correlation_id": correlationID,
+			}).Debug("Retrying content generation")
+		} else {
+			logrus.WithFields(logrus.Fields{
+				"directory":      dir,
+				"model":          s.modelName,
+				"operation":      "generate_content",
+				"correlation_id": correlationID,
+			}).Debug("Generating content")
 		}
 
 		// Generate content
 		result, err := s.client.Generate(ctx, prompt)
 		if err == nil {
 			// Success
-			if logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.WithFields(logrus.Fields{
-					"directory":      dir,
-					"model":          s.modelName,
-					"operation":      "generate_content",
-					"attempts":       attempt,
-					"correlation_id": correlationID,
-					"status":         "success",
-				}).Debug("Content generation successful")
-			}
+			logrus.WithFields(logrus.Fields{
+				"directory":      dir,
+				"model":          s.modelName,
+				"operation":      "generate_content",
+				"attempts":       attempt,
+				"correlation_id": correlationID,
+				"status":         "success",
+			}).Debug("Content generation successful")
 			return result, nil
 		}
 
 		// Log error and retry
 		lastError = err
-		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.WithFields(logrus.Fields{
-				"directory":      dir,
-				"attempt":        attempt,
-				"model":          s.modelName,
-				"operation":      "generate_content",
-				"correlation_id": correlationID,
-				"error":          err,
-				"status":         "failed",
-			}).Debug("Content generation attempt failed")
-		}
+		logrus.WithFields(logrus.Fields{
+			"directory":      dir,
+			"attempt":        attempt,
+			"model":          s.modelName,
+			"operation":      "generate_content",
+			"correlation_id": correlationID,
+			"error":          err,
+			"status":         "failed",
+		}).Debug("Content generation attempt failed")
 
 		// Simple backoff before retry
 		if attempt < maxAttempts {
 			backoffMs := 100 * attempt * attempt
-			if logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.WithFields(logrus.Fields{
-					"directory":      dir,
-					"backoff_ms":     backoffMs,
-					"correlation_id": correlationID,
-				}).Debug("Applying backoff before retry")
-			}
+			logrus.WithFields(logrus.Fields{
+				"directory":      dir,
+				"backoff_ms":     backoffMs,
+				"correlation_id": correlationID,
+			}).Debug("Applying backoff before retry")
 			time.Sleep(time.Duration(backoffMs) * time.Millisecond)
 		}
 	}

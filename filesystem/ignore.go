@@ -5,8 +5,6 @@ package filesystem
 import (
 	"path/filepath"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Constants for default ignore patterns
@@ -37,17 +35,13 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain) bool
 
 	// Always ignore hidden files
 	if strings.HasPrefix(filename, ".") {
-		if IsLevelEnabled(logrus.DebugLevel) {
-			log.Debugf("Ignoring hidden file: %s", path)
-		}
+		log.Debugf("Ignoring hidden file: %s", path)
 		return true
 	}
 
 	// Always ignore glance.md files (our output files)
 	if filename == GlanceFilename {
-		if IsLevelEnabled(logrus.DebugLevel) {
-			log.Debugf("Ignoring glance.md file: %s", path)
-		}
+		log.Debugf("Ignoring glance.md file: %s", path)
 		return true
 	}
 
@@ -78,17 +72,13 @@ func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain) bool 
 
 	// Always ignore hidden directories
 	if strings.HasPrefix(dirname, ".") {
-		if IsLevelEnabled(logrus.DebugLevel) {
-			log.Debugf("Ignoring hidden directory: %s", path)
-		}
+		log.Debugf("Ignoring hidden directory: %s", path)
 		return true
 	}
 
 	// Always ignore node_modules
 	if dirname == NodeModulesDir {
-		if IsLevelEnabled(logrus.DebugLevel) {
-			log.Debugf("Ignoring node_modules directory: %s", path)
-		}
+		log.Debugf("Ignoring node_modules directory: %s", path)
 		return true
 	}
 
@@ -121,10 +111,8 @@ func MatchesGitignore(path string, baseDir string, ignoreChain IgnoreChain, isDi
 		// Get the path relative to the rule's origin
 		relPath, err := filepath.Rel(rule.OriginDir, path)
 		if err != nil {
-			if IsLevelEnabled(logrus.DebugLevel) {
-				log.Debugf("Error calculating relative path for %s from %s: %v",
-					path, rule.OriginDir, err)
-			}
+			log.Debugf("Error calculating relative path for %s from %s: %v",
+				path, rule.OriginDir, err)
 			continue
 		}
 
@@ -135,16 +123,12 @@ func MatchesGitignore(path string, baseDir string, ignoreChain IgnoreChain, isDi
 		// because gitignore patterns like "dir/" only match "dir/" and not "dir"
 		if isDir {
 			if rule.Matcher.MatchesPath(relPath) || rule.Matcher.MatchesPath(relPath+"/") {
-				if IsLevelEnabled(logrus.DebugLevel) {
-					log.Debugf("Path %s matched by gitignore rule from %s", path, rule.OriginDir)
-				}
+				log.Debugf("Path %s matched by gitignore rule from %s", path, rule.OriginDir)
 				return true
 			}
 		} else {
 			if rule.Matcher.MatchesPath(relPath) {
-				if IsLevelEnabled(logrus.DebugLevel) {
-					log.Debugf("Path %s matched by gitignore rule from %s", path, rule.OriginDir)
-				}
+				log.Debugf("Path %s matched by gitignore rule from %s", path, rule.OriginDir)
 				return true
 			}
 		}

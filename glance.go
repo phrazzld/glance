@@ -189,7 +189,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 
 		// Check if we need to regenerate the glance.md file
 		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain) // Check if regeneration is needed
-		if errCheck != nil && filesystem.IsLevelEnabled(logrus.DebugLevel) {
+		if errCheck != nil {
 			logrus.Warnf("Couldn't check modification time for %s: %v", d, errCheck)
 		}
 
@@ -222,9 +222,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// forceDir already indicates if regeneration is needed based on filesystem.ShouldRegenerate
 	// called in processDirectories
 	if !forceDir && !cfg.Force {
-		if filesystem.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Skipping %s (glance.md already exists and looks fresh)", dir)
-		}
+		logrus.Debugf("Skipping %s (glance.md already exists and looks fresh)", dir)
 		r.success = true
 		r.attempts = 0 // Explicitly mark that we didn't attempt to regenerate
 		return r
@@ -247,10 +245,8 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		return r
 	}
 
-	if filesystem.IsLevelEnabled(logrus.DebugLevel) {
-		logrus.Debugf("Processing %s → Found %d subdirs, %d sub-glances, %d local files",
-			dir, len(subdirs), len(subGlances), len(fileContents))
-	}
+	logrus.Debugf("Processing %s → Found %d subdirs, %d sub-glances, %d local files",
+		dir, len(subdirs), len(subGlances), len(fileContents))
 
 	// Create context for LLM operations
 	ctx := context.Background()
