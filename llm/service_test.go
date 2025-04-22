@@ -1,3 +1,5 @@
+// Package llm provides abstractions and implementations for interacting with
+// Large Language Model APIs in the glance application.
 package llm
 
 import (
@@ -323,24 +325,12 @@ func TestStructuredLogging(t *testing.T) {
 	foundGeneratePrompt := false
 	foundCountTokens := false
 	foundGenerateContent := false
-	correlationID := ""
 
 	for _, entry := range entries {
 		// All entries should have fields
 		assert.NotEmpty(t, entry.Data)
 		assert.Contains(t, entry.Data, "directory")
 		assert.Equal(t, dir, entry.Data["directory"])
-
-		// Save correlation ID from first entry to verify consistency
-		if correlationID == "" && entry.Data["correlation_id"] != nil {
-			correlationID = entry.Data["correlation_id"].(string)
-			assert.NotEmpty(t, correlationID)
-		}
-
-		// All entries should use the same correlation ID
-		if entry.Data["correlation_id"] != nil {
-			assert.Equal(t, correlationID, entry.Data["correlation_id"])
-		}
 
 		// Check for specific operation logs
 		if entry.Data["operation"] == "generate_prompt" {

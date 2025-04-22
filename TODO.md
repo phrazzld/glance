@@ -70,7 +70,7 @@
         2. Log output is consistent and easily parsable.
     - **Depends‑on:** none
 
-- [ ] **T007 · Refactor · P2: remove correlation id functionality**
+- [x] **T007 · Refactor · P2: remove correlation id functionality**
     - **Context:** cr-08 Re-evaluate Correlation ID Necessity
     - **Action:**
         1. Remove the `generateCorrelationID` function (likely in `llm/service.go`).

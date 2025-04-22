@@ -4,8 +4,6 @@ package llm
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -96,18 +94,6 @@ func NewService(client Client, options ...func(*ServiceConfig)) (*Service, error
 	}, nil
 }
 
-// generateCorrelationID creates a unique identifier for tracking requests through logging.
-// This helps connect related log entries across the application for better traceability.
-func generateCorrelationID() string {
-	bytes := make([]byte, 8) // 16 hex chars
-	_, err := rand.Read(bytes)
-	if err != nil {
-		// If random generation fails, use timestamp-based fallback
-		return fmt.Sprintf("ts-%d", time.Now().UnixNano())
-	}
-	return hex.EncodeToString(bytes)
-}
-
 // GenerateGlanceMarkdown generates a markdown summary for a directory using the LLM.
 // It builds a prompt based on directory information, sends it to the LLM client,
 // and handles retries with exponential backoff if necessary.
@@ -125,16 +111,12 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	// Build prompt data
 	promptData := BuildPromptData(dir, subGlances, fileMap)
 
-	// Generate a correlation ID for this operation
-	correlationID := generateCorrelationID()
-
 	// Log start of prompt generation with structured fields
 	logrus.WithFields(logrus.Fields{
-		"directory":      dir,
-		"model":          s.modelName,
-		"operation":      "generate_prompt",
-		"correlation_id": correlationID,
-		"file_count":     len(fileMap),
+		"directory":  dir,
+		"model":      s.modelName,
+		"operation":  "generate_prompt",
+		"file_count": len(fileMap),
 	}).Debug("Generating prompt from template")
 
 	// Use template from the service
@@ -142,12 +124,11 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	if err != nil {
 		// Log prompt generation error with structured fields
 		logrus.WithFields(logrus.Fields{
-			"directory":      dir,
-			"model":          s.modelName,
-			"operation":      "generate_prompt",
-			"correlation_id": correlationID,
-			"error":          err,
-			"status":         "failed",
+			"directory": dir,
+			"model":     s.modelName,
+			"operation": "generate_prompt",
+			"error":     err,
+			"status":    "failed",
 		}).Error("Failed to generate prompt from template")
 		return "", fmt.Errorf("failed to generate prompt: %w", err)
 	}
@@ -156,19 +137,17 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	tokens, tokenErr := s.client.CountTokens(ctx, prompt)
 	if tokenErr == nil {
 		logrus.WithFields(logrus.Fields{
-			"directory":      dir,
-			"token_count":    tokens,
-			"model":          s.modelName,
-			"operation":      "count_tokens",
-			"correlation_id": correlationID,
+			"directory":   dir,
+			"token_count": tokens,
+			"model":       s.modelName,
+			"operation":   "count_tokens",
 		}).Debug("Token count for prompt")
 	} else {
 		logrus.WithFields(logrus.Fields{
-			"directory":      dir,
-			"model":          s.modelName,
-			"operation":      "count_tokens",
-			"correlation_id": correlationID,
-			"error":          tokenErr,
+			"directory": dir,
+			"model":     s.modelName,
+			"operation": "count_tokens",
+			"error":     tokenErr,
 		}).Debug("Failed to count tokens")
 	}
 
@@ -179,19 +158,17 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
 			logrus.WithFields(logrus.Fields{
-				"directory":      dir,
-				"retry_number":   attempt - 1,
-				"max_retries":    s.maxRetries,
-				"model":          s.modelName,
-				"operation":      "generate_content",
-				"correlation_id": correlationID,
+				"directory":    dir,
+				"retry_number": attempt - 1,
+				"max_retries":  s.maxRetries,
+				"model":        s.modelName,
+				"operation":    "generate_content",
 			}).Debug("Retrying content generation")
 		} else {
 			logrus.WithFields(logrus.Fields{
-				"directory":      dir,
-				"model":          s.modelName,
-				"operation":      "generate_content",
-				"correlation_id": correlationID,
+				"directory": dir,
+				"model":     s.modelName,
+				"operation": "generate_content",
 			}).Debug("Generating content")
 		}
 
@@ -200,12 +177,11 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 		if err == nil {
 			// Success
 			logrus.WithFields(logrus.Fields{
-				"directory":      dir,
-				"model":          s.modelName,
-				"operation":      "generate_content",
-				"attempts":       attempt,
-				"correlation_id": correlationID,
-				"status":         "success",
+				"directory": dir,
+				"model":     s.modelName,
+				"operation": "generate_content",
+				"attempts":  attempt,
+				"status":    "success",
 			}).Debug("Content generation successful")
 			return result, nil
 		}
@@ -213,22 +189,20 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 		// Log error and retry
 		lastError = err
 		logrus.WithFields(logrus.Fields{
-			"directory":      dir,
-			"attempt":        attempt,
-			"model":          s.modelName,
-			"operation":      "generate_content",
-			"correlation_id": correlationID,
-			"error":          err,
-			"status":         "failed",
+			"directory": dir,
+			"attempt":   attempt,
+			"model":     s.modelName,
+			"operation": "generate_content",
+			"error":     err,
+			"status":    "failed",
 		}).Debug("Content generation attempt failed")
 
 		// Simple backoff before retry
 		if attempt < maxAttempts {
 			backoffMs := 100 * attempt * attempt
 			logrus.WithFields(logrus.Fields{
-				"directory":      dir,
-				"backoff_ms":     backoffMs,
-				"correlation_id": correlationID,
+				"directory":  dir,
+				"backoff_ms": backoffMs,
 			}).Debug("Applying backoff before retry")
 			time.Sleep(time.Duration(backoffMs) * time.Millisecond)
 		}
@@ -236,13 +210,12 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 
 	// Log final error with structured fields
 	logrus.WithFields(logrus.Fields{
-		"directory":      dir,
-		"max_attempts":   maxAttempts,
-		"model":          s.modelName,
-		"operation":      "generate_content",
-		"correlation_id": correlationID,
-		"error":          lastError,
-		"status":         "failed",
+		"directory":    dir,
+		"max_attempts": maxAttempts,
+		"model":        s.modelName,
+		"operation":    "generate_content",
+		"error":        lastError,
+		"status":       "failed",
 	}).Error("Content generation failed after all retry attempts")
 
 	return "", fmt.Errorf("failed to generate content after %d attempts: %w",
