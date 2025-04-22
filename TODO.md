@@ -67,7 +67,7 @@
     - **Depends‑on:** none
 
 ## Glance (Main)
-- [ ] **T006 · Refactor · P1: update glance main code to remove verbose args and emojis**
+- [x] **T006 · Refactor · P1: update glance main code to remove verbose args and emojis**
     - **Context:** Plan Step 6: Update Main Glance Code
     - **Action:**
         1. Update all calls to `filesystem`, `llm`, and `ui` functions in `glance.go` to remove the `verbose` arguments.

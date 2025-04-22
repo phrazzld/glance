@@ -50,14 +50,14 @@ func main() {
 	// Set up the LLM client and service using the function variable
 	llmClient, llmService, err := setupLLMService(cfg)
 	if err != nil {
-		logrus.Fatalf("🚫 Failed to initialize LLM service: %v", err)
+		logrus.Fatalf("Failed to initialize LLM service: %v", err)
 	}
 	defer llmClient.Close()
 
 	// Scan directories and process them to generate glance.md files
 	dirs, ignoreChains, err := scanDirectories(cfg)
 	if err != nil {
-		logrus.Fatalf("🚫 Directory scan failed: %v - Check file permissions and disk space", err)
+		logrus.Fatalf("Directory scan failed: %v - Check file permissions and disk space", err)
 	}
 
 	// Process directories and generate glance.md files
@@ -130,7 +130,7 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 
 // scanDirectories performs BFS scanning and gathers .gitignore chain info per directory
 func scanDirectories(cfg *config.Config) ([]string, map[string]filesystem.IgnoreChain, error) {
-	logrus.Info("✨ Excellent! Scanning directories now... Let's explore your code!")
+	logrus.Info("Excellent! Scanning directories now... Let's explore your code!")
 
 	// Show a spinner while scanning
 	scanner := ui.NewScanner()
@@ -151,7 +151,7 @@ func scanDirectories(cfg *config.Config) ([]string, map[string]filesystem.Ignore
 
 // processDirectories generates glance.md files for each directory in the list
 func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesystem.IgnoreChain, cfg *config.Config, llmService *llm.Service) []result {
-	logrus.Info("🧠 Preparing to generate all glance.md files... Getting ready to make your code shine!")
+	logrus.Info("Preparing to generate all glance.md files... Getting ready to make your code shine!")
 
 	// Create progress bar
 	bar := ui.NewProcessor(len(dirsList))
@@ -166,7 +166,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 		// Check if we need to regenerate the glance.md file
 		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain) // Check if regeneration is needed
 		if errCheck != nil && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Warnf("⏱️ Couldn't check modification time for %s: %v", d, errCheck)
+			logrus.Warnf("Couldn't check modification time for %s: %v", d, errCheck)
 		}
 
 		forceDir = forceDir || needsRegen[d]
@@ -186,7 +186,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 	}
 
 	fmt.Println()
-	logrus.Infof("🎯 All done! glance.md files have been generated for your codebase up to: %s", cfg.TargetDir)
+	logrus.Infof("All done! glance.md files have been generated for your codebase up to: %s", cfg.TargetDir)
 
 	return finalResults
 }
@@ -199,7 +199,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// called in processDirectories
 	if !forceDir && !cfg.Force {
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("⏩ Skipping %s (glance.md already exists and looks fresh)", dir)
+			logrus.Debugf("Skipping %s (glance.md already exists and looks fresh)", dir)
 		}
 		r.success = true
 		r.attempts = 0 // Explicitly mark that we didn't attempt to regenerate
@@ -224,7 +224,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	}
 
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
-		logrus.Debugf("📊 Processing %s → Found %d subdirs, %d sub-glances, %d local files",
+		logrus.Debugf("Processing %s → Found %d subdirs, %d sub-glances, %d local files",
 			dir, len(subdirs), len(subGlances), len(fileContents))
 	}
 
@@ -400,20 +400,20 @@ func printDebrief(results []result) {
 			totalFailed++
 		}
 	}
-	logrus.Info("📊 === FINAL SUMMARY === 📊")
-	logrus.Infof("🔢 Processed %d directories → %d successes, %d failures", len(results), totalSuccess, totalFailed)
+	logrus.Info("=== FINAL SUMMARY ===")
+	logrus.Infof("Processed %d directories → %d successes, %d failures", len(results), totalSuccess, totalFailed)
 
 	if totalFailed == 0 {
-		logrus.Info("🌟 Perfect run! No failures detected. Your codebase is now well-documented!")
+		logrus.Info("Perfect run! No failures detected. Your codebase is now well-documented!")
 		return
 	}
 
-	logrus.Info("⚠️ Some directories couldn't be processed:")
+	logrus.Info("Some directories couldn't be processed:")
 	for _, r := range results {
 		if !r.success {
 			// Use the UI error reporting
 			ui.ReportError(r.err, fmt.Sprintf("Failed to process %s (attempts: %d)", r.dir, r.attempts))
 		}
 	}
-	logrus.Info("📊 ===================== 📊")
+	logrus.Info("=====================")
 }
