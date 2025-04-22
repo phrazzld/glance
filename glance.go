@@ -44,8 +44,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Set up logging based on the verbose flag
-	setupLogging(cfg.Verbose)
+	// Set up logging with debug level
+	setupLogging()
 
 	// Set up the LLM client and service using the function variable
 	llmClient, llmService, err := setupLLMService(cfg)
@@ -71,14 +71,10 @@ func main() {
 // Main function components
 // -----------------------------------------------------------------------------
 
-// setupLogging configures the logger based on the verbose flag
-func setupLogging(verbose bool) {
-	// Set log level based on verbose flag
-	if verbose {
-		logrus.SetLevel(logrus.DebugLevel)
-	} else {
-		logrus.SetLevel(logrus.InfoLevel)
-	}
+// setupLogging configures the logger with debug level
+func setupLogging() {
+	// Always set log level to debug
+	logrus.SetLevel(logrus.DebugLevel)
 
 	// Configure formatter with custom settings
 	logrus.SetFormatter(&logrus.TextFormatter{
@@ -122,7 +118,7 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	service, err := llm.NewService(
 		client,
 		llm.WithServiceMaxRetries(cfg.MaxRetries),
-		llm.WithVerbose(cfg.Verbose),
+		llm.WithVerbose(true), // Always use verbose (debug) mode
 		llm.WithPromptTemplate(cfg.PromptTemplate),
 	)
 	if err != nil {
@@ -169,8 +165,8 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 		ignoreChain := dirToIgnoreChain[d]
 
 		// Check if we need to regenerate the glance.md file
-		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain, cfg.Verbose)
-		if errCheck != nil && cfg.Verbose {
+		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain, true) // Always use verbose (debug) mode
+		if errCheck != nil && logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Warnf("⏱️ Couldn't check modification time for %s: %v", d, errCheck)
 		}
 
@@ -203,7 +199,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// forceDir already indicates if regeneration is needed based on filesystem.ShouldRegenerate
 	// called in processDirectories
 	if !forceDir && !cfg.Force {
-		if cfg.Verbose {
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("⏩ Skipping %s (glance.md already exists and looks fresh)", dir)
 		}
 		r.success = true
@@ -222,13 +218,13 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		r.err = fmt.Errorf("gatherSubGlances failed: %w", err)
 		return r
 	}
-	fileContents, err := gatherLocalFiles(dir, ignoreChain, cfg.MaxFileBytes, cfg.Verbose)
+	fileContents, err := gatherLocalFiles(dir, ignoreChain, cfg.MaxFileBytes, true) // Always use verbose (debug) mode
 	if err != nil {
 		r.err = fmt.Errorf("gatherLocalFiles failed: %w", err)
 		return r
 	}
 
-	if cfg.Verbose {
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
 		logrus.Debugf("📊 Processing %s → Found %d subdirs, %d sub-glances, %d local files",
 			dir, len(subdirs), len(subGlances), len(fileContents))
 	}

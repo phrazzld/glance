@@ -224,8 +224,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Configure our application
 		cfg := config.NewDefaultConfig().
 			WithTargetDir(testDir).
-			WithForce(true).
-			WithVerbose(false)
+			WithForce(true)
 
 		// Run the core application logic with mock dependencies
 		results, err := ProcessDirectory(cfg, mockClient, service)
@@ -284,8 +283,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Configure our application
 		cfg := config.NewDefaultConfig().
 			WithTargetDir(testDir).
-			WithForce(true).
-			WithVerbose(false)
+			WithForce(true)
 
 		// Run the core application logic with mock dependencies
 		_, err = ProcessDirectory(cfg, mockClient, service)

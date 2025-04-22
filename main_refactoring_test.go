@@ -20,13 +20,9 @@ func TestSetupLogging(t *testing.T) {
 	logrus.SetOutput(&buf)
 	defer logrus.SetOutput(originalOutput)
 
-	// Test verbose=true
-	setupLogging(true)
-	assert.Equal(t, logrus.DebugLevel, logrus.GetLevel(), "Logger should be set to debug level when verbose is true")
-
-	// Test verbose=false
-	setupLogging(false)
-	assert.Equal(t, logrus.InfoLevel, logrus.GetLevel(), "Logger should be set to info level when verbose is false")
+	// Test setupLogging with no parameters
+	setupLogging()
+	assert.Equal(t, logrus.DebugLevel, logrus.GetLevel(), "Logger should always be set to debug level")
 
 	// Test formatter settings
 	formatter, ok := logrus.StandardLogger().Formatter.(*logrus.TextFormatter)

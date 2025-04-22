@@ -14,7 +14,7 @@
     - **Depends‑on:** none
 
 ## Glance (Main)
-- [ ] **T002 · Refactor · P1: set default log level to debug in setupLogging**
+- [x] **T002 · Refactor · P1: set default log level to debug in setupLogging**
     - **Context:** Plan Step 2: Set Default Log Level to Debug
     - **Action:**
         1. Modify `setupLogging` in `glance.go` to remove the `verbose` parameter.
