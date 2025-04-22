@@ -1,121 +1,104 @@
 # Todo
 
-## Config
-- [x] **T001 · Refactor · P1: remove verbose flag from config package**
-    - **Context:** Plan Step 1: Remove Verbose Flag from Config
+## Logging Refactor and Cleanup
+
+- [x] **T001 · Chore · P1: remove backup files from version control**
+    - **Context:** cr-01 Remove Backup Files from Repository
     - **Action:**
-        1. Delete `Verbose bool` field and `WithVerbose` method from `config.Config` (`config/config.go`).
-        2. Remove `--verbose` flag definition and application from `config/loadconfig.go`.
-        3. Remove related tests for `Verbose` field, `WithVerbose` method, and `--verbose` flag (`config/*_test.go`).
+        1. Run `git rm glance.go.bak integration_test.go.bak`.
+        2. Add `*.bak` to the `.gitignore` file.
+        3. Commit the removal and the `.gitignore` update.
     - **Done‑when:**
-        1. `Verbose` field and related logic are removed from the `config` package.
-        2. Related unit tests are removed or updated and pass.
-        3. `go test ./config/...` passes.
+        1. `glance.go.bak` and `integration_test.go.bak` are no longer tracked by git.
+        2. `.gitignore` prevents future tracking of `*.bak` files.
     - **Depends‑on:** none
 
-## Glance (Main)
-- [x] **T002 · Refactor · P1: set default log level to debug in setupLogging**
-    - **Context:** Plan Step 2: Set Default Log Level to Debug
+- [ ] **T002 · Feature · P1: make logging level configurable via environment variable**
+    - **Context:** cr-02 Make Logging Level Configurable
     - **Action:**
-        1. Modify `setupLogging` in `glance.go` to remove the `verbose` parameter.
-        2. Unconditionally call `logrus.SetLevel(logrus.DebugLevel)` inside `setupLogging`.
-        3. Update all calls to `setupLogging` in `glance.go` to remove the verbose argument.
+        1. Modify logging setup (`setupLogging` or `config.LoadConfig`) to read `GLANCE_LOG_LEVEL` env var.
+        2. Parse var ("debug", "info", "warn", "error") mapping to `logrus.Level`, defaulting to `logrus.InfoLevel`.
+        3. Call `logrus.SetLevel()` with the determined level.
     - **Done‑when:**
-        1. `setupLogging` function signature is updated.
-        2. Log level is always set to `logrus.DebugLevel`.
-        3. Code compiles and related tests (if any) pass.
+        1. Running the application with `GLANCE_LOG_LEVEL=debug` shows debug logs.
+        2. Running the application with `GLANCE_LOG_LEVEL=warn` (or unset) hides debug and info logs.
+        3. Running with an invalid value defaults to info level.
     - **Depends‑on:** none
 
-## Filesystem
-- [x] **T003 · Refactor · P1: remove verbose parameter and checks from filesystem package**
-    - **Context:** Plan Step 3: Update Filesystem Package
+- [ ] **T003 · Refactor · P1: decouple filesystem functions from global logger state**
+    - **Context:** cr-03 Decouple Filesystem Package from Global Logger State
     - **Action:**
-        1. Remove `verbose bool` parameter from `ShouldIgnoreFile`, `ShouldIgnoreDir`, `LatestModTime`, `ShouldRegenerate`, `GatherLocalFiles`.
-        2. Replace `if verbose && logrus.IsLevelEnabled(logrus.DebugLevel)` checks with `if logrus.IsLevelEnabled(logrus.DebugLevel)`.
-        3. Remove emojis (e.g., 📊) from log messages within the `filesystem` package.
+        1. Identify functions/structs in `filesystem` package using global `logrus`.
+        2. Modify identified functions/structs to accept a `logger logrus.FieldLogger` parameter/field.
+        3. Update all call sites to pass a logger instance and replace global `logrus` calls with injected logger calls.
     - **Done‑when:**
-        1. Function signatures in the `filesystem` package are updated.
-        2. Conditional verbose logging checks are removed or simplified.
-        3. Emojis are removed from logs in this package.
-        4. `go test ./filesystem/...` passes.
+        1. No functions in the `filesystem` package directly reference the global `logrus` instance or its state.
+        2. Dependencies on a logger are explicit via parameters or struct fields.
+        3. All existing tests for the `filesystem` package pass.
     - **Depends‑on:** none
 
-## LLM
-- [x] **T004 · Refactor · P1: remove verbose parameter/field and checks from llm package**
-    - **Context:** Plan Step 4: Update LLM Package
+- [ ] **T004 · Test · P1: fix skipped configuration and template tests**
+    - **Context:** cr-04 Fix Skipped Configuration Tests
     - **Action:**
-        1. Remove `Verbose bool` field and `WithVerbose` function from `llm.ClientOptions` and `llm.ServiceConfig`.
-        2. Replace verbose checks (e.g., `if c.options.Verbose`, `if s.verbose`) with `if logrus.IsLevelEnabled(logrus.DebugLevel)`.
-        3. Remove emojis (e.g., 🚀, 🔄, ❌, 🔤, ⚠️) from log messages within the `llm` package.
+        1. Identify skipped tests in `config/loadconfig_test.go` and `config/template_test.go`.
+        2. Refactor test setup to use `t.TempDir()` for temporary file/directory creation.
+        3. Ensure paths used in tests conform to `filesystem.ValidateFilePath` requirements.
+        4. Remove `t.Skip()` calls.
     - **Done‑when:**
-        1. Structs and functions in the `llm` package are updated.
-        2. Conditional verbose logging checks are removed or simplified.
-        3. Emojis are removed from logs in this package.
-        4. `go test ./llm/...` passes.
+        1. All previously skipped tests in `config/loadconfig_test.go` now pass.
+        2. All previously skipped tests in `config/template_test.go` now pass.
     - **Depends‑on:** none
 
-## UI
-- [x] **T005 · Refactor · P1: remove verbose parameter and emoji from ui.ReportError**
-    - **Context:** Plan Step 5: Update UI Package
+- [ ] **T005 · Refactor · P2: remove redundant log level checks**
+    - **Context:** cr-05 Remove Redundant Log Level Checks
     - **Action:**
-        1. Remove the `verbose bool` parameter from `ui.ReportError` (`ui/feedback.go`).
-        2. Remove the emoji (e.g., ❌) from the `logrus.Errorf` call within `ReportError`.
+        1. Find all instances of `if logrus.IsLevelEnabled(...) { logger.Level(...) }`.
+        2. Remove the explicit `if logrus.IsLevelEnabled(...)` check, relying on the logger method's internal check.
     - **Done‑when:**
-        1. `ui.ReportError` function signature is updated.
-        2. Emoji is removed from the error log message.
-        3. `go test ./ui/...` passes.
+        1. Explicit `IsLevelEnabled` checks preceding logging calls are removed.
+        2. Logging behavior remains unchanged (correct level filtering still occurs).
+    - **Depends‑on:** [T003]
+
+- [ ] **T006 · Refactor · P2: standardize log messages to structured format**
+    - **Context:** cr-06 Standardize Log Message Formatting
+    - **Action:**
+        1. Identify all logging calls using simple string formatting (e.g., `logrus.Infof("User %s logged in", user)`).
+        2. Convert these calls to use structured logging (e.g., `logrus.WithField("user", user).Info("User logged in")`).
+        3. Ensure consistent field naming conventions are used.
+    - **Done‑when:**
+        1. All application log entries use structured formatting (`WithFields`).
+        2. Log output is consistent and easily parsable.
     - **Depends‑on:** none
 
-## Glance (Main)
-- [x] **T006 · Refactor · P1: update glance main code to remove verbose args and emojis**
-    - **Context:** Plan Step 6: Update Main Glance Code
+- [ ] **T007 · Refactor · P2: remove correlation id functionality**
+    - **Context:** cr-08 Re-evaluate Correlation ID Necessity
     - **Action:**
-        1. Update all calls to `filesystem`, `llm`, and `ui` functions in `glance.go` to remove the `verbose` arguments.
-        2. Remove emojis (e.g., ✨, 🚫, 🧠, 🎯, 📊, 🔢, 🌟, ⚠️) from all `logrus` calls in `glance.go`.
-        3. Replace conditional debug logging checks (e.g., `if cfg.Verbose { logrus.Debugf(...) }`) with direct `logrus.Debugf(...)` calls.
+        1. Remove the `generateCorrelationID` function (likely in `llm/service.go`).
+        2. Remove all `correlation_id` fields from `logrus.WithFields` calls throughout the codebase.
+        3. Update any tests asserting the presence of `correlation_id` in logs.
     - **Done‑when:**
-        1. All calls to modified functions in `filesystem`, `llm`, `ui` packages are updated.
-        2. Emojis are removed from log messages in `glance.go`.
-        3. Direct debug logging is used instead of conditional checks.
-        4. Code compiles and relevant tests pass.
-    - **Depends‑on:** [T001, T002, T003, T004, T005]
+        1. Correlation ID generation code is removed.
+        2. No log entries contain the `correlation_id` field.
+        3. Relevant tests pass.
+    - **Depends‑on:** none
 
-## Logging
-- [x] **T007 · Feature · P2: implement structured logging using logrus fields**
-    - **Context:** Plan Step 7: Introduce Structured Logging; Logging & Observability Section
+- [ ] **T008 · Chore · P2: clarify readme logging description**
+    - **Context:** cr-11 Clarify README Logging Description
     - **Action:**
-        1. Identify key logging points (e.g., directory processing, file reads, LLM calls, errors) in `glance.go`, `filesystem`, `llm`.
-        2. Modify relevant `logrus.*` calls to use `logrus.WithField` or `logrus.WithFields` adding context (e.g., `directory`, `file`, `error`).
-        3. Implement specific structured log events listed in the plan (e.g., DirectoryScanStarted, FileIgnored, LLMRequestSent).
+        1. Update the "Logging" section in `README.md` to explain the default level (`info`).
+        2. Document the `GLANCE_LOG_LEVEL` environment variable, its purpose, and valid values ("debug", "info", "warn", "error").
+        3. Add examples showing how to set the log level.
     - **Done‑when:**
-        1. Key log messages include structured fields (e.g., `directory`, `file`, `error`).
-        2. Log output is demonstrably more structured and informative.
-        3. Code compiles and tests pass.
-    - **Depends‑on:** [T006]
+        1. `README.md` accurately describes default logging behavior.
+        2. `README.md` clearly explains how to configure the log level using `GLANCE_LOG_LEVEL`.
+    - **Depends‑on:** [T002]
 
-## Testing
-- [x] **T008 · Test · P1: update tests to reflect verbose removal and structured logging**
-    - **Context:** Plan Step 8: Update Tests; Testing Strategy
+- [ ] **T009 · Chore · P2: add context for todo.md removal in backlog.md**
+    - **Context:** cr-10 Add Context for TODO.md Removal
     - **Action:**
-        1. Update `TestSetupLogging` to assert `logrus.DebugLevel` is always set.
-        2. Update unit/integration tests calling `filesystem`, `llm`, `ui` functions to remove the `verbose` parameter.
-        3. Review/update/remove tests related to the `--verbose` flag (e.g., `TestGlanceVerboseFlag`).
-        4. Update any tests asserting specific log message content to account for removed emojis and added structured fields.
+        1. Add a note to `BACKLOG.md` stating it supersedes `TODO.md` for task tracking.
+        2. Briefly summarize the major logging refactor tasks (from this plan) that were completed, referencing the original `TODO.md` if applicable/possible.
     - **Done‑when:**
-        1. All existing unit and integration tests pass after the refactoring.
-        2. Tests accurately reflect the new logging behavior (always debug, no emojis, structured fields).
-        3. Test coverage is maintained or improved.
-    - **Depends‑on:** [T001, T002, T003, T004, T005, T006, T007]
-
-## Documentation
-- [x] **T009 · Chore · P2: update documentation to remove verbose flag references**
-    - **Context:** Plan Step 9: Update Documentation; Documentation Section
-    - **Action:**
-        1. Remove description and usage of the `--verbose` flag from `README.md`.
-        2. Update `README.md` and any relevant files in `docs/` to state that logging is detailed (debug level) by default.
-        3. Update code comments (functions, structs) in `config`, `filesystem`, `llm`, `ui` to reflect removed `verbose` parameters/fields.
-    - **Done‑when:**
-        1. `README.md` accurately reflects the removal of the `--verbose` flag and default debug logging.
-        2. Code comments are updated for modified functions/structs.
-        3. No references to the `--verbose` flag remain in user-facing documentation.
-    - **Depends‑on:** [T001]
+        1. `BACKLOG.md` contains a note about replacing `TODO.md`.
+        2. `BACKLOG.md` includes context about the completion of previous logging-related tasks.
+    - **Depends‑on:** none

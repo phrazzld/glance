@@ -24,3 +24,6 @@ docs/prompts
 
 # System files
 .DS_Store
+
+# Backup files
+*.bak
