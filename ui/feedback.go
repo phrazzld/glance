@@ -233,10 +233,10 @@ func NewFileProcessor(total int) *ProgressBar {
 // -----------------------------------------------------------------------------
 
 // ReportError logs an error and optionally displays it to the user.
-func ReportError(err error, verbose bool, context string) {
+func ReportError(err error, context string) {
 	if err == nil {
 		return
 	}
 
-	logrus.Errorf("❌ %s: %v", context, err)
+	logrus.Errorf("%s: %v", context, err)
 }

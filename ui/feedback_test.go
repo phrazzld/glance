@@ -367,31 +367,20 @@ func TestReportError(t *testing.T) {
 	// Test with nil error (should not log anything)
 	t.Run("Nil error", func(t *testing.T) {
 		output := captureLogOutput(func() {
-			ReportError(nil, true, "Test context")
+			ReportError(nil, "Test context")
 		})
 		assert.Empty(t, output, "No output should be logged for nil error")
 	})
 
-	// Test with non-nil error and verbose=true
-	t.Run("Error with verbose=true", func(t *testing.T) {
+	// Test with non-nil error
+	t.Run("Error logging", func(t *testing.T) {
 		testErr := errors.New("test error")
 		output := captureLogOutput(func() {
-			ReportError(testErr, true, "Test context")
+			ReportError(testErr, "Test context")
 		})
 		assert.Contains(t, output, "Test context")
 		assert.Contains(t, output, "test error")
-		assert.Contains(t, output, "❌")
-	})
-
-	// Test with non-nil error and verbose=false
-	t.Run("Error with verbose=false", func(t *testing.T) {
-		testErr := errors.New("test error")
-		output := captureLogOutput(func() {
-			ReportError(testErr, false, "Test context")
-		})
-		assert.Contains(t, output, "Test context")
-		assert.Contains(t, output, "test error")
-		assert.Contains(t, output, "❌")
+		assert.NotContains(t, output, "❌")
 	})
 
 	// Test with different context values
@@ -399,12 +388,12 @@ func TestReportError(t *testing.T) {
 		testErr := errors.New("test error")
 
 		output1 := captureLogOutput(func() {
-			ReportError(testErr, true, "Context 1")
+			ReportError(testErr, "Context 1")
 		})
 		assert.Contains(t, output1, "Context 1")
 
 		output2 := captureLogOutput(func() {
-			ReportError(testErr, true, "Context 2")
+			ReportError(testErr, "Context 2")
 		})
 		assert.Contains(t, output2, "Context 2")
 	})

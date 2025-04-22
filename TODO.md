@@ -55,7 +55,7 @@
     - **Depends‑on:** none
 
 ## UI
-- [ ] **T005 · Refactor · P1: remove verbose parameter and emoji from ui.ReportError**
+- [x] **T005 · Refactor · P1: remove verbose parameter and emoji from ui.ReportError**
     - **Context:** Plan Step 5: Update UI Package
     - **Action:**
         1. Remove the `verbose bool` parameter from `ui.ReportError` (`ui/feedback.go`).

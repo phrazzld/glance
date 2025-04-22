@@ -118,7 +118,6 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	service, err := llm.NewService(
 		client,
 		llm.WithServiceMaxRetries(cfg.MaxRetries),
-		llm.WithVerbose(true), // Always use verbose (debug) mode
 		llm.WithPromptTemplate(cfg.PromptTemplate),
 	)
 	if err != nil {
@@ -165,7 +164,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 		ignoreChain := dirToIgnoreChain[d]
 
 		// Check if we need to regenerate the glance.md file
-		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain, true) // Always use verbose (debug) mode
+		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain) // Check if regeneration is needed
 		if errCheck != nil && logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Warnf("⏱️ Couldn't check modification time for %s: %v", d, errCheck)
 		}
@@ -218,7 +217,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		r.err = fmt.Errorf("gatherSubGlances failed: %w", err)
 		return r
 	}
-	fileContents, err := gatherLocalFiles(dir, ignoreChain, cfg.MaxFileBytes, true) // Always use verbose (debug) mode
+	fileContents, err := gatherLocalFiles(dir, ignoreChain, cfg.MaxFileBytes)
 	if err != nil {
 		r.err = fmt.Errorf("gatherLocalFiles failed: %w", err)
 		return r
@@ -348,7 +347,7 @@ func readSubdirectories(dir string, ignoreChain filesystem.IgnoreChain) ([]strin
 		fullPath := filepath.Join(validDir, name)
 
 		// Use the filesystem package for directory filtering
-		if filesystem.ShouldIgnoreDir(fullPath, validDir, ignoreChain, logrus.IsLevelEnabled(logrus.DebugLevel)) {
+		if filesystem.ShouldIgnoreDir(fullPath, validDir, ignoreChain) {
 			continue
 		}
 
@@ -366,9 +365,9 @@ func readSubdirectories(dir string, ignoreChain filesystem.IgnoreChain) ([]strin
 
 // gatherLocalFiles reads immediate files in a directory (excluding glance.md, hidden files, etc.).
 // This function now uses filesystem.GatherLocalFiles directly with the IgnoreChain.
-func gatherLocalFiles(dir string, ignoreChain filesystem.IgnoreChain, maxFileBytes int64, verbose bool) (map[string]string, error) {
+func gatherLocalFiles(dir string, ignoreChain filesystem.IgnoreChain, maxFileBytes int64) (map[string]string, error) {
 	// Use the filesystem package function that provides comprehensive validation and handling
-	return filesystem.GatherLocalFiles(dir, ignoreChain, maxFileBytes, verbose)
+	return filesystem.GatherLocalFiles(dir, ignoreChain, maxFileBytes)
 }
 
 // Note: We now use filesystem.IsTextFile instead of this local function
@@ -413,7 +412,7 @@ func printDebrief(results []result) {
 	for _, r := range results {
 		if !r.success {
 			// Use the UI error reporting
-			ui.ReportError(r.err, true, fmt.Sprintf("Failed to process %s (attempts: %d)", r.dir, r.attempts))
+			ui.ReportError(r.err, fmt.Sprintf("Failed to process %s (attempts: %d)", r.dir, r.attempts))
 		}
 	}
 	logrus.Info("📊 ===================== 📊")

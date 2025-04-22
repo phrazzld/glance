@@ -41,7 +41,7 @@ func TestFileSystemPackageUsage(t *testing.T) {
 	ignoreChain := filesystem.IgnoreChain{}
 
 	// Demonstrate checking if regeneration is needed
-	_, err = filesystem.ShouldRegenerate(tempDir, false, ignoreChain, false)
+	_, err = filesystem.ShouldRegenerate(tempDir, false, ignoreChain)
 	assert.NoError(t, err, "Failed to use filesystem.ShouldRegenerate")
 
 	// Demonstrate bubbling up regeneration flags
