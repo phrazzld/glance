@@ -25,7 +25,7 @@
         3. Running with an invalid value defaults to info level.
     - **Depends‑on:** none
 
-- [ ] **T003 · Refactor · P1: decouple filesystem functions from global logger state**
+- [x] **T003 · Refactor · P1: decouple filesystem functions from global logger state**
     - **Context:** cr-03 Decouple Filesystem Package from Global Logger State
     - **Action:**
         1. Identify functions/structs in `filesystem` package using global `logrus`.

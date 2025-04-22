@@ -66,8 +66,8 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 				dirsList = append(dirsList, current.path)
 			} else {
 				// Skip this directory - don't process its children
-				if logrus.IsLevelEnabled(logrus.DebugLevel) {
-					logrus.Debugf("Skipping directory %s: matched by ignore rules", current.path)
+				if IsLevelEnabled(logrus.DebugLevel) {
+					log.Debugf("Skipping directory %s: matched by ignore rules", current.path)
 				}
 				continue
 			}
@@ -75,8 +75,8 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 
 		// Load .gitignore in the current directory, if it exists
 		localIgnore, err := LoadGitignore(current.path)
-		if err != nil && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Error loading .gitignore from %s: %v", current.path, err)
+		if err != nil && IsLevelEnabled(logrus.DebugLevel) {
+			log.Debugf("Error loading .gitignore from %s: %v", current.path, err)
 		}
 
 		// Build the combined chain for this directory's children
@@ -115,8 +115,8 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 			// This is an optimization to avoid creating queue items for directories
 			// we know will be excluded
 			if strings.HasPrefix(name, ".") || name == NodeModulesDir {
-				if logrus.IsLevelEnabled(logrus.DebugLevel) {
-					logrus.Debugf("Skipping hidden/node_modules directory: %s", fullChildPath)
+				if IsLevelEnabled(logrus.DebugLevel) {
+					log.Debugf("Skipping hidden/node_modules directory: %s", fullChildPath)
 				}
 				continue
 			}

@@ -72,6 +72,7 @@ func main() {
 // -----------------------------------------------------------------------------
 
 // setupLogging configures the logger with level based on environment variable
+// and initializes the package-level loggers in other packages
 func setupLogging() {
 	// Get logging level from environment variable, default to info level
 	logLevelStr := os.Getenv("GLANCE_LOG_LEVEL")
@@ -107,6 +108,9 @@ func setupLogging() {
 		DisableSorting:   true,
 		DisableColors:    false,
 	})
+
+	// Initialize package-level loggers in other packages
+	filesystem.SetLogger(logrus.StandardLogger())
 }
 
 // SetupLLMServiceFunc is a function type for creating LLM clients and services.
@@ -185,7 +189,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 
 		// Check if we need to regenerate the glance.md file
 		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain) // Check if regeneration is needed
-		if errCheck != nil && logrus.IsLevelEnabled(logrus.DebugLevel) {
+		if errCheck != nil && filesystem.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Warnf("Couldn't check modification time for %s: %v", d, errCheck)
 		}
 
@@ -218,7 +222,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// forceDir already indicates if regeneration is needed based on filesystem.ShouldRegenerate
 	// called in processDirectories
 	if !forceDir && !cfg.Force {
-		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		if filesystem.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Skipping %s (glance.md already exists and looks fresh)", dir)
 		}
 		r.success = true
@@ -243,7 +247,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		return r
 	}
 
-	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+	if filesystem.IsLevelEnabled(logrus.DebugLevel) {
 		logrus.Debugf("Processing %s → Found %d subdirs, %d sub-glances, %d local files",
 			dir, len(subdirs), len(subGlances), len(fileContents))
 	}

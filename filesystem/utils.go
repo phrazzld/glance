@@ -50,8 +50,8 @@ func LatestModTime(dir string, ignoreChain IgnoreChain) (time.Time, error) {
 		// Get file info for modification time
 		info, errStat := d.Info()
 		if errStat != nil {
-			if logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("Error getting file info for %s: %v", path, errStat)
+			if IsLevelEnabled(logrus.DebugLevel) {
+				log.Debugf("Error getting file info for %s: %v", path, errStat)
 			}
 			return nil
 		}
@@ -84,8 +84,8 @@ func LatestModTime(dir string, ignoreChain IgnoreChain) (time.Time, error) {
 func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bool, error) {
 	// Always regenerate if force is true
 	if globalForce {
-		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Force regeneration for %s", dir)
+		if IsLevelEnabled(logrus.DebugLevel) {
+			log.Debugf("Force regeneration for %s", dir)
 		}
 		return true, nil
 	}
@@ -94,8 +94,8 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
-		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("glance.md not found in %s, will generate", dir)
+		if IsLevelEnabled(logrus.DebugLevel) {
+			log.Debugf("glance.md not found in %s, will generate", dir)
 		}
 		return true, nil
 	}
@@ -107,8 +107,8 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 	}
 
 	if latest.After(glanceInfo.ModTime()) {
-		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Found newer files in %s, will regenerate glance.md", dir)
+		if IsLevelEnabled(logrus.DebugLevel) {
+			log.Debugf("Found newer files in %s, will regenerate glance.md", dir)
 		}
 		return true, nil
 	}
