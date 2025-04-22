@@ -14,18 +14,17 @@ Glance is a command-line tool that recursively scans a directory tree and genera
 1. **Build or Run:**
    Clone the repository and run the tool with:
 
-       go build -o glance && ./glance [--force] [--verbose] /path/to/directory
+       go build -o glance && ./glance [--force] /path/to/directory
 
    or run directly:
 
-       go run . [--force] [--verbose] /path/to/directory
+       go run . [--force] /path/to/directory
 
 2. **Set Up Environment:**
    Ensure you have a valid `GEMINI_API_KEY` set in your environment or in a `.env` file.
 
 3. **Flags:**
    - `--force` will regenerate `glance.md` even if it already exists.
-   - `--verbose` enables detailed logging output.
    - `--prompt-file` allows specifying a custom prompt template file.
 
 ## Environment Variables
@@ -73,8 +72,8 @@ If the `.env` file is absent, Glance will fall back to your system's environment
 ## Logging
 
 Glance uses [logrus](https://github.com/sirupsen/logrus) for logging:
-- **Info-level Logging:** Default logging of key actions.
-- **Debug-level Logging:** Enabled with the `--verbose` flag for more detailed output.
+- **Debug-level Logging:** Enabled by default for detailed diagnostics and tracing.
+- **Structured Logging:** Uses logrus fields to provide contextual information in logs.
 - Additionally, it features a spinner and a progress bar during scanning and generation.
 
 ## Package Structure

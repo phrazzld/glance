@@ -188,8 +188,8 @@ func TestGlanceWithModifiedFiles(t *testing.T) {
 	assert.NotEqual(t, initialTime, currentStat.ModTime(), "glance.md should have been regenerated after file modification")
 }
 
-// TestGlanceVerboseFlag tests the behavior of the --verbose flag
-func TestGlanceVerboseFlag(t *testing.T) {
+// TestDebugLogging verifies that debug level logs are present by default
+func TestDebugLogging(t *testing.T) {
 	if os.Getenv("TEST_WITH_COMPILED_BINARY") != "true" {
 		t.Skip("Skipping test that requires compiled binary. Set TEST_WITH_COMPILED_BINARY=true to run.")
 	}
@@ -202,14 +202,14 @@ func TestGlanceVerboseFlag(t *testing.T) {
 	testProjectDir, cleanup := setupTestProjectStructure(t)
 	defer cleanup()
 
-	// Run glance with --verbose flag
-	cmd := exec.Command("./glance", "--verbose", testProjectDir)
+	// Run glance with default settings
+	cmd := exec.Command("./glance", testProjectDir)
 	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "Glance with --verbose flag failed")
+	require.NoError(t, err, "Glance execution failed")
 
 	// Check for debug level messages in the output
 	outputStr := string(output)
-	assert.Contains(t, outputStr, "level=debug", "Verbose output should contain debug level messages")
+	assert.Contains(t, outputStr, "level=debug", "Output should contain debug level messages by default")
 }
 
 // TestGlanceWithCustomPromptFile tests using a custom prompt file
@@ -316,12 +316,12 @@ func TestBinaryFileHandling(t *testing.T) {
 	err := os.WriteFile(binaryFile, binaryFileContent, 0644)
 	require.NoError(t, err, "Failed to create binary file")
 
-	// Run glance with verbose output
-	cmd := exec.Command("./glance", "--verbose", testProjectDir)
+	// Run glance (debug logging is now on by default)
+	cmd := exec.Command("./glance", testProjectDir)
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "Glance run failed")
 
-	// Check verbose output for binary file detection
+	// Check debug output for binary file detection
 	outputStr := string(output)
 	assert.Contains(t, outputStr, "binary", "Output should mention binary file detection")
 

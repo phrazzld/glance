@@ -108,7 +108,7 @@
     - **Depends‑on:** [T001, T002, T003, T004, T005, T006, T007]
 
 ## Documentation
-- [ ] **T009 · Chore · P2: update documentation to remove verbose flag references**
+- [x] **T009 · Chore · P2: update documentation to remove verbose flag references**
     - **Context:** Plan Step 9: Update Documentation; Documentation Section
     - **Action:**
         1. Remove description and usage of the `--verbose` flag from `README.md`.
