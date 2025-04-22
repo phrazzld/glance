@@ -272,7 +272,7 @@ func TestGatherLocalFiles(t *testing.T) {
 
 	// Test with no ignore rules
 	t.Run("Basic gathering with no ignore rules", func(t *testing.T) {
-		results, err := GatherLocalFiles(testDir, nil, 0, true)
+		results, err := GatherLocalFiles(testDir, nil, 0)
 		assert.NoError(t, err)
 
 		// Should find exactly 2 files (file1.txt and file2.json)
@@ -292,7 +292,7 @@ func TestGatherLocalFiles(t *testing.T) {
 
 	// Test with truncation
 	t.Run("Truncation of large files", func(t *testing.T) {
-		results, err := GatherLocalFiles(testDir, nil, 5, true)
+		results, err := GatherLocalFiles(testDir, nil, 5)
 		assert.NoError(t, err)
 
 		// Content should be truncated
@@ -319,7 +319,7 @@ func TestGatherLocalFiles(t *testing.T) {
 			},
 		}
 
-		results, err := GatherLocalFiles(testDir, ignoreChain, 0, true)
+		results, err := GatherLocalFiles(testDir, ignoreChain, 0)
 		assert.NoError(t, err)
 
 		// Should only find file1.txt as file2.json is ignored by gitignore
@@ -331,7 +331,7 @@ func TestGatherLocalFiles(t *testing.T) {
 	// Test with non-existent directory
 	t.Run("Error handling for non-existent directory", func(t *testing.T) {
 		nonExistentDir := filepath.Join(testDir, "does-not-exist")
-		_, err := GatherLocalFiles(nonExistentDir, nil, 0, true)
+		_, err := GatherLocalFiles(nonExistentDir, nil, 0)
 		assert.Error(t, err)
 	})
 
@@ -341,7 +341,7 @@ func TestGatherLocalFiles(t *testing.T) {
 		err := os.Mkdir(emptyDir, 0755)
 		require.NoError(t, err)
 
-		results, err := GatherLocalFiles(emptyDir, nil, 0, true)
+		results, err := GatherLocalFiles(emptyDir, nil, 0)
 		assert.NoError(t, err)
 		assert.Empty(t, results, "Empty directory should return empty results map")
 	})

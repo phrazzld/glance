@@ -28,17 +28,16 @@ const (
 //   - path: The absolute path to the file
 //   - baseDir: The base directory relative to which the file is being evaluated
 //   - ignoreChain: A chain of gitignore matchers to check for ignored files
-//   - verbose: Whether to log verbose debug information
 //
 // Returns:
 //   - true if the file should be ignored, false otherwise
-func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain, verbose bool) bool {
+func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain) bool {
 	// Get the file name without the path
 	filename := filepath.Base(path)
 
 	// Always ignore hidden files
 	if strings.HasPrefix(filename, ".") {
-		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Ignoring hidden file: %s", path)
 		}
 		return true
@@ -46,7 +45,7 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain, verb
 
 	// Always ignore glance.md files (our output files)
 	if filename == GlanceFilename {
-		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Ignoring glance.md file: %s", path)
 		}
 		return true
@@ -70,17 +69,16 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain, verb
 //   - path: The absolute path to the directory
 //   - baseDir: The base directory relative to which the directory is being evaluated
 //   - ignoreChain: A chain of gitignore matchers to check for ignored directories
-//   - verbose: Whether to log verbose debug information
 //
 // Returns:
 //   - true if the directory should be ignored, false otherwise
-func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain, verbose bool) bool {
+func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain) bool {
 	// Get the directory name without the path
 	dirname := filepath.Base(path)
 
 	// Always ignore hidden directories
 	if strings.HasPrefix(dirname, ".") {
-		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Ignoring hidden directory: %s", path)
 		}
 		return true
@@ -88,7 +86,7 @@ func ShouldIgnoreDir(path string, baseDir string, ignoreChain IgnoreChain, verbo
 
 	// Always ignore node_modules
 	if dirname == NodeModulesDir {
-		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Ignoring node_modules directory: %s", path)
 		}
 		return true

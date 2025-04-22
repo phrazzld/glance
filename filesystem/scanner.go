@@ -42,7 +42,6 @@ type queueItem struct {
 //   - An error, if any occurred during directory traversal
 func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) {
 	var dirsList []string
-	verbose := logrus.IsLevelEnabled(logrus.DebugLevel)
 
 	// BFS queue
 	queue := []queueItem{
@@ -63,11 +62,11 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 		} else {
 			// For non-root directories, use the shared ignore functions to check
 			// if the directory should be included
-			if !ShouldIgnoreDir(current.path, filepath.Dir(current.path), current.ignoreChain, verbose) {
+			if !ShouldIgnoreDir(current.path, filepath.Dir(current.path), current.ignoreChain) {
 				dirsList = append(dirsList, current.path)
 			} else {
 				// Skip this directory - don't process its children
-				if verbose {
+				if logrus.IsLevelEnabled(logrus.DebugLevel) {
 					logrus.Debugf("Skipping directory %s: matched by ignore rules", current.path)
 				}
 				continue
@@ -76,7 +75,7 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 
 		// Load .gitignore in the current directory, if it exists
 		localIgnore, err := LoadGitignore(current.path)
-		if err != nil && verbose {
+		if err != nil && logrus.IsLevelEnabled(logrus.DebugLevel) {
 			logrus.Debugf("Error loading .gitignore from %s: %v", current.path, err)
 		}
 
@@ -116,7 +115,7 @@ func ListDirsWithIgnores(root string) ([]string, map[string]IgnoreChain, error) 
 			// This is an optimization to avoid creating queue items for directories
 			// we know will be excluded
 			if strings.HasPrefix(name, ".") || name == NodeModulesDir {
-				if verbose {
+				if logrus.IsLevelEnabled(logrus.DebugLevel) {
 					logrus.Debugf("Skipping hidden/node_modules directory: %s", fullChildPath)
 				}
 				continue

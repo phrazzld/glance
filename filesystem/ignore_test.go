@@ -37,7 +37,6 @@ func TestShouldIgnoreFile(t *testing.T) {
 		path     string
 		baseDir  string
 		chain    IgnoreChain
-		verbose  bool
 		expected bool
 	}{
 		{
@@ -45,7 +44,6 @@ func TestShouldIgnoreFile(t *testing.T) {
 			path:     filepath.Join(testDir, ".hidden"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 		{
@@ -53,7 +51,6 @@ func TestShouldIgnoreFile(t *testing.T) {
 			path:     filepath.Join(testDir, "glance.md"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 		{
@@ -61,7 +58,6 @@ func TestShouldIgnoreFile(t *testing.T) {
 			path:     filepath.Join(testDir, "regular.txt"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: false,
 		},
 		{
@@ -69,7 +65,6 @@ func TestShouldIgnoreFile(t *testing.T) {
 			path:     filepath.Join(testDir, "test.log"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 		{
@@ -77,7 +72,6 @@ func TestShouldIgnoreFile(t *testing.T) {
 			path:     filepath.Join(testDir, "test.tmp"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 		{
@@ -85,14 +79,13 @@ func TestShouldIgnoreFile(t *testing.T) {
 			path:     filepath.Join(testDir, "ignored_dir", "file.txt"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := ShouldIgnoreFile(tc.path, tc.baseDir, tc.chain, tc.verbose)
+			result := ShouldIgnoreFile(tc.path, tc.baseDir, tc.chain)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
@@ -125,7 +118,6 @@ func TestShouldIgnoreDir(t *testing.T) {
 		path     string
 		baseDir  string
 		chain    IgnoreChain
-		verbose  bool
 		expected bool
 	}{
 		{
@@ -133,7 +125,6 @@ func TestShouldIgnoreDir(t *testing.T) {
 			path:     filepath.Join(testDir, ".git"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 		{
@@ -141,7 +132,6 @@ func TestShouldIgnoreDir(t *testing.T) {
 			path:     filepath.Join(testDir, "node_modules"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 		{
@@ -149,7 +139,6 @@ func TestShouldIgnoreDir(t *testing.T) {
 			path:     filepath.Join(testDir, "src"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: false,
 		},
 		{
@@ -157,7 +146,6 @@ func TestShouldIgnoreDir(t *testing.T) {
 			path:     filepath.Join(testDir, "ignored_dir"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 		{
@@ -165,14 +153,13 @@ func TestShouldIgnoreDir(t *testing.T) {
 			path:     filepath.Join(testDir, "build"),
 			baseDir:  testDir,
 			chain:    ignoreChain,
-			verbose:  false,
 			expected: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := ShouldIgnoreDir(tc.path, tc.baseDir, tc.chain, tc.verbose)
+			result := ShouldIgnoreDir(tc.path, tc.baseDir, tc.chain)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
