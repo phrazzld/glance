@@ -64,7 +64,7 @@
         1. Integration test `TestNoChangesMeansNoRegeneration` passes.
     - **Depends‑on:** [T001]
 
-- [ ] **T007 · Test · P2: add integration test for sibling directory isolation**
+- [x] **T007 · Test · P2: add integration test for sibling directory isolation**
     - **Context:** Testing Strategy #2
     - **Action:**
         1. Create a test with branching directory structure (e.g., root/a/b and root/c).

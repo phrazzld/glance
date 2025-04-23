@@ -697,3 +697,164 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 			fmt.Sprintf("%s's glance.md should NOT have been regenerated (mod times should be equal)", level))
 	}
 }
+
+// setupBranchingDirectoryStructure creates a directory structure with multiple branches
+// for testing sibling directory isolation
+// Structure:
+//
+//	root/
+//	├── branch_a/
+//	│   └── deep_a/
+//	│       └── nested_a/
+//	└── branch_b/
+//	    └── deep_b/
+func setupBranchingDirectoryStructure(t *testing.T) (string, map[string]string, func()) {
+	rootDir, err := os.MkdirTemp("", "glance-sibling-isolation-test-*")
+	require.NoError(t, err, "Failed to create root test directory")
+
+	// Create branching directory structure with two separate branches
+	branchADir := filepath.Join(rootDir, "branch_a")
+	deepADir := filepath.Join(branchADir, "deep_a")
+	nestedADir := filepath.Join(deepADir, "nested_a")
+
+	branchBDir := filepath.Join(rootDir, "branch_b")
+	deepBDir := filepath.Join(branchBDir, "deep_b")
+
+	// Create all directories
+	for _, dir := range []string{branchADir, deepADir, nestedADir, branchBDir, deepBDir} {
+		err := os.MkdirAll(dir, 0755)
+		require.NoError(t, err, "Failed to create directory: "+dir)
+	}
+
+	// Create files in each directory
+	paths := map[string]string{
+		"root":     rootDir,
+		"branch_a": branchADir,
+		"deep_a":   deepADir,
+		"nested_a": nestedADir,
+		"branch_b": branchBDir,
+		"deep_b":   deepBDir,
+	}
+
+	// Add a file to each directory
+	for level, dir := range paths {
+		filePath := filepath.Join(dir, level+".txt")
+		err := os.WriteFile(filePath, []byte("Content for "+level), 0644)
+		require.NoError(t, err, "Failed to create file in "+level)
+	}
+
+	// Return cleanup function
+	return rootDir, paths, func() {
+		err := os.RemoveAll(rootDir)
+		if err != nil {
+			t.Logf("Warning: failed to clean up test directory: %v", err)
+		}
+	}
+}
+
+// TestSiblingDirectoryIsolation tests that when a file in one branch of the directory structure
+// changes, glance.md files in sibling branches are not regenerated
+func TestSiblingDirectoryIsolation(t *testing.T) {
+	// Create test directory with branching structure
+	rootDir, dirs, cleanup := setupBranchingDirectoryStructure(t)
+	defer cleanup()
+
+	// Create a mock LLM client and service
+	mockLLMClient := new(mocks.LLMClient)
+	mockClient := &MockClient{LLMClient: mockLLMClient}
+	mockLLMClient.On("Generate", mock.Anything, mock.Anything).Return("# Mock Glance\n\nThis is a mock glance.md summary.", nil)
+	mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(100, nil)
+	service, err := llm.NewService(mockClient)
+	require.NoError(t, err, "Failed to create LLM service")
+
+	// Configure application for the root directory
+	cfg := config.NewDefaultConfig().
+		WithTargetDir(rootDir)
+
+	// Get all directories to process
+	dirsList, dirToIgnoreChain, err := filesystem.ListDirsWithIgnores(rootDir)
+	require.NoError(t, err, "Failed to list directories")
+
+	// Reverse dirsList to process from deepest to shallowest
+	for i, j := 0, len(dirsList)-1; i < j; i, j = i+1, j-1 {
+		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
+	}
+
+	// Initial run to generate all glance.md files
+	initialCfg := cfg.WithForce(true)
+	_ = ProcessDirectoriesWithTracking(dirsList, dirToIgnoreChain, initialCfg, service)
+
+	// Verify all directories have glance.md files
+	for _, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
+	}
+
+	// Wait to ensure file timestamps will be different if files are regenerated
+	time.Sleep(1 * time.Second)
+
+	// Get initial modification times for all directories
+	initialModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		initialModTimes[level] = info.ModTime()
+		t.Logf("Initial mod time for %s: %v", level, initialModTimes[level])
+	}
+
+	// Modify a file in the nested_a branch
+	nestedAFilePath := filepath.Join(dirs["nested_a"], "nested_a.txt")
+	newContent := "Modified content for nested_a - " + time.Now().String()
+	err = os.WriteFile(nestedAFilePath, []byte(newContent), 0644)
+	require.NoError(t, err, "Failed to modify file in nested_a directory")
+
+	// Explicitly touch the file to ensure modification time is updated
+	now := time.Now()
+	err = os.Chtimes(nestedAFilePath, now, now)
+	require.NoError(t, err, "Failed to update file modification time")
+
+	// Run again without the force flag
+	secondRunCfg := cfg.WithForce(false)
+	regenMap := ProcessDirectoriesWithTracking(dirsList, dirToIgnoreChain, secondRunCfg, service)
+
+	// Get final modification times
+	finalModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		finalModTimes[level] = info.ModTime()
+		t.Logf("Final mod time for %s: %v", level, finalModTimes[level])
+	}
+
+	// Affected Paths: nested_a, deep_a, branch_a
+	// These should be regenerated based on file changes and bubble-up
+	affectedPaths := []string{"nested_a", "deep_a", "branch_a"}
+	for _, path := range affectedPaths {
+		t.Logf("Checking affected path: %s", path)
+		assert.True(t, finalModTimes[path].After(initialModTimes[path]),
+			fmt.Sprintf("%s glance.md should have been regenerated (final time should be after initial time)", path))
+
+		// For all affected paths, they should be marked for regeneration or be the source of change
+		assert.True(t, regenMap[dirs[path]] || path == "nested_a",
+			fmt.Sprintf("%s should be marked for regeneration or be the modified directory", path))
+	}
+
+	// The root directory should also be regenerated, but it's not always in the regenMap
+	// since it's the target directory and is handled differently
+	t.Logf("Checking root directory")
+	assert.True(t, finalModTimes["root"].After(initialModTimes["root"]),
+		"root glance.md should have been regenerated (final time should be after initial time)")
+
+	// Unaffected Paths: branch_b, deep_b
+	// These should NOT be regenerated
+	unaffectedPaths := []string{"branch_b", "deep_b"}
+	for _, path := range unaffectedPaths {
+		t.Logf("Checking unaffected path: %s", path)
+		assert.Equal(t, initialModTimes[path], finalModTimes[path],
+			fmt.Sprintf("%s glance.md should NOT have been regenerated (mod times should be equal)", path))
+		assert.False(t, regenMap[dirs[path]],
+			fmt.Sprintf("%s should NOT be marked for regeneration", path))
+	}
+}
