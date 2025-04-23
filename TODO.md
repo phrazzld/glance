@@ -47,7 +47,7 @@
         2. Test successfully verifies the expected outcome of forced regeneration.
     - **Depends‑on:** [T002]
 
-- [ ] **T006 · Bugfix · P2: remove inverted condition blocking windows path test**
+- [x] **T006 · Bugfix · P2: remove inverted condition blocking windows path test**
     - **Context:** cr-05 Fix Windows Path Test Logic
     - **Action:**
         1. Locate the test responsible for Windows path logic.

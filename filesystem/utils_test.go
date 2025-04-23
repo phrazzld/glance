@@ -295,22 +295,20 @@ func TestBubbleUpParents(t *testing.T) {
 
 	// Test case 7: Windows-style paths
 	t.Run("Windows-style paths", func(t *testing.T) {
-		if filepath.Separator != '\\' {
-			// This test is useful on all platforms because filepath.Dir will
-			// process paths according to the host platform
-			root := filepath.FromSlash("C:/Users/test")
-			dir := filepath.FromSlash("C:/Users/test/Documents/folder/subfolder")
-			needsRegen := make(map[string]bool)
+		// This test is useful on all platforms because filepath.Dir will
+		// process paths according to the host platform
+		root := filepath.FromSlash("C:/Users/test")
+		dir := filepath.FromSlash("C:/Users/test/Documents/folder/subfolder")
+		needsRegen := make(map[string]bool)
 
-			BubbleUpParents(dir, root, needsRegen)
+		BubbleUpParents(dir, root, needsRegen)
 
-			documents := filepath.FromSlash("C:/Users/test/Documents")
-			documentsFolder := filepath.FromSlash("C:/Users/test/Documents/folder")
+		documents := filepath.FromSlash("C:/Users/test/Documents")
+		documentsFolder := filepath.FromSlash("C:/Users/test/Documents/folder")
 
-			assert.True(t, needsRegen[documentsFolder], "Should mark parent folders correctly on Windows paths")
-			assert.True(t, needsRegen[documents], "Should mark grandparent folders correctly on Windows paths")
-			assert.False(t, needsRegen[root], "Should not mark root on Windows paths")
-		}
+		assert.True(t, needsRegen[documentsFolder], "Should mark parent folders correctly on Windows paths")
+		assert.True(t, needsRegen[documents], "Should mark grandparent folders correctly on Windows paths")
+		assert.False(t, needsRegen[root], "Should not mark root on Windows paths")
 	})
 
 	// Test case 8: Map with false values
