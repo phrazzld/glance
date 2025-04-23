@@ -545,46 +545,43 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 	// Wait to ensure file timestamps will be different
 	time.Sleep(1 * time.Second)
 
-	// Force regenerate the level3 directory directly
+	// Create a new directory list with just the level3 directory
 	level3Dir := dirs["level3"]
-	level3GlancePath := filepath.Join(level3Dir, "glance.md")
-	content := "# Forced Glance\n\nThis is a forcibly regenerated glance.md file\nGenerated at: " + time.Now().String()
-	err = os.WriteFile(level3GlancePath, []byte(content), filesystem.DefaultFileMode)
-	require.NoError(t, err, "Failed to manually regenerate level3 glance.md")
+	level3DirsList := []string{level3Dir}
+	level3IgnoreChain := map[string]filesystem.IgnoreChain{level3Dir: dirToIgnoreChain[level3Dir]}
 
-	// Explicitly touch the file to ensure modification time is updated
-	now := time.Now()
-	err = os.Chtimes(level3GlancePath, now, now)
-	require.NoError(t, err, "Failed to update glance.md modification time")
+	// Configure level3 config with the force flag set to true - this is the key change
+	// using the actual application's force mechanism instead of manual simulation
+	level3Cfg := config.NewDefaultConfig().
+		WithTargetDir(level3Dir).
+		WithForce(true) // Using the actual force mechanism here
 
-	// Reset the progress tracker for the next run
+	// Reset the progress tracker for the level3 run
 	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
 
-	// Instead of trying to invoke processDirectories directly on level3,
-	// we'll update level3's glance.md file directly and then bubble up changes manually
+	// Process level3 directory with force flag to trigger regeneration
+	_, _ = processDirectories(level3DirsList, level3IgnoreChain, level3Cfg, service, progressFactory)
 
-	// Directly touch the level3 glance.md file again to ensure it's seen as regenerated
-	now = time.Now()
-	err = os.Chtimes(level3GlancePath, now, now)
-	require.NoError(t, err, "Failed to update glance.md modification time again")
+	// Wait a bit to ensure timestamps will be different if files are regenerated
+	time.Sleep(100 * time.Millisecond)
 
-	// Manually bubble up regeneration from level3 to parents
+	// Manually bubble up regeneration from level3 to parents to make the test more reliable
+	// This simulates what happens in the application code but makes it explicit in our test
 	needsRegen := make(map[string]bool)
 	filesystem.BubbleUpParents(level3Dir, rootDir, needsRegen)
 
-	// Verify parent directories are marked for regeneration
-	assert.True(t, needsRegen[dirs["level2"]], "level2 directory should be marked for regeneration in our manual check")
-	assert.True(t, needsRegen[dirs["level1"]], "level1 directory should be marked for regeneration in our manual check")
+	// Verify parent directories are correctly marked for regeneration in our manual check
+	assert.True(t, needsRegen[dirs["level2"]], "level2 directory should be marked for regeneration in manual check")
+	assert.True(t, needsRegen[dirs["level1"]], "level1 directory should be marked for regeneration in manual check")
 
-	// Reset the progress tracker for our main run
+	// Reset the progress tracker for the main run
 	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
 
 	// Process all directories to propagate changes
 	rootCfg = rootCfg.WithForce(false)
+	// We're not asserting on the regenMap anymore since we've already verified the bubbling behavior above
+	// The important part is that the timestamps show files actually get regenerated
 	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, progressFactory)
-
-	// Instead of checking the regeneration map, we'll just verify the file modification times
-	// which is the observable behavior we care about
 
 	// Get new modification times
 	finalModTimes := make(map[string]time.Time)

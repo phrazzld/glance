@@ -36,7 +36,7 @@
         3. All relevant integration tests pass using the production code path.
     - **Depends‑on:** [T002]
 
-- [ ] **T004 · Test · P2: refactor forced regeneration test to use actual force mechanism**
+- [x] **T004 · Test · P2: refactor forced regeneration test to use actual force mechanism**
     - **Context:** cr-03 Fix Forced Regeneration Test
     - **Action:**
         1. Modify the forced regeneration test to utilize the application's actual force flag/mechanism when calling the refactored `processDirectories`.
