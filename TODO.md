@@ -33,7 +33,7 @@
         2. Test coverage is adequate (determined by coverage report).
     - **Depends‑on:** none
 
-- [ ] **T004 · Test · P1: add integration test for parent regeneration on child change**
+- [x] **T004 · Test · P1: add integration test for parent regeneration on child change**
     - **Context:** Testing Strategy #2, #3
     - **Action:**
         1. Create a test with multi-level directory structure in `main_test.go` or `integration_test.go`.
