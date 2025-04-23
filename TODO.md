@@ -70,7 +70,7 @@
     - **Depends‑on:** none
 
 ## Logging
-- [ ] **T007 · Refactor · P2: standardize structured log field names**
+- [x] **T007 · Refactor · P2: standardize structured log field names**
     - **Context:** cr-06 Standardize Log Field Names
     - **Action:**
         1. Define standard names (e.g., `error` vs `err`, `path` vs `file_path`).

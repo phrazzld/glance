@@ -359,7 +359,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	glancePath := filepath.Join(dir, "glance.md")
 	logrus.WithFields(logrus.Fields{
 		"directory": dir,
-		"file_path": glancePath,
+		"path":      glancePath,
 		"stage":     "path_validation",
 	}).Debug("Validating glance.md path")
 
@@ -367,7 +367,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	if pathErr != nil {
 		logrus.WithFields(logrus.Fields{
 			"directory": dir,
-			"file_path": glancePath,
+			"path":      glancePath,
 			"error":     pathErr,
 			"stage":     "path_validation",
 		}).Error("Invalid glance.md path")
