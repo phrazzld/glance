@@ -13,6 +13,7 @@ import (
 )
 
 // TestSetupLogging verifies that the setupLogging function properly configures the logger
+// based on the GLANCE_LOG_LEVEL environment variable
 func TestSetupLogging(t *testing.T) {
 	// Capture log output
 	var buf bytes.Buffer
@@ -20,19 +21,85 @@ func TestSetupLogging(t *testing.T) {
 	logrus.SetOutput(&buf)
 	defer logrus.SetOutput(originalOutput)
 
-	// Test verbose=true
-	setupLogging(true)
-	assert.Equal(t, logrus.DebugLevel, logrus.GetLevel(), "Logger should be set to debug level when verbose is true")
+	// Save current log level to restore after test
+	originalLevel := logrus.GetLevel()
+	defer logrus.SetLevel(originalLevel)
 
-	// Test verbose=false
-	setupLogging(false)
-	assert.Equal(t, logrus.InfoLevel, logrus.GetLevel(), "Logger should be set to info level when verbose is false")
+	// Test cases for various log level settings
+	testCases := []struct {
+		name          string
+		envValue      string
+		expectedLevel logrus.Level
+	}{
+		{
+			name:          "debug level",
+			envValue:      "debug",
+			expectedLevel: logrus.DebugLevel,
+		},
+		{
+			name:          "info level",
+			envValue:      "info",
+			expectedLevel: logrus.InfoLevel,
+		},
+		{
+			name:          "warn level",
+			envValue:      "warn",
+			expectedLevel: logrus.WarnLevel,
+		},
+		{
+			name:          "warning level (alternative)",
+			envValue:      "warning",
+			expectedLevel: logrus.WarnLevel,
+		},
+		{
+			name:          "error level",
+			envValue:      "error",
+			expectedLevel: logrus.ErrorLevel,
+		},
+		{
+			name:          "empty string defaults to info",
+			envValue:      "",
+			expectedLevel: logrus.InfoLevel,
+		},
+		{
+			name:          "invalid value defaults to info",
+			envValue:      "invalid_level",
+			expectedLevel: logrus.InfoLevel,
+		},
+		{
+			name:          "case insensitivity",
+			envValue:      "DEBUG",
+			expectedLevel: logrus.DebugLevel,
+		},
+	}
 
-	// Test formatter settings
-	formatter, ok := logrus.StandardLogger().Formatter.(*logrus.TextFormatter)
-	assert.True(t, ok, "Formatter should be TextFormatter")
-	assert.True(t, formatter.FullTimestamp, "FullTimestamp should be true")
-	assert.True(t, formatter.ForceColors, "ForceColors should be true")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set environment variable for this test case
+			if tc.envValue != "" {
+				os.Setenv("GLANCE_LOG_LEVEL", tc.envValue)
+				defer os.Unsetenv("GLANCE_LOG_LEVEL")
+			} else {
+				os.Unsetenv("GLANCE_LOG_LEVEL")
+			}
+
+			// Run the function being tested
+			setupLogging()
+
+			// Verify the log level was set correctly
+			assert.Equal(t, tc.expectedLevel, logrus.GetLevel())
+		})
+	}
+
+	// Test formatter settings (independent of log level)
+	t.Run("formatter settings", func(t *testing.T) {
+		os.Unsetenv("GLANCE_LOG_LEVEL")
+		setupLogging()
+		formatter, ok := logrus.StandardLogger().Formatter.(*logrus.TextFormatter)
+		assert.True(t, ok, "Formatter should be TextFormatter")
+		assert.True(t, formatter.FullTimestamp, "FullTimestamp should be true")
+		assert.True(t, formatter.ForceColors, "ForceColors should be true")
+	})
 }
 
 // TestMainWithConfig verifies that the main function works with the new config package

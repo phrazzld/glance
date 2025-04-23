@@ -17,7 +17,6 @@ type Service struct {
 	client         Client
 	maxRetries     int
 	modelName      string
-	verbose        bool
 	promptTemplate string
 }
 
@@ -30,9 +29,6 @@ type ServiceConfig struct {
 	// ModelName is the name of the LLM model to use
 	ModelName string
 
-	// Verbose enables detailed logging for LLM operations
-	Verbose bool
-
 	// PromptTemplate is the template string to use for generating prompts
 	PromptTemplate string
 }
@@ -43,7 +39,6 @@ func DefaultServiceConfig() ServiceConfig {
 	return ServiceConfig{
 		MaxRetries:     3,
 		ModelName:      "gemini-2.0-flash", // Make sure this matches the client default
-		Verbose:        false,
 		PromptTemplate: "",
 	}
 }
@@ -59,13 +54,6 @@ func WithServiceMaxRetries(maxRetries int) func(*ServiceConfig) {
 func WithServiceModelName(modelName string) func(*ServiceConfig) {
 	return func(c *ServiceConfig) {
 		c.ModelName = modelName
-	}
-}
-
-// WithVerbose configures verbose logging for the service.
-func WithVerbose(verbose bool) func(*ServiceConfig) {
-	return func(c *ServiceConfig) {
-		c.Verbose = verbose
 	}
 }
 
@@ -102,7 +90,6 @@ func NewService(client Client, options ...func(*ServiceConfig)) (*Service, error
 		client:         client,
 		maxRetries:     config.MaxRetries,
 		modelName:      config.ModelName,
-		verbose:        config.Verbose,
 		promptTemplate: config.PromptTemplate,
 	}, nil
 }
@@ -124,20 +111,44 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	// Build prompt data
 	promptData := BuildPromptData(dir, subGlances, fileMap)
 
+	// Log start of prompt generation with structured fields
+	logrus.WithFields(logrus.Fields{
+		"directory":  dir,
+		"model":      s.modelName,
+		"operation":  "generate_prompt",
+		"file_count": len(fileMap),
+	}).Debug("Generating prompt from template")
+
 	// Use template from the service
 	prompt, err := GeneratePrompt(promptData, s.promptTemplate)
 	if err != nil {
+		// Log prompt generation error with structured fields
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"model":     s.modelName,
+			"operation": "generate_prompt",
+			"error":     err,
+			"status":    "failed",
+		}).Error("Failed to generate prompt from template")
 		return "", fmt.Errorf("failed to generate prompt: %w", err)
 	}
 
 	// Optional token counting for debugging
-	if s.verbose {
-		tokens, tokenErr := s.client.CountTokens(ctx, prompt)
-		if tokenErr == nil {
-			logrus.Debugf("🔤 Token count for %s: %d tokens in prompt", dir, tokens)
-		} else {
-			logrus.Debugf("⚠️ Couldn't count tokens for %s: %v", dir, tokenErr)
-		}
+	tokens, tokenErr := s.client.CountTokens(ctx, prompt)
+	if tokenErr == nil {
+		logrus.WithFields(logrus.Fields{
+			"directory":   dir,
+			"token_count": tokens,
+			"model":       s.modelName,
+			"operation":   "count_tokens",
+		}).Debug("Token count for prompt")
+	} else {
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"model":     s.modelName,
+			"operation": "count_tokens",
+			"error":     tokenErr,
+		}).Debug("Failed to count tokens")
 	}
 
 	// Attempt generation with retries
@@ -145,33 +156,67 @@ func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMa
 	maxAttempts := s.maxRetries + 1 // +1 for the initial attempt
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if s.verbose {
-			if attempt > 1 {
-				logrus.Debugf("🔄 Retry #%d/%d for %s", attempt-1, s.maxRetries, dir)
-			} else {
-				logrus.Debugf("🚀 Generating content for %s", dir)
-			}
+		if attempt > 1 {
+			logrus.WithFields(logrus.Fields{
+				"directory":    dir,
+				"retry_number": attempt - 1,
+				"max_retries":  s.maxRetries,
+				"model":        s.modelName,
+				"operation":    "generate_content",
+			}).Debug("Retrying content generation")
+		} else {
+			logrus.WithFields(logrus.Fields{
+				"directory": dir,
+				"model":     s.modelName,
+				"operation": "generate_content",
+			}).Debug("Generating content")
 		}
 
 		// Generate content
 		result, err := s.client.Generate(ctx, prompt)
 		if err == nil {
 			// Success
+			logrus.WithFields(logrus.Fields{
+				"directory": dir,
+				"model":     s.modelName,
+				"operation": "generate_content",
+				"attempts":  attempt,
+				"status":    "success",
+			}).Debug("Content generation successful")
 			return result, nil
 		}
 
 		// Log error and retry
 		lastError = err
-		if s.verbose {
-			logrus.Debugf("❌ Attempt %d for %s failed: %v", attempt, dir, err)
-		}
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"attempt":   attempt,
+			"model":     s.modelName,
+			"operation": "generate_content",
+			"error":     err,
+			"status":    "failed",
+		}).Debug("Content generation attempt failed")
 
 		// Simple backoff before retry
 		if attempt < maxAttempts {
 			backoffMs := 100 * attempt * attempt
+			logrus.WithFields(logrus.Fields{
+				"directory":  dir,
+				"backoff_ms": backoffMs,
+			}).Debug("Applying backoff before retry")
 			time.Sleep(time.Duration(backoffMs) * time.Millisecond)
 		}
 	}
+
+	// Log final error with structured fields
+	logrus.WithFields(logrus.Fields{
+		"directory":    dir,
+		"max_attempts": maxAttempts,
+		"model":        s.modelName,
+		"operation":    "generate_content",
+		"error":        lastError,
+		"status":       "failed",
+	}).Error("Content generation failed after all retry attempts")
 
 	return "", fmt.Errorf("failed to generate content after %d attempts: %w",
 		s.maxRetries, lastError)

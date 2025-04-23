@@ -27,12 +27,11 @@ const DefaultFileMode = 0o600
 // Parameters:
 //   - dir: The directory to search for the latest modification time
 //   - ignoreChain: A chain of gitignore matchers to check for ignored files/directories
-//   - verbose: Whether to log verbose debug information
 //
 // Returns:
 //   - The most recent modification time found
 //   - An error, if any occurred during the search
-func LatestModTime(dir string, ignoreChain IgnoreChain, verbose bool) (time.Time, error) {
+func LatestModTime(dir string, ignoreChain IgnoreChain) (time.Time, error) {
 	var latest time.Time
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, werr error) error {
@@ -43,7 +42,7 @@ func LatestModTime(dir string, ignoreChain IgnoreChain, verbose bool) (time.Time
 		// For directories (except the root dir), check if we should skip them
 		if d.IsDir() && path != dir {
 			// Check if the directory should be ignored
-			if ShouldIgnoreDir(path, dir, ignoreChain, verbose) {
+			if ShouldIgnoreDir(path, dir, ignoreChain) {
 				return fs.SkipDir
 			}
 		}
@@ -51,9 +50,10 @@ func LatestModTime(dir string, ignoreChain IgnoreChain, verbose bool) (time.Time
 		// Get file info for modification time
 		info, errStat := d.Info()
 		if errStat != nil {
-			if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("Error getting file info for %s: %v", path, errStat)
-			}
+			log.WithFields(logrus.Fields{
+				"path":  path,
+				"error": errStat,
+			}).Debug("Error getting file info")
 			return nil
 		}
 
@@ -78,17 +78,14 @@ func LatestModTime(dir string, ignoreChain IgnoreChain, verbose bool) (time.Time
 //   - dir: The directory to check for regeneration need
 //   - globalForce: Whether regeneration is forced globally
 //   - ignoreChain: A chain of gitignore matchers to check for ignored files/directories
-//   - verbose: Whether to log verbose debug information
 //
 // Returns:
 //   - true if regeneration is needed, false otherwise
 //   - an error, if any occurred during the check
-func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain, verbose bool) (bool, error) {
+func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bool, error) {
 	// Always regenerate if force is true
 	if globalForce {
-		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Force regeneration for %s", dir)
-		}
+		log.WithField("directory", dir).Debug("Force regeneration")
 		return true, nil
 	}
 
@@ -96,22 +93,18 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain, ver
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
-		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("glance.md not found in %s, will generate", dir)
-		}
+		log.WithField("directory", dir).Debug("glance.md not found, will generate")
 		return true, nil
 	}
 
 	// Check if any file is newer than glance.md
-	latest, err := LatestModTime(dir, ignoreChain, verbose)
+	latest, err := LatestModTime(dir, ignoreChain)
 	if err != nil {
 		return false, err
 	}
 
 	if latest.After(glanceInfo.ModTime()) {
-		if verbose && logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Found newer files in %s, will regenerate glance.md", dir)
-		}
+		log.WithField("directory", dir).Debug("Found newer files, will regenerate glance.md")
 		return true, nil
 	}
 

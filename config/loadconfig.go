@@ -13,6 +13,13 @@ import (
 	"glance/llm"
 )
 
+// LoadPromptTemplateFunc defines a function type for loading prompt templates
+// This allows us to replace it in tests
+type LoadPromptTemplateFunc func(path string) (string, error)
+
+// loadPromptTemplate is the function to use for loading prompt templates
+var loadPromptTemplate LoadPromptTemplateFunc = LoadPromptTemplate
+
 // directoryChecker defines an interface for checking directory existence
 // This allows for easier testing by substituting a mock implementation
 type directoryChecker interface {
@@ -62,12 +69,10 @@ func LoadConfig(args []string) (*Config, error) {
 	cmdFlags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	var (
 		force      bool
-		verbose    bool
 		promptFile string
 	)
 
 	cmdFlags.BoolVar(&force, "force", false, "regenerate glance.md even if it already exists")
-	cmdFlags.BoolVar(&verbose, "verbose", false, "enable verbose logging (debug level)")
 	cmdFlags.StringVar(&promptFile, "prompt-file", "", "path to custom prompt file (overrides default)")
 
 	// Parse flags
@@ -105,7 +110,7 @@ func LoadConfig(args []string) (*Config, error) {
 
 	// Load .env if present (but don't fail if not found)
 	if err := godotenv.Load(); err != nil {
-		logrus.Warn("📝 No .env file found or couldn't load it. Using system environment variables instead.")
+		logrus.Warn("No .env file found or couldn't load it. Using system environment variables instead.")
 	}
 
 	// Get API key from environment
@@ -115,7 +120,7 @@ func LoadConfig(args []string) (*Config, error) {
 	}
 
 	// Load prompt template using the centralized function
-	promptTemplate, err := LoadPromptTemplate(promptFile)
+	promptTemplate, err := loadPromptTemplate(promptFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load prompt template: %w", err)
 	}
@@ -130,7 +135,6 @@ func LoadConfig(args []string) (*Config, error) {
 		WithAPIKey(apiKey).
 		WithTargetDir(absDir).
 		WithForce(force).
-		WithVerbose(verbose).
 		WithPromptTemplate(promptTemplate)
 
 	return cfg, nil

@@ -89,14 +89,14 @@ func TestLatestModTime(t *testing.T) {
 	}
 
 	// Test the function
-	resultTime, err := LatestModTime(baseDir, ignoreChain, true)
+	resultTime, err := LatestModTime(baseDir, ignoreChain)
 	require.NoError(t, err)
 
 	// The result should be the modification time of file3, not the ignored files
 	assert.Equal(t, latestTime.Unix(), resultTime.Unix(), "Should return the latest modification time of non-ignored files")
 
 	// Test with non-existent directory
-	_, err = LatestModTime(filepath.Join(baseDir, "nonexistent"), ignoreChain, true)
+	_, err = LatestModTime(filepath.Join(baseDir, "nonexistent"), ignoreChain)
 	assert.Error(t, err, "Should return an error for non-existent directory")
 
 	// Test with empty directory
@@ -109,7 +109,7 @@ func TestLatestModTime(t *testing.T) {
 	require.NoError(t, err)
 
 	// Call latestModTime
-	emptyDirTime, err := LatestModTime(emptyIgnoredDir, ignoreChain, true)
+	emptyDirTime, err := LatestModTime(emptyIgnoredDir, ignoreChain)
 	require.NoError(t, err)
 
 	// Should get the directory's own time since there are no files
@@ -120,7 +120,7 @@ func TestLatestModTime(t *testing.T) {
 	err = os.Mkdir(emptyDir, 0755)
 	require.NoError(t, err)
 
-	emptyTime, err := LatestModTime(emptyDir, ignoreChain, true)
+	emptyTime, err := LatestModTime(emptyDir, ignoreChain)
 	require.NoError(t, err)
 
 	// Should return the directory's own modification time
@@ -163,13 +163,13 @@ func TestShouldRegenerate(t *testing.T) {
 
 	// Test cases
 	t.Run("Force regeneration", func(t *testing.T) {
-		shouldRegen, err := ShouldRegenerate(baseDir, true, ignoreChain, false)
+		shouldRegen, err := ShouldRegenerate(baseDir, true, ignoreChain)
 		assert.NoError(t, err)
 		assert.True(t, shouldRegen, "Should return true when force is true")
 	})
 
 	t.Run("No need to regenerate (no newer files)", func(t *testing.T) {
-		shouldRegen, err := ShouldRegenerate(baseDir, false, ignoreChain, false)
+		shouldRegen, err := ShouldRegenerate(baseDir, false, ignoreChain)
 		assert.NoError(t, err)
 		assert.False(t, shouldRegen, "Should return false when no files are newer than glance.md")
 	})
@@ -180,7 +180,7 @@ func TestShouldRegenerate(t *testing.T) {
 		err := os.Mkdir(emptyDir, 0755)
 		require.NoError(t, err)
 
-		shouldRegen, err := ShouldRegenerate(emptyDir, false, ignoreChain, false)
+		shouldRegen, err := ShouldRegenerate(emptyDir, false, ignoreChain)
 		assert.NoError(t, err)
 		assert.True(t, shouldRegen, "Should return true when no glance.md exists")
 	})
@@ -194,7 +194,7 @@ func TestShouldRegenerate(t *testing.T) {
 		err := os.WriteFile(newerFile, []byte("newer content"), 0644)
 		require.NoError(t, err)
 
-		shouldRegen, err := ShouldRegenerate(baseDir, false, ignoreChain, false)
+		shouldRegen, err := ShouldRegenerate(baseDir, false, ignoreChain)
 		assert.NoError(t, err)
 		assert.True(t, shouldRegen, "Should return true when a file is newer than glance.md")
 	})
@@ -318,7 +318,7 @@ func TestLatestModTime_EdgeCases(t *testing.T) {
 		}
 
 		// Get the latest mod time
-		resultTime, err := LatestModTime(testDir, nil, true)
+		resultTime, err := LatestModTime(testDir, nil)
 		require.NoError(t, err)
 
 		// Check that it matches the expected latest file
@@ -335,7 +335,7 @@ func TestLatestModTime_EdgeCases(t *testing.T) {
 		gitignoreTime := gitignoreInfo.ModTime()
 
 		// Get the latest mod time again
-		newResultTime, err := LatestModTime(testDir, nil, true)
+		newResultTime, err := LatestModTime(testDir, nil)
 		require.NoError(t, err)
 
 		// Now the .gitignore file should be the latest

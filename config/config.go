@@ -14,9 +14,6 @@ type Config struct {
 	// Force indicates whether to regenerate existing glance.md files
 	Force bool
 
-	// Verbose enables additional debug logging
-	Verbose bool
-
 	// PromptTemplate contains the template text used for generating prompts
 	PromptTemplate string
 
@@ -60,7 +57,6 @@ func NewDefaultConfig() *Config {
 		APIKey:         "",
 		TargetDir:      "",
 		Force:          false,
-		Verbose:        false,
 		PromptTemplate: defaultPromptTemplate,
 		MaxRetries:     DefaultMaxRetries,
 		MaxFileBytes:   DefaultMaxFileBytes,
@@ -86,13 +82,6 @@ func (c *Config) WithTargetDir(targetDir string) *Config {
 func (c *Config) WithForce(force bool) *Config {
 	newConfig := *c
 	newConfig.Force = force
-	return &newConfig
-}
-
-// WithVerbose returns a new Config with the specified verbose flag value.
-func (c *Config) WithVerbose(verbose bool) *Config {
-	newConfig := *c
-	newConfig.Verbose = verbose
 	return &newConfig
 }
 

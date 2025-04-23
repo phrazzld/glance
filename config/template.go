@@ -8,6 +8,13 @@ import (
 	"glance/filesystem"
 )
 
+// validateFilePathFn defines a function type for path validation
+// This allows us to replace it in tests
+type validateFilePathFn func(path, baseDir string, allowBaseDir, mustExist bool) (string, error)
+
+// The function to use for validating file paths
+var validateFilePath validateFilePathFn = filesystem.ValidateFilePath
+
 // LoadPromptTemplate loads a prompt template from the specified file path.
 // If the path is empty, it attempts to load from "prompt.txt" in the current directory.
 // If neither is available, it returns an empty string (caller should use default template).
@@ -40,7 +47,7 @@ func LoadPromptTemplate(path string) (string, error) {
 		// allowBaseDir=true because the root itself is allowed
 		// mustExist=true to ensure the file exists and is not a directory
 		rootDir := "/"
-		validPath, err := filesystem.ValidateFilePath(absPath, rootDir, true, true)
+		validPath, err := validateFilePath(absPath, rootDir, true, true)
 		if err != nil {
 			return "", fmt.Errorf("failed to validate prompt template path: %w", err)
 		}
@@ -61,7 +68,7 @@ func LoadPromptTemplate(path string) (string, error) {
 		// Validate the default path against the current working directory
 		// allowBaseDir=false because prompt.txt should be in CWD, not be CWD itself
 		// mustExist=true to ensure the file exists and is a file
-		validDefaultPath, err := filesystem.ValidateFilePath(defaultPromptPath, cwd, false, true)
+		validDefaultPath, err := validateFilePath(defaultPromptPath, cwd, false, true)
 		if err != nil {
 			// We just log this rather than fail, to maintain backward compatibility
 			// with existing behavior of falling back to default template

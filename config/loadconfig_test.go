@@ -98,7 +98,7 @@ func TestLoadConfig(t *testing.T) {
 	defer cleanupEnv()
 
 	// Create test arguments
-	args := []string{"glance", "--force", "--verbose", "/test/dir"}
+	args := []string{"glance", "--force", "/test/dir"}
 
 	// Run the function
 	cfg, err := LoadConfig(args)
@@ -110,7 +110,6 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "test-gemini-api-key", cfg.APIKey, "API Key should be set from environment")
 	assert.Equal(t, "/test/dir", cfg.TargetDir, "Target directory should be set from arguments")
 	assert.True(t, cfg.Force, "Force flag should be true")
-	assert.True(t, cfg.Verbose, "Verbose flag should be true")
 	assert.NotEmpty(t, cfg.PromptTemplate, "Prompt template should not be empty")
 	assert.Equal(t, DefaultMaxRetries, cfg.MaxRetries, "MaxRetries should have default value")
 	assert.Equal(t, int64(DefaultMaxFileBytes), cfg.MaxFileBytes, "MaxFileBytes should have default value")
@@ -120,16 +119,7 @@ func TestLoadConfig(t *testing.T) {
 }
 
 func TestLoadConfigAllFlags(t *testing.T) {
-	// This test requires adjustments for the new path validation
-	// Our ValidateFilePath now enforces tighter security by
-	// checking that paths aren't outside the base directory
-
-	// Skip this test because our new path validation is stricter
-	// The path traversal protection actually works correctly
-	t.Skip("Skipping due to stricter path validation that prevents temp dir access")
-
-	// The rest of the implementation is kept for reference but won't run
-	// Test all the available command-line flags
+	// Test all the available command-line flags using a patched file loader
 
 	// Setup the mock directory checker to pass
 	_, cleanup := setupMockDirectoryChecker(true, "")
@@ -141,21 +131,32 @@ func TestLoadConfigAllFlags(t *testing.T) {
 	})
 	defer cleanupEnv()
 
-	// Create a temporary prompt file
-	tempDir, err := os.MkdirTemp("", "glance-test-*")
-	require.NoError(t, err, "Failed to create temp directory")
-	defer os.RemoveAll(tempDir)
+	// Use t.TempDir() for test directory
+	tempDir := t.TempDir()
 
 	customPromptPath := filepath.Join(tempDir, "custom-prompt.txt")
 	customPromptContent := "custom prompt template for flags test {{.Directory}}"
-	err = os.WriteFile(customPromptPath, []byte(customPromptContent), 0644)
+	err := os.WriteFile(customPromptPath, []byte(customPromptContent), 0644)
 	require.NoError(t, err, "Failed to create custom prompt file")
+
+	// Save the original loadPromptTemplate function for restoration later
+	originalLoadPromptTemplate := loadPromptTemplate
+	defer func() {
+		loadPromptTemplate = originalLoadPromptTemplate
+	}()
+
+	// Mock loadPromptTemplate to return our custom content for testing
+	loadPromptTemplate = func(path string) (string, error) {
+		if path == customPromptPath {
+			return customPromptContent, nil
+		}
+		return "", fmt.Errorf("unexpected prompt file path: %s", path)
+	}
 
 	// Test with all flags set
 	args := []string{
 		"glance",
 		"--force",
-		"--verbose",
 		"--prompt-file", customPromptPath,
 		"/test/target/dir",
 	}
@@ -168,7 +169,6 @@ func TestLoadConfigAllFlags(t *testing.T) {
 
 	// Check flag values were set correctly
 	assert.True(t, cfg.Force, "Force flag should be true")
-	assert.True(t, cfg.Verbose, "Verbose flag should be true")
 	assert.Equal(t, customPromptContent, cfg.PromptTemplate, "Prompt template should be loaded from file")
 	assert.Equal(t, "/test/target/dir", cfg.TargetDir, "Target directory should be set correctly")
 }
@@ -197,7 +197,6 @@ func TestLoadConfigDefaults(t *testing.T) {
 
 	// Check default values
 	assert.False(t, cfg.Force, "Force flag should default to false")
-	assert.False(t, cfg.Verbose, "Verbose flag should default to false")
 	// Should use default template - we don't test the exact content here
 	assert.NotEmpty(t, cfg.PromptTemplate, "Default prompt template should be used")
 	assert.Equal(t, DefaultMaxRetries, cfg.MaxRetries, "Default max retries should be used")
@@ -205,15 +204,6 @@ func TestLoadConfigDefaults(t *testing.T) {
 }
 
 func TestLoadConfigWithCustomPromptFile(t *testing.T) {
-	// This test requires adjustments for the new path validation
-	// Our ValidateFilePath now enforces tighter security by
-	// checking that paths aren't outside the base directory
-
-	// Skip this test because our new path validation is stricter
-	// The path traversal protection actually works correctly
-	t.Skip("Skipping due to stricter path validation that prevents temp dir access")
-
-	// The rest of the implementation is kept for reference but won't run
 	// Setup the mock directory checker to pass
 	_, cleanup := setupMockDirectoryChecker(true, "")
 	defer cleanup()
@@ -224,15 +214,27 @@ func TestLoadConfigWithCustomPromptFile(t *testing.T) {
 	})
 	defer cleanupEnv()
 
-	// Create a temporary prompt file
-	tempDir, err := os.MkdirTemp("", "glance-test-*")
-	require.NoError(t, err, "Failed to create temp directory")
-	defer os.RemoveAll(tempDir)
+	// Use t.TempDir() for test directory
+	tempDir := t.TempDir()
 
 	customPromptPath := filepath.Join(tempDir, "custom-prompt.txt")
 	customPromptContent := "custom prompt template for testing {{.Directory}}"
-	err = os.WriteFile(customPromptPath, []byte(customPromptContent), 0644)
+	err := os.WriteFile(customPromptPath, []byte(customPromptContent), 0644)
 	require.NoError(t, err, "Failed to create custom prompt file")
+
+	// Save the original loadPromptTemplate function for restoration later
+	originalLoadPromptTemplate := loadPromptTemplate
+	defer func() {
+		loadPromptTemplate = originalLoadPromptTemplate
+	}()
+
+	// Mock loadPromptTemplate to return our custom content for testing
+	loadPromptTemplate = func(path string) (string, error) {
+		if path == customPromptPath {
+			return customPromptContent, nil
+		}
+		return "", fmt.Errorf("unexpected prompt file path: %s", path)
+	}
 
 	// Create test arguments with custom prompt file
 	args := []string{"glance", "--prompt-file", customPromptPath, "/test/dir"}
@@ -551,9 +553,4 @@ func TestLoadConfigInvalidDirectory(t *testing.T) {
 	assert.Contains(t, err.Error(), dirErrorMsg, "Error should contain the directory error message")
 }
 
-// This function tested the previous internal loadPromptTemplate function
-// We no longer need to test it directly, as we have a separate test for LoadPromptTemplate
-func TestInternalLoadPromptTemplateSkipped(t *testing.T) {
-	// Skip all of these tests as they're superceded by template_test.go
-	t.Skip("Tests moved to template_test.go")
-}
+// Note: These tests were moved to template_test.go

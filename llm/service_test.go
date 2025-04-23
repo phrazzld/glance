@@ -1,3 +1,5 @@
+// Package llm provides abstractions and implementations for interacting with
+// Large Language Model APIs in the glance application.
 package llm
 
 import (
@@ -5,6 +7,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -33,7 +37,6 @@ func TestNewService(t *testing.T) {
 		assert.Equal(t, adapter, service.client)
 		assert.Equal(t, DefaultServiceConfig().MaxRetries, service.maxRetries)
 		assert.Equal(t, DefaultServiceConfig().ModelName, service.modelName)
-		assert.Equal(t, DefaultServiceConfig().Verbose, service.verbose)
 	})
 
 	// Test with valid client and custom options
@@ -54,14 +57,12 @@ func TestNewService(t *testing.T) {
 		adapter := NewMockClientAdapter(mockClient)
 		service, err := NewService(adapter,
 			WithServiceMaxRetries(5),
-			WithServiceModelName("custom-model"),
-			WithVerbose(true))
+			WithServiceModelName("custom-model"))
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		assert.Equal(t, 5, service.maxRetries)
 		assert.Equal(t, "custom-model", service.modelName)
-		assert.True(t, service.verbose)
 	})
 }
 
@@ -208,7 +209,6 @@ func TestServiceConfig(t *testing.T) {
 	defaults := DefaultServiceConfig()
 	assert.Greater(t, defaults.MaxRetries, 0)
 	assert.NotEmpty(t, defaults.ModelName)
-	assert.False(t, defaults.Verbose)
 
 	// Test config option functions
 	// Create test config instance
@@ -229,23 +229,13 @@ func TestServiceConfig(t *testing.T) {
 	modelOption(&testConfig)
 	assert.Equal(t, modelName, testConfig.ModelName)
 
-	// Test WithVerbose
-	verboseOption := WithVerbose(true)
-
-	// Reset test config
-	testConfig = DefaultServiceConfig()
-	verboseOption(&testConfig)
-	assert.True(t, testConfig.Verbose)
-
 	// Test applying multiple options
 	testConfig = DefaultServiceConfig()
 	retriesOption(&testConfig)
 	modelOption(&testConfig)
-	verboseOption(&testConfig)
 
 	assert.Equal(t, retries, testConfig.MaxRetries)
 	assert.Equal(t, modelName, testConfig.ModelName)
-	assert.True(t, testConfig.Verbose)
 }
 
 func TestServiceConfigFunctions(t *testing.T) {
@@ -262,11 +252,6 @@ func TestServiceConfigFunctions(t *testing.T) {
 	modelNameOption := WithServiceModelName("functional-option-model")
 	modelNameOption(&config)
 	assert.Equal(t, "functional-option-model", config.ModelName)
-
-	// Apply WithVerbose
-	verboseOption := WithVerbose(true)
-	verboseOption(&config)
-	assert.True(t, config.Verbose)
 
 	// Apply WithPromptTemplate
 	promptTemplate := "Custom prompt template"
@@ -295,4 +280,76 @@ func TestEndToEndWorkflow(t *testing.T) {
 	// 3. Preparing test data for directory, files, etc.
 	// 4. Calling GenerateGlanceMarkdown
 	// 5. Verifying the result
+}
+
+// Test structured logging in the service
+func TestStructuredLogging(t *testing.T) {
+	// Setup test logger hook to capture log entries
+	hook := test.NewGlobal()
+	// Save previous level to restore later
+	previousLevel := logrus.GetLevel()
+	defer logrus.SetLevel(previousLevel)
+
+	// Set debug level to ensure logs are captured
+	logrus.SetLevel(logrus.DebugLevel)
+
+	// Setup mock client and service
+	mockClient := new(mocks.LLMClient)
+	adapter := NewMockClientAdapter(mockClient)
+	service, _ := NewService(adapter)
+
+	// Test data
+	ctx := context.Background()
+	dir := "/test/dir"
+	fileMap := map[string]string{
+		"file1.txt": "Content 1",
+	}
+	subGlances := "Sub glances"
+
+	// Setup expectations - successful generation
+	mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil)
+	mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return("Generated content", nil)
+
+	// Call the function
+	result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+
+	// Verify function result
+	assert.NoError(t, err)
+	assert.Equal(t, "Generated content", result)
+
+	// Verify structured log entries
+	entries := hook.AllEntries()
+	assert.GreaterOrEqual(t, len(entries), 3, "Should have at least 3 log entries")
+
+	// Check for expected structured fields in logs
+	foundGeneratePrompt := false
+	foundCountTokens := false
+	foundGenerateContent := false
+
+	for _, entry := range entries {
+		// All entries should have fields
+		assert.NotEmpty(t, entry.Data)
+		assert.Contains(t, entry.Data, "directory")
+		assert.Equal(t, dir, entry.Data["directory"])
+
+		// Check for specific operation logs
+		if entry.Data["operation"] == "generate_prompt" {
+			foundGeneratePrompt = true
+			assert.Contains(t, entry.Data, "file_count")
+		}
+
+		if entry.Data["operation"] == "count_tokens" {
+			foundCountTokens = true
+			assert.Contains(t, entry.Data, "token_count")
+		}
+
+		if entry.Data["operation"] == "generate_content" {
+			foundGenerateContent = true
+			assert.Contains(t, entry.Data, "model")
+		}
+	}
+
+	assert.True(t, foundGeneratePrompt, "Should have generate_prompt operation log")
+	assert.True(t, foundCountTokens, "Should have count_tokens operation log")
+	assert.True(t, foundGenerateContent, "Should have generate_content operation log")
 }

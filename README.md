@@ -14,24 +14,26 @@ Glance is a command-line tool that recursively scans a directory tree and genera
 1. **Build or Run:**
    Clone the repository and run the tool with:
 
-       go build -o glance && ./glance [--force] [--verbose] /path/to/directory
+       go build -o glance && ./glance [--force] /path/to/directory
 
    or run directly:
 
-       go run . [--force] [--verbose] /path/to/directory
+       go run . [--force] /path/to/directory
 
 2. **Set Up Environment:**
    Ensure you have a valid `GEMINI_API_KEY` set in your environment or in a `.env` file.
 
 3. **Flags:**
    - `--force` will regenerate `glance.md` even if it already exists.
-   - `--verbose` enables detailed logging output.
    - `--prompt-file` allows specifying a custom prompt template file.
 
 ## Environment Variables
 
 - **GEMINI_API_KEY:**
   Your Google Generative AI API key. This must be valid for the Gemini calls to succeed.
+
+- **GLANCE_LOG_LEVEL:**
+  Controls the verbosity of logging. Valid values: `debug`, `info` (default), `warn`, `error`.
 
 ## LLM Configuration
 
@@ -46,7 +48,10 @@ Glance uses Google's Gemini AI model for generating summaries:
 
 Optionally, create a `.env` file in the same directory as the tool to automatically load your environment variables. For example:
 
-       GEMINI_API_KEY=your_api_key_here
+```
+GEMINI_API_KEY=your_api_key_here
+GLANCE_LOG_LEVEL=debug
+```
 
 If the `.env` file is absent, Glance will fall back to your system's environment variables.
 
@@ -73,9 +78,35 @@ If the `.env` file is absent, Glance will fall back to your system's environment
 ## Logging
 
 Glance uses [logrus](https://github.com/sirupsen/logrus) for logging:
-- **Info-level Logging:** Default logging of key actions.
-- **Debug-level Logging:** Enabled with the `--verbose` flag for more detailed output.
-- Additionally, it features a spinner and a progress bar during scanning and generation.
+
+- **Default Log Level:** Info level (`logrus.InfoLevel`) is set by default.
+- **Configurable Log Level:** You can change the log level using the `GLANCE_LOG_LEVEL` environment variable.
+- **Structured Logging:** Uses logrus fields to provide contextual information in logs.
+- **Visual Feedback:** Features a spinner and a progress bar during scanning and generation.
+
+### Configuring Log Level
+
+Set the `GLANCE_LOG_LEVEL` environment variable to one of these values:
+
+- `debug` - Most verbose, shows all diagnostic information.
+- `info` - Default level, shows general operational information.
+- `warn` - Only warnings and errors.
+- `error` - Only serious errors.
+
+#### Examples:
+
+```bash
+# Set to debug level for maximum verbosity
+GLANCE_LOG_LEVEL=debug ./glance /path/to/directory
+
+# Set to error level for minimal output
+GLANCE_LOG_LEVEL=error ./glance /path/to/directory
+
+# In your .env file
+GLANCE_LOG_LEVEL=warn
+```
+
+If an invalid level is specified, Glance will default to `info` level.
 
 ## Package Structure
 

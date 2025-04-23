@@ -35,9 +35,7 @@ func TestNewScanner(t *testing.T) {
 	// Verify spinner is properly configured
 	assert.NotNil(t, spinner, "Spinner should not be nil")
 	assert.Contains(t, spinner.suffix, "Scanning")
-	assert.Contains(t, spinner.suffix, "🔍")
 	assert.Contains(t, spinner.finalMsg, "Scan complete")
-	assert.Contains(t, spinner.finalMsg, "🎉")
 	assert.NotNil(t, spinner.spinner, "Underlying spinner should be initialized")
 
 	// Check default values are properly set
@@ -51,9 +49,7 @@ func TestNewGenerator(t *testing.T) {
 	// Verify spinner is properly configured
 	assert.NotNil(t, spinner, "Generator spinner should not be nil")
 	assert.Contains(t, spinner.suffix, "Generating")
-	assert.Contains(t, spinner.suffix, "🧠")
 	assert.Contains(t, spinner.finalMsg, "Generation complete")
-	assert.Contains(t, spinner.finalMsg, "✅")
 	assert.NotNil(t, spinner.spinner, "Underlying spinner should be initialized")
 }
 
@@ -195,7 +191,6 @@ func TestNewProcessor(t *testing.T) {
 	assert.Equal(t, 10, bar.total)
 	assert.NotNil(t, bar.bar, "Underlying progress bar should be initialized")
 	assert.Contains(t, bar.description, "Creating glance files")
-	assert.Contains(t, bar.description, "✍️")
 	assert.Equal(t, 40, bar.width)
 	assert.Equal(t, DefaultTheme, bar.theme)
 }
@@ -209,7 +204,6 @@ func TestNewFileProcessor(t *testing.T) {
 	assert.Equal(t, 15, bar.total)
 	assert.NotNil(t, bar.bar, "Underlying progress bar should be initialized")
 	assert.Contains(t, bar.description, "Processing files")
-	assert.Contains(t, bar.description, "📄")
 	assert.Equal(t, 40, bar.width)
 	assert.Equal(t, DefaultTheme, bar.theme)
 }
@@ -367,31 +361,20 @@ func TestReportError(t *testing.T) {
 	// Test with nil error (should not log anything)
 	t.Run("Nil error", func(t *testing.T) {
 		output := captureLogOutput(func() {
-			ReportError(nil, true, "Test context")
+			ReportError(nil, "Test context")
 		})
 		assert.Empty(t, output, "No output should be logged for nil error")
 	})
 
-	// Test with non-nil error and verbose=true
-	t.Run("Error with verbose=true", func(t *testing.T) {
+	// Test with non-nil error
+	t.Run("Error logging", func(t *testing.T) {
 		testErr := errors.New("test error")
 		output := captureLogOutput(func() {
-			ReportError(testErr, true, "Test context")
+			ReportError(testErr, "Test context")
 		})
 		assert.Contains(t, output, "Test context")
 		assert.Contains(t, output, "test error")
-		assert.Contains(t, output, "❌")
-	})
-
-	// Test with non-nil error and verbose=false
-	t.Run("Error with verbose=false", func(t *testing.T) {
-		testErr := errors.New("test error")
-		output := captureLogOutput(func() {
-			ReportError(testErr, false, "Test context")
-		})
-		assert.Contains(t, output, "Test context")
-		assert.Contains(t, output, "test error")
-		assert.Contains(t, output, "❌")
+		assert.NotContains(t, output, "❌")
 	})
 
 	// Test with different context values
@@ -399,12 +382,12 @@ func TestReportError(t *testing.T) {
 		testErr := errors.New("test error")
 
 		output1 := captureLogOutput(func() {
-			ReportError(testErr, true, "Context 1")
+			ReportError(testErr, "Context 1")
 		})
 		assert.Contains(t, output1, "Context 1")
 
 		output2 := captureLogOutput(func() {
-			ReportError(testErr, true, "Context 2")
+			ReportError(testErr, "Context 2")
 		})
 		assert.Contains(t, output2, "Context 2")
 	})

@@ -214,6 +214,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 
 		// Configure mock to respond to expected calls for ANY prompt
 		mockLLMClient.On("Generate", mock.Anything, mock.Anything).Return("# Glance Summary\n\nThis directory contains a simple Go program.", nil)
+		mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(100, nil)
 
 		// No need to configure Close method as we're not testing that explicitly
 
@@ -224,8 +225,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Configure our application
 		cfg := config.NewDefaultConfig().
 			WithTargetDir(testDir).
-			WithForce(true).
-			WithVerbose(false)
+			WithForce(true)
 
 		// Run the core application logic with mock dependencies
 		results, err := ProcessDirectory(cfg, mockClient, service)
@@ -274,6 +274,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 
 		// Configure mock to respond to expected calls for ANY prompt
 		mockLLMClient.On("Generate", mock.Anything, mock.Anything).Return("# Glance Summary\n\nThis directory contains a simple Go program.", nil)
+		mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(100, nil)
 
 		// No need to configure Close method as we're not testing that explicitly
 
@@ -284,8 +285,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Configure our application
 		cfg := config.NewDefaultConfig().
 			WithTargetDir(testDir).
-			WithForce(true).
-			WithVerbose(false)
+			WithForce(true)
 
 		// Run the core application logic with mock dependencies
 		_, err = ProcessDirectory(cfg, mockClient, service)

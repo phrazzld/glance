@@ -15,7 +15,6 @@ func TestConfigStructConstruction(t *testing.T) {
 			APIKey:         "test-api-key",
 			TargetDir:      "/test/directory",
 			Force:          true,
-			Verbose:        true,
 			PromptTemplate: "test template {{.Directory}}",
 			MaxRetries:     5,
 			MaxFileBytes:   1024 * 1024, // 1MB
@@ -25,7 +24,6 @@ func TestConfigStructConstruction(t *testing.T) {
 		assert.Equal(t, "test-api-key", cfg.APIKey, "APIKey should match the provided value")
 		assert.Equal(t, "/test/directory", cfg.TargetDir, "TargetDir should match the provided value")
 		assert.True(t, cfg.Force, "Force should be true")
-		assert.True(t, cfg.Verbose, "Verbose should be true")
 		assert.Equal(t, "test template {{.Directory}}", cfg.PromptTemplate, "PromptTemplate should match the provided value")
 		assert.Equal(t, 5, cfg.MaxRetries, "MaxRetries should match the provided value")
 		assert.Equal(t, int64(1024*1024), cfg.MaxFileBytes, "MaxFileBytes should match the provided value")
@@ -39,7 +37,6 @@ func TestConfigStructConstruction(t *testing.T) {
 		assert.Empty(t, cfg.APIKey, "Zero value APIKey should be empty")
 		assert.Empty(t, cfg.TargetDir, "Zero value TargetDir should be empty")
 		assert.False(t, cfg.Force, "Zero value Force should be false")
-		assert.False(t, cfg.Verbose, "Zero value Verbose should be false")
 		assert.Empty(t, cfg.PromptTemplate, "Zero value PromptTemplate should be empty")
 		assert.Zero(t, cfg.MaxRetries, "Zero value MaxRetries should be 0")
 		assert.Zero(t, cfg.MaxFileBytes, "Zero value MaxFileBytes should be 0")
@@ -56,7 +53,6 @@ func TestConfigStructConstruction(t *testing.T) {
 		assert.Equal(t, "partial-test-key", cfg.APIKey, "APIKey should match the provided value")
 		assert.Equal(t, "/partial/test", cfg.TargetDir, "TargetDir should match the provided value")
 		assert.False(t, cfg.Force, "Unspecified Force should default to false")
-		assert.False(t, cfg.Verbose, "Unspecified Verbose should default to false")
 		assert.Empty(t, cfg.PromptTemplate, "Unspecified PromptTemplate should be empty")
 		assert.Zero(t, cfg.MaxRetries, "Unspecified MaxRetries should be zero")
 		assert.Zero(t, cfg.MaxFileBytes, "Unspecified MaxFileBytes should be zero")
@@ -71,7 +67,6 @@ func TestNewDefaultConfig(t *testing.T) {
 	assert.Empty(t, cfg.APIKey, "Default APIKey should be empty")
 	assert.Empty(t, cfg.TargetDir, "Default TargetDir should be empty")
 	assert.False(t, cfg.Force, "Default Force should be false")
-	assert.False(t, cfg.Verbose, "Default Verbose should be false")
 	assert.NotEmpty(t, cfg.PromptTemplate, "Default PromptTemplate should not be empty")
 	assert.Equal(t, 3, cfg.MaxRetries, "Default MaxRetries should be 3")
 	assert.Equal(t, int64(5*1024*1024), cfg.MaxFileBytes, "Default MaxFileBytes should be 5MB")
@@ -189,32 +184,6 @@ func TestWithForce(t *testing.T) {
 	}
 }
 
-func TestWithVerbose(t *testing.T) {
-	// Start with default config
-	cfg := NewDefaultConfig()
-
-	// Test both true and false values
-	testCases := []struct {
-		name    string
-		verbose bool
-		want    bool
-	}{
-		{"Set Verbose to true", true, true},
-		{"Set Verbose to false", false, false},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Apply Verbose
-			result := cfg.WithVerbose(tc.verbose)
-
-			// Verify the Verbose flag is updated and the original config is unchanged
-			assert.Equal(t, tc.want, result.Verbose, "Verbose should be updated correctly")
-			assert.False(t, cfg.Verbose, "Original config should be unchanged")
-		})
-	}
-}
-
 func TestWithPromptTemplate(t *testing.T) {
 	// Start with default config
 	cfg := NewDefaultConfig()
@@ -309,7 +278,6 @@ func TestChainedWithMethods(t *testing.T) {
 		WithAPIKey("chained-api-key").
 		WithTargetDir("/chained/path").
 		WithForce(true).
-		WithVerbose(true).
 		WithPromptTemplate("chained template").
 		WithMaxRetries(7).
 		WithMaxFileBytes(7 * 1024 * 1024)
@@ -318,7 +286,6 @@ func TestChainedWithMethods(t *testing.T) {
 	assert.Equal(t, "chained-api-key", result.APIKey, "APIKey should be updated")
 	assert.Equal(t, "/chained/path", result.TargetDir, "TargetDir should be updated")
 	assert.True(t, result.Force, "Force should be true")
-	assert.True(t, result.Verbose, "Verbose should be true")
 	assert.Equal(t, "chained template", result.PromptTemplate, "PromptTemplate should be updated")
 	assert.Equal(t, 7, result.MaxRetries, "MaxRetries should be updated")
 	assert.Equal(t, int64(7*1024*1024), result.MaxFileBytes, "MaxFileBytes should be updated")
@@ -327,7 +294,6 @@ func TestChainedWithMethods(t *testing.T) {
 	assert.Empty(t, cfg.APIKey, "Original APIKey should be unchanged")
 	assert.Empty(t, cfg.TargetDir, "Original TargetDir should be unchanged")
 	assert.False(t, cfg.Force, "Original Force should be unchanged")
-	assert.False(t, cfg.Verbose, "Original Verbose should be unchanged")
 	assert.NotEqual(t, "chained template", cfg.PromptTemplate, "Original PromptTemplate should be unchanged")
 	assert.Equal(t, DefaultMaxRetries, cfg.MaxRetries, "Original MaxRetries should be unchanged")
 	assert.Equal(t, int64(DefaultMaxFileBytes), cfg.MaxFileBytes, "Original MaxFileBytes should be unchanged")
@@ -339,14 +305,12 @@ func TestChainedWithMethods(t *testing.T) {
 		WithMaxRetries(5).
 		WithPromptTemplate("different template").
 		WithTargetDir("/different/path").
-		WithVerbose(true).
 		WithForce(true)
 
 	// Verify all changes were applied correctly
 	assert.Equal(t, "different-key", result2.APIKey, "APIKey should be updated")
 	assert.Equal(t, "/different/path", result2.TargetDir, "TargetDir should be updated")
 	assert.True(t, result2.Force, "Force should be true")
-	assert.True(t, result2.Verbose, "Verbose should be true")
 	assert.Equal(t, "different template", result2.PromptTemplate, "PromptTemplate should be updated")
 	assert.Equal(t, 5, result2.MaxRetries, "MaxRetries should be updated")
 	assert.Equal(t, int64(2*1024*1024), result2.MaxFileBytes, "MaxFileBytes should be updated")
