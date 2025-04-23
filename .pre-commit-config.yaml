@@ -179,3 +179,26 @@ repos:
             \.pre-commit-config\.yaml|
             ^precommit-tests/.*
           )$
+
+  # Custom hooks - local repository
+  - repo: local
+    hooks:
+      - id: check-file-length
+        name: Check file length
+        description: Ensures files don't exceed recommended (500) or maximum (1000) line counts
+        entry: scripts/check-file-length.sh
+        language: script
+        types: [text]
+        exclude: |
+          (?x)^(
+            .*/test-fixtures/.*|
+            .*/testdata/.*|
+            .*/vendor/.*|
+            .*\.md$|
+            .*\.yaml$|
+            .*\.yml$|
+            .*\.json$|
+            .*\.lock$|
+            .*\.svg$|
+            .*\.txt$
+          )$

@@ -126,6 +126,11 @@ The Glance project includes the following hooks:
 - `detect-secrets`: Scans for potential secrets/credentials
 - `detect-private-key`: Prevents private keys from being committed
 
+### Code Organization
+- `check-file-length`: Ensures files don't exceed recommended line count limits
+  - Warns for files over 500 lines
+  - Fails for files over 1000 lines
+
 ## Troubleshooting
 
 ### Common Issues
