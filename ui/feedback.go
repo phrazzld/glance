@@ -97,16 +97,16 @@ func NewCustomSpinner(options ...SpinnerOption) *Spinner {
 // NewScanner creates a spinner specifically for directory scanning operations.
 func NewScanner() *Spinner {
 	return NewCustomSpinner(
-		WithSuffix("🔍 Scanning directories and loading .gitignore files..."),
-		WithFinalMessage("🎉 Scan complete! Found all the good stuff!\n"),
+		WithSuffix("Scanning directories and loading .gitignore files..."),
+		WithFinalMessage("Scan complete!\n"),
 	)
 }
 
 // NewGenerator creates a spinner specifically for content generation operations.
 func NewGenerator() *Spinner {
 	return NewCustomSpinner(
-		WithSuffix("🧠 Generating content..."),
-		WithFinalMessage("✅ Generation complete!\n"),
+		WithSuffix("Generating content..."),
+		WithFinalMessage("Generation complete!\n"),
 	)
 }
 
@@ -213,7 +213,7 @@ func NewCustomProgressBar(total int, options ...ProgressBarOption) *ProgressBar 
 // NewProcessor creates a progress bar for processing a known number of items.
 func NewProcessor(total int) *ProgressBar {
 	return NewCustomProgressBar(total,
-		WithDescription("✍️ Creating glance files"),
+		WithDescription("Creating glance files"),
 		WithWidth(40),
 		WithTheme(DefaultTheme),
 	)
@@ -222,7 +222,7 @@ func NewProcessor(total int) *ProgressBar {
 // NewFileProcessor creates a progress bar specifically for file processing operations.
 func NewFileProcessor(total int) *ProgressBar {
 	return NewCustomProgressBar(total,
-		WithDescription("📄 Processing files"),
+		WithDescription("Processing files"),
 		WithWidth(40),
 		WithTheme(DefaultTheme),
 	)

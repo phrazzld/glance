@@ -154,7 +154,7 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 
 // scanDirectories performs BFS scanning and gathers .gitignore chain info per directory
 func scanDirectories(cfg *config.Config) ([]string, map[string]filesystem.IgnoreChain, error) {
-	logrus.Info("Excellent! Scanning directories now... Let's explore your code!")
+	logrus.Info("Scanning directories...")
 
 	// Show a spinner while scanning
 	scanner := ui.NewScanner()
@@ -175,7 +175,7 @@ func scanDirectories(cfg *config.Config) ([]string, map[string]filesystem.Ignore
 
 // processDirectories generates glance.md files for each directory in the list
 func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesystem.IgnoreChain, cfg *config.Config, llmService *llm.Service) []result {
-	logrus.Info("Preparing to generate all glance.md files... Getting ready to make your code shine!")
+	logrus.Info("Preparing to generate glance.md files...")
 
 	// Create progress bar
 	bar := ui.NewProcessor(len(dirsList))

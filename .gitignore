@@ -16,6 +16,8 @@ PLAN.md
 # AI assistance artifacts
 architect_output/
 architect_output_tasks/
+thinktank_output/
+thinktank_output_tasks/
 
 # Symlinked documentation files
 DEVELOPMENT_PHILOSOPHY.md
