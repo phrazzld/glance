@@ -114,6 +114,34 @@ func NewGenerator() *Spinner {
 // Progress Bar
 // -----------------------------------------------------------------------------
 
+// ProgressBar is an interface that represents a progress bar.
+type ProgressBar interface {
+	// Increment advances the progress bar by one step.
+	Increment() error
+	// Set sets the progress bar to a specific value.
+	Set(value int) error
+	// Finish completes the progress bar.
+	Finish() error
+}
+
+// ProgressTrackerFactory is an interface for creating progress trackers.
+type ProgressTrackerFactory interface {
+	// NewProcessor creates a new progress bar for processing directories.
+	NewProcessor(total int) ProgressBar
+}
+
+// DefaultProgressTrackerFactory is the default implementation of ProgressTrackerFactory.
+type DefaultProgressTrackerFactory struct{}
+
+// NewProcessor creates a progress bar for processing a known number of items.
+func (f DefaultProgressTrackerFactory) NewProcessor(total int) ProgressBar {
+	return NewCustomProgressBar(total,
+		WithDescription("Creating glance files"),
+		WithWidth(40),
+		WithTheme(DefaultTheme),
+	)
+}
+
 // ProgressBarTheme defines the visual appearance of a progress bar.
 type ProgressBarTheme struct {
 	Saucer        string
@@ -130,8 +158,8 @@ var DefaultTheme = ProgressBarTheme{
 	BarEnd:        "]",
 }
 
-// ProgressBar represents a terminal progress bar for visual feedback.
-type ProgressBar struct {
+// ConcreteProgressBar represents a terminal progress bar for visual feedback.
+type ConcreteProgressBar struct {
 	bar         *progressbar.ProgressBar
 	total       int
 	description string
@@ -140,48 +168,48 @@ type ProgressBar struct {
 }
 
 // Increment advances the progress bar by one step.
-func (p *ProgressBar) Increment() error {
+func (p *ConcreteProgressBar) Increment() error {
 	return p.bar.Add(1)
 }
 
 // Set sets the progress bar to a specific value.
-func (p *ProgressBar) Set(value int) error {
+func (p *ConcreteProgressBar) Set(value int) error {
 	return p.bar.Set(value)
 }
 
 // Finish completes the progress bar.
-func (p *ProgressBar) Finish() error {
+func (p *ConcreteProgressBar) Finish() error {
 	return p.bar.Finish()
 }
 
-// ProgressBarOption is a function type that configures a ProgressBar.
-type ProgressBarOption func(*ProgressBar)
+// ProgressBarOption is a function type that configures a ConcreteProgressBar.
+type ProgressBarOption func(*ConcreteProgressBar)
 
 // WithDescription sets the text displayed alongside the progress bar.
 func WithDescription(description string) ProgressBarOption {
-	return func(p *ProgressBar) {
+	return func(p *ConcreteProgressBar) {
 		p.description = description
 	}
 }
 
 // WithWidth sets the width of the progress bar.
 func WithWidth(width int) ProgressBarOption {
-	return func(p *ProgressBar) {
+	return func(p *ConcreteProgressBar) {
 		p.width = width
 	}
 }
 
 // WithTheme sets the visual theme of the progress bar.
 func WithTheme(theme ProgressBarTheme) ProgressBarOption {
-	return func(p *ProgressBar) {
+	return func(p *ConcreteProgressBar) {
 		p.theme = theme
 	}
 }
 
 // NewCustomProgressBar creates a new progress bar with custom options.
-func NewCustomProgressBar(total int, options ...ProgressBarOption) *ProgressBar {
+func NewCustomProgressBar(total int, options ...ProgressBarOption) *ConcreteProgressBar {
 	// Default values
-	p := &ProgressBar{
+	p := &ConcreteProgressBar{
 		total:       total,
 		description: "Processing",
 		width:       40,
@@ -211,7 +239,8 @@ func NewCustomProgressBar(total int, options ...ProgressBarOption) *ProgressBar 
 }
 
 // NewProcessor creates a progress bar for processing a known number of items.
-func NewProcessor(total int) *ProgressBar {
+// Deprecated: Use DefaultProgressTrackerFactory.NewProcessor instead.
+func NewProcessor(total int) *ConcreteProgressBar {
 	return NewCustomProgressBar(total,
 		WithDescription("Creating glance files"),
 		WithWidth(40),
@@ -220,7 +249,7 @@ func NewProcessor(total int) *ProgressBar {
 }
 
 // NewFileProcessor creates a progress bar specifically for file processing operations.
-func NewFileProcessor(total int) *ProgressBar {
+func NewFileProcessor(total int) *ConcreteProgressBar {
 	return NewCustomProgressBar(total,
 		WithDescription("Processing files"),
 		WithWidth(40),

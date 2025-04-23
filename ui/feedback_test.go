@@ -294,14 +294,14 @@ func TestProgressBarOptions(t *testing.T) {
 
 	t.Run("WithDescription", func(t *testing.T) {
 		opt := WithDescription("Test description")
-		p := &ProgressBar{}
+		p := &ConcreteProgressBar{}
 		opt(p)
 		assert.Equal(t, "Test description", p.description)
 	})
 
 	t.Run("WithWidth", func(t *testing.T) {
 		opt := WithWidth(60)
-		p := &ProgressBar{}
+		p := &ConcreteProgressBar{}
 		opt(p)
 		assert.Equal(t, 60, p.width)
 	})
@@ -314,7 +314,7 @@ func TestProgressBarOptions(t *testing.T) {
 			BarEnd:        "}",
 		}
 		opt := WithTheme(theme)
-		p := &ProgressBar{}
+		p := &ConcreteProgressBar{}
 		opt(p)
 		assert.Equal(t, theme, p.theme)
 	})

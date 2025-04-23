@@ -60,8 +60,11 @@ func main() {
 		logrus.WithField("error", err).Fatal("Directory scan failed - Check file permissions and disk space")
 	}
 
+	// Create progress tracker factory
+	progressFactory := &ui.DefaultProgressTrackerFactory{}
+
 	// Process directories and generate glance.md files
-	results := processDirectories(dirs, ignoreChains, cfg, llmService)
+	results, _ := processDirectories(dirs, ignoreChains, cfg, llmService, progressFactory)
 
 	// Print summary of results
 	printDebrief(results)
@@ -173,12 +176,19 @@ func scanDirectories(cfg *config.Config) ([]string, map[string]filesystem.Ignore
 	return dirsList, dirToIgnoreChain, nil
 }
 
-// processDirectories generates glance.md files for each directory in the list
-func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesystem.IgnoreChain, cfg *config.Config, llmService *llm.Service) []result {
+// processDirectories generates glance.md files for each directory in the list and returns the map of directories
+// needing regeneration for testing purposes
+func processDirectories(
+	dirsList []string,
+	dirToIgnoreChain map[string]filesystem.IgnoreChain,
+	cfg *config.Config,
+	llmService *llm.Service,
+	progressFactory ui.ProgressTrackerFactory,
+) ([]result, map[string]bool) {
 	logrus.Info("Preparing to generate glance.md files...")
 
-	// Create progress bar
-	bar := ui.NewProcessor(len(dirsList))
+	// Create progress bar using the factory interface
+	bar := progressFactory.NewProcessor(len(dirsList))
 
 	// Create map to track directories needing regeneration due to child changes
 	needsRegen := make(map[string]bool)
@@ -229,7 +239,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 	fmt.Println()
 	logrus.WithField("target_dir", cfg.TargetDir).Info("All done! glance.md files have been generated for your codebase")
 
-	return finalResults
+	return finalResults, needsRegen
 }
 
 // processDirectory processes a single directory with retry logic
