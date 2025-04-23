@@ -13,7 +13,7 @@
         4. Unit tests for `processDirectories` (if any) pass.
     - **Depends‑on:** none
 
-- [ ] **T005 · Bugfix · P2: remove flawed `glance_file_missing` check in logging**
+- [x] **T005 · Bugfix · P2: remove flawed `glance_file_missing` check in logging**
     - **Context:** cr-04 Fix "glance_file_missing" Logic
     - **Action:**
         1. Remove the condition checking `filepath.Base(dir) == "glance.md"` within the regeneration logic.

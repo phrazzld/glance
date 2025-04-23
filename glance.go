@@ -269,12 +269,10 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		fields["reason"] = "global_force_flag"
 		logrus.WithFields(fields).Debug("Processing directory - global force flag is set")
 	} else if forceDir {
-		// Try to be more specific about the reason
-		if len(dir) > 0 && filepath.Base(dir) == "glance.md" {
-			fields["reason"] = "glance_file_missing"
-		} else {
-			fields["reason"] = "local_changes_or_child_regenerated"
-		}
+		// The forceDir variable comes from ShouldRegenerate or parent propagation
+		// We don't try to distinguish the exact reason, as it's correctly derived from
+		// ShouldRegenerate or the parent propagation mechanism
+		fields["reason"] = "local_changes_or_child_regenerated"
 		logrus.WithFields(fields).Debug("Processing directory - local changes or child directory regenerated")
 	}
 
