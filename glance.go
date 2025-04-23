@@ -180,6 +180,7 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 	// Create progress bar
 	bar := ui.NewProcessor(len(dirsList))
 
+	// Create map to track directories needing regeneration due to child changes
 	needsRegen := make(map[string]bool)
 	var finalResults []result
 
@@ -187,8 +188,8 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 	for _, d := range dirsList {
 		ignoreChain := dirToIgnoreChain[d]
 
-		// Check if we need to regenerate the glance.md file
-		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain) // Check if regeneration is needed
+		// Check if we need to regenerate the glance.md file based on local file changes
+		forceDir, errCheck := filesystem.ShouldRegenerate(d, cfg.Force, ignoreChain)
 		if errCheck != nil {
 			logrus.WithFields(logrus.Fields{
 				"directory": d,
@@ -196,7 +197,15 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 			}).Warn("Couldn't check modification time")
 		}
 
+		// Also check if this directory needs regeneration due to child directory changes
 		forceDir = forceDir || needsRegen[d]
+
+		if needsRegen[d] {
+			logrus.WithFields(logrus.Fields{
+				"directory": d,
+				"reason":    "child directory regenerated",
+			}).Debug("Directory marked for regeneration due to child changes")
+		}
 
 		// Process the directory with retry logic
 		r := processDirectory(d, forceDir, ignoreChain, cfg, llmService)
@@ -206,8 +215,13 @@ func processDirectories(dirsList []string, dirToIgnoreChain map[string]filesyste
 			logrus.WithField("error", err).Warn("Failed to increment progress bar")
 		}
 
-		// Bubble up parent's regeneration flag if needed
+		// Bubble up parent's regeneration flag if needed - only when regeneration was
+		// successful and actually attempted (not skipped)
 		if r.success && r.attempts > 0 && forceDir {
+			logrus.WithFields(logrus.Fields{
+				"directory": d,
+				"reason":    "successfully regenerated",
+			}).Debug("Marking parent directories for regeneration")
 			filesystem.BubbleUpParents(d, cfg.TargetDir, needsRegen)
 		}
 	}
@@ -223,12 +237,19 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	r := result{dir: dir}
 
 	// forceDir already indicates if regeneration is needed based on filesystem.ShouldRegenerate
-	// called in processDirectories
+	// or parent propagation in processDirectories
 	if !forceDir && !cfg.Force {
-		logrus.WithField("directory", dir).Debug("Skipping directory - glance.md already exists and looks fresh")
+		logrus.WithField("directory", dir).Debug("Skipping directory - glance.md already exists and looks fresh, no child changes detected")
 		r.success = true
 		r.attempts = 0 // Explicitly mark that we didn't attempt to regenerate
 		return r
+	}
+
+	// Log the reason for processing this directory
+	if cfg.Force {
+		logrus.WithField("directory", dir).Debug("Processing directory - global force flag is set")
+	} else if forceDir {
+		logrus.WithField("directory", dir).Debug("Processing directory - local changes or child directory regenerated")
 	}
 
 	// Gather data for glance.md generation
