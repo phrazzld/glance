@@ -35,9 +35,7 @@ func TestNewScanner(t *testing.T) {
 	// Verify spinner is properly configured
 	assert.NotNil(t, spinner, "Spinner should not be nil")
 	assert.Contains(t, spinner.suffix, "Scanning")
-	assert.Contains(t, spinner.suffix, "🔍")
 	assert.Contains(t, spinner.finalMsg, "Scan complete")
-	assert.Contains(t, spinner.finalMsg, "🎉")
 	assert.NotNil(t, spinner.spinner, "Underlying spinner should be initialized")
 
 	// Check default values are properly set
@@ -51,9 +49,7 @@ func TestNewGenerator(t *testing.T) {
 	// Verify spinner is properly configured
 	assert.NotNil(t, spinner, "Generator spinner should not be nil")
 	assert.Contains(t, spinner.suffix, "Generating")
-	assert.Contains(t, spinner.suffix, "🧠")
 	assert.Contains(t, spinner.finalMsg, "Generation complete")
-	assert.Contains(t, spinner.finalMsg, "✅")
 	assert.NotNil(t, spinner.spinner, "Underlying spinner should be initialized")
 }
 
@@ -195,7 +191,6 @@ func TestNewProcessor(t *testing.T) {
 	assert.Equal(t, 10, bar.total)
 	assert.NotNil(t, bar.bar, "Underlying progress bar should be initialized")
 	assert.Contains(t, bar.description, "Creating glance files")
-	assert.Contains(t, bar.description, "✍️")
 	assert.Equal(t, 40, bar.width)
 	assert.Equal(t, DefaultTheme, bar.theme)
 }
@@ -209,7 +204,6 @@ func TestNewFileProcessor(t *testing.T) {
 	assert.Equal(t, 15, bar.total)
 	assert.NotNil(t, bar.bar, "Underlying progress bar should be initialized")
 	assert.Contains(t, bar.description, "Processing files")
-	assert.Contains(t, bar.description, "📄")
 	assert.Equal(t, 40, bar.width)
 	assert.Equal(t, DefaultTheme, bar.theme)
 }

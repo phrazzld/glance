@@ -107,7 +107,7 @@
         3. All tests continue to pass.
     - **Depends‑on:** none
 
-- [ ] **T011 · Refactor · P1: remove remaining emojis from UI components**
+- [x] **T011 · Refactor · P1: remove remaining emojis from UI components**
     - **Context:** Continuation of emoji removal from UI feedback
     - **Action:**
         1. Remove all remaining emoji characters from spinner messages in `ui/feedback.go`.
