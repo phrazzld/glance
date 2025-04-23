@@ -54,7 +54,7 @@
         1. Integration test `TestForcedChildRegenerationBubblesUp` passes.
     - **Depends‑on:** [T001]
 
-- [ ] **T006 · Test · P2: add integration test for no-change optimization**
+- [x] **T006 · Test · P2: add integration test for no-change optimization**
     - **Context:** Testing Strategy #3
     - **Action:**
         1. Create a test setup and run glance initially, recording file modification times.

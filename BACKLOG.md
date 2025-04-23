@@ -1,8 +1,7 @@
 # BACKLOG
 
-- clean up logging, make tighter, cleaner, no emojis
-    - remove verbose option too -- just always be maximally verbose
-- fix: when a glance file regenerates, *all* glance files in *all* of its parent directories need to regenerate
+- fix: when a glance file regenerates, *all* glance files in *all* of its parent directories need to regenerate. because a parent glance file makes use of the glance files in its subdirectories, they risk losing sync if they are not regenerated when their children are regenerated
+
 - create post-commit hook to run glance
 - improve performance -- make *fast*
 - timestamp generated glance files
