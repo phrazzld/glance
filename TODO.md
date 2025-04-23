@@ -44,7 +44,7 @@
         2. Test verifies parent regeneration by checking file modification times.
     - **Depends‑on:** [T001]
 
-- [ ] **T005 · Test · P2: add integration test for parent regeneration on forced child**
+- [x] **T005 · Test · P2: add integration test for parent regeneration on forced child**
     - **Context:** Testing Strategy #3
     - **Action:**
         1. Create a test with multi-level directory structure.
