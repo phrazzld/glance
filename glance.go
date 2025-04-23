@@ -239,32 +239,81 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// forceDir already indicates if regeneration is needed based on filesystem.ShouldRegenerate
 	// or parent propagation in processDirectories
 	if !forceDir && !cfg.Force {
-		logrus.WithField("directory", dir).Debug("Skipping directory - glance.md already exists and looks fresh, no child changes detected")
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"reason":    "up-to-date",
+			"action":    "skip",
+		}).Debug("Skipping directory - glance.md already exists and looks fresh, no child changes detected")
 		r.success = true
 		r.attempts = 0 // Explicitly mark that we didn't attempt to regenerate
 		return r
 	}
 
-	// Log the reason for processing this directory
+	// Log the reason for processing this directory with additional context
+	fields := logrus.Fields{
+		"directory": dir,
+		"action":    "regenerate",
+	}
+
 	if cfg.Force {
-		logrus.WithField("directory", dir).Debug("Processing directory - global force flag is set")
+		fields["reason"] = "global_force_flag"
+		logrus.WithFields(fields).Debug("Processing directory - global force flag is set")
 	} else if forceDir {
-		logrus.WithField("directory", dir).Debug("Processing directory - local changes or child directory regenerated")
+		// Try to be more specific about the reason
+		if len(dir) > 0 && filepath.Base(dir) == "glance.md" {
+			fields["reason"] = "glance_file_missing"
+		} else {
+			fields["reason"] = "local_changes_or_child_regenerated"
+		}
+		logrus.WithFields(fields).Debug("Processing directory - local changes or child directory regenerated")
 	}
 
 	// Gather data for glance.md generation
+	logrus.WithFields(logrus.Fields{
+		"directory": dir,
+		"stage":     "gather_subdirectories",
+	}).Debug("Reading subdirectories")
+
 	subdirs, err := readSubdirectories(dir, ignoreChain)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"error":     err,
+			"stage":     "gather_subdirectories",
+		}).Error("Failed to read subdirectories")
 		r.err = err
 		return r
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"directory":     dir,
+		"subdirs_count": len(subdirs),
+		"stage":         "gather_subglances",
+	}).Debug("Gathering glance files from subdirectories")
+
 	subGlances, err := gatherSubGlances(dir, subdirs)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"error":     err,
+			"stage":     "gather_subglances",
+		}).Error("Failed to gather glance files from subdirectories")
 		r.err = fmt.Errorf("gatherSubGlances failed: %w", err)
 		return r
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"directory": dir,
+		"stage":     "gather_local_files",
+	}).Debug("Gathering local files")
+
 	fileContents, err := gatherLocalFiles(dir, ignoreChain, cfg.MaxFileBytes)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"error":     err,
+			"stage":     "gather_local_files",
+		}).Error("Failed to gather local files")
 		r.err = fmt.Errorf("gatherLocalFiles failed: %w", err)
 		return r
 	}
@@ -274,14 +323,25 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		"subdirs_count":    len(subdirs),
 		"subglances_count": len(subGlances),
 		"files_count":      len(fileContents),
-	}).Debug("Processing directory")
+		"stage":            "data_gathering_complete",
+	}).Debug("Directory data gathering complete")
 
 	// Create context for LLM operations
 	ctx := context.Background()
 
 	// Generate markdown content using the LLM service
+	logrus.WithFields(logrus.Fields{
+		"directory": dir,
+		"stage":     "llm_generation",
+	}).Debug("Generating markdown content using LLM service")
+
 	summary, llmErr := llmService.GenerateGlanceMarkdown(ctx, dir, fileContents, subGlances)
 	if llmErr != nil {
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"error":     llmErr,
+			"stage":     "llm_generation",
+		}).Error("Failed to generate markdown with LLM service")
 		r.attempts = 1 // Service already handles retries internally
 		r.err = llmErr
 		return r
@@ -289,8 +349,20 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 
 	// Validate the glance.md path before writing
 	glancePath := filepath.Join(dir, "glance.md")
+	logrus.WithFields(logrus.Fields{
+		"directory": dir,
+		"file_path": glancePath,
+		"stage":     "path_validation",
+	}).Debug("Validating glance.md path")
+
 	validatedPath, pathErr := filesystem.ValidateFilePath(glancePath, dir, true, false)
 	if pathErr != nil {
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"file_path": glancePath,
+			"error":     pathErr,
+			"stage":     "path_validation",
+		}).Error("Invalid glance.md path")
 		r.err = fmt.Errorf("invalid glance.md path for %s: %w", dir, pathErr)
 		return r
 	}
@@ -298,9 +370,24 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// Write the generated content to file using the validated path
 	// #nosec G306 -- Using filesystem.DefaultFileMode (0600) for security & path validated
 	if werr := os.WriteFile(validatedPath, []byte(summary), filesystem.DefaultFileMode); werr != nil { // Path validated & using secure permissions
+		logrus.WithFields(logrus.Fields{
+			"directory": dir,
+			"path":      validatedPath,
+			"error":     werr,
+			"stage":     "file_write",
+		}).Error("Failed to write glance.md file")
 		r.err = fmt.Errorf("failed writing glance.md to %s: %w", dir, werr)
 		return r
 	}
+
+	// Log successful generation with content info
+	logrus.WithFields(logrus.Fields{
+		"directory":   dir,
+		"path":        validatedPath,
+		"summary_len": len(summary),
+		"stage":       "complete",
+		"status":      "success",
+	}).Debug("Successfully generated and wrote glance.md file")
 
 	r.success = true
 	r.attempts = 1 // Service already handles retries internally

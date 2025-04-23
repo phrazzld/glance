@@ -13,7 +13,7 @@
         2. Code compiles successfully.
     - **Depends‑on:** none
 
-- [ ] **T002 · Refactor · P2: enhance logging for regeneration reasons**
+- [x] **T002 · Refactor · P2: enhance logging for regeneration reasons**
     - **Context:** Implementation Steps #2
     - **Action:**
         1. Update logging messages within `processDirectory` in `glance.go` to clearly indicate regeneration reason.
