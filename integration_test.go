@@ -478,16 +478,22 @@ func TestParentRegenerationPropagation(t *testing.T) {
 	}
 
 	// Level3 (changed directory) should be regenerated
-	t.Logf("level3 initial: %v, final: %v", initialModTimes["level3"], finalModTimes["level3"])
+	if testing.Verbose() {
+		t.Logf("level3 initial: %v, final: %v", initialModTimes["level3"], finalModTimes["level3"])
+	}
 	assert.True(t, finalModTimes["level3"].After(initialModTimes["level3"]),
 		"level3 glance.md should have been regenerated (final time should be after initial time)")
 
 	// Parent directories should be regenerated due to bubbling up
-	t.Logf("level2 initial: %v, final: %v", initialModTimes["level2"], finalModTimes["level2"])
+	if testing.Verbose() {
+		t.Logf("level2 initial: %v, final: %v", initialModTimes["level2"], finalModTimes["level2"])
+	}
 	assert.True(t, finalModTimes["level2"].After(initialModTimes["level2"]),
 		"level2 glance.md should have been regenerated due to child change")
 
-	t.Logf("level1 initial: %v, final: %v", initialModTimes["level1"], finalModTimes["level1"])
+	if testing.Verbose() {
+		t.Logf("level1 initial: %v, final: %v", initialModTimes["level1"], finalModTimes["level1"])
+	}
 	assert.True(t, finalModTimes["level1"].After(initialModTimes["level1"]),
 		"level1 glance.md should have been regenerated due to child change")
 }
@@ -593,16 +599,22 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 	}
 
 	// Level3 (forced directory) should be regenerated
-	t.Logf("level3 initial: %v, final: %v", initialModTimes["level3"], finalModTimes["level3"])
+	if testing.Verbose() {
+		t.Logf("level3 initial: %v, final: %v", initialModTimes["level3"], finalModTimes["level3"])
+	}
 	assert.True(t, finalModTimes["level3"].After(initialModTimes["level3"]),
 		"level3 glance.md should have been regenerated due to force flag")
 
 	// Parent directories should be regenerated due to bubbling up
-	t.Logf("level2 initial: %v, final: %v", initialModTimes["level2"], finalModTimes["level2"])
+	if testing.Verbose() {
+		t.Logf("level2 initial: %v, final: %v", initialModTimes["level2"], finalModTimes["level2"])
+	}
 	assert.True(t, finalModTimes["level2"].After(initialModTimes["level2"]),
 		"level2 glance.md should have been regenerated due to forced child")
 
-	t.Logf("level1 initial: %v, final: %v", initialModTimes["level1"], finalModTimes["level1"])
+	if testing.Verbose() {
+		t.Logf("level1 initial: %v, final: %v", initialModTimes["level1"], finalModTimes["level1"])
+	}
 	assert.True(t, finalModTimes["level1"].After(initialModTimes["level1"]),
 		"level1 glance.md should have been regenerated due to forced child")
 }
@@ -658,7 +670,9 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		initialModTimes[level] = info.ModTime()
-		t.Logf("Initial mod time for %s: %v", level, initialModTimes[level])
+		if testing.Verbose() {
+			t.Logf("Initial mod time for %s: %v", level, initialModTimes[level])
+		}
 	}
 
 	// Reset the progress tracker for the second run
@@ -681,7 +695,9 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		finalModTimes[level] = info.ModTime()
-		t.Logf("Final mod time for %s: %v", level, finalModTimes[level])
+		if testing.Verbose() {
+			t.Logf("Final mod time for %s: %v", level, finalModTimes[level])
+		}
 	}
 
 	// Verify no glance.md files were regenerated (modification times should be unchanged)
@@ -796,7 +812,9 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		initialModTimes[level] = info.ModTime()
-		t.Logf("Initial mod time for %s: %v", level, initialModTimes[level])
+		if testing.Verbose() {
+			t.Logf("Initial mod time for %s: %v", level, initialModTimes[level])
+		}
 	}
 
 	// Modify a file in the nested_a branch
@@ -824,14 +842,18 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		finalModTimes[level] = info.ModTime()
-		t.Logf("Final mod time for %s: %v", level, finalModTimes[level])
+		if testing.Verbose() {
+			t.Logf("Final mod time for %s: %v", level, finalModTimes[level])
+		}
 	}
 
 	// Affected Paths: nested_a, deep_a, branch_a
 	// These should be regenerated based on file changes and bubble-up
 	affectedPaths := []string{"nested_a", "deep_a", "branch_a"}
 	for _, path := range affectedPaths {
-		t.Logf("Checking affected path: %s", path)
+		if testing.Verbose() {
+			t.Logf("Checking affected path: %s", path)
+		}
 		assert.True(t, finalModTimes[path].After(initialModTimes[path]),
 			fmt.Sprintf("%s glance.md should have been regenerated (final time should be after initial time)", path))
 
@@ -842,7 +864,9 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 
 	// The root directory should also be regenerated, but it's not always in the regenMap
 	// since it's the target directory and is handled differently
-	t.Logf("Checking root directory")
+	if testing.Verbose() {
+		t.Logf("Checking root directory")
+	}
 	assert.True(t, finalModTimes["root"].After(initialModTimes["root"]),
 		"root glance.md should have been regenerated (final time should be after initial time)")
 
@@ -850,7 +874,9 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 	// These should NOT be regenerated
 	unaffectedPaths := []string{"branch_b", "deep_b"}
 	for _, path := range unaffectedPaths {
-		t.Logf("Checking unaffected path: %s", path)
+		if testing.Verbose() {
+			t.Logf("Checking unaffected path: %s", path)
+		}
 		assert.Equal(t, initialModTimes[path], finalModTimes[path],
 			fmt.Sprintf("%s glance.md should NOT have been regenerated (mod times should be equal)", path))
 		assert.False(t, regenMap[dirs[path]],

@@ -58,7 +58,7 @@
         3. The test still passes on non-Windows environments.
     - **Depends‑on:** none
 
-- [ ] **T008 · Chore · P3: remove or make conditional excessive `t.Logf` calls in integration tests**
+- [x] **T008 · Chore · P3: remove or make conditional excessive `t.Logf` calls in integration tests**
     - **Context:** cr-07 Remove Excessive Test Logging
     - **Action:**
         1. Review integration tests for `t.Logf` calls used for debugging rather than essential test output.

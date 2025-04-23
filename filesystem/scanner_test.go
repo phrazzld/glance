@@ -101,15 +101,19 @@ func TestListDirsWithIgnores(t *testing.T) {
 	rootGI, err := LoadGitignore(root)
 	require.NoError(t, err, "Failed to load root .gitignore")
 
-	t.Logf("Direct .gitignore matching checks:")
-	t.Logf("- root gitignore.MatchesPath('ignored_dir') = %v", rootGI.MatchesPath("ignored_dir"))
-	t.Logf("- root gitignore.MatchesPath('ignored_dir/') = %v", rootGI.MatchesPath("ignored_dir/"))
+	if testing.Verbose() {
+		t.Logf("Direct .gitignore matching checks:")
+		t.Logf("- root gitignore.MatchesPath('ignored_dir') = %v", rootGI.MatchesPath("ignored_dir"))
+		t.Logf("- root gitignore.MatchesPath('ignored_dir/') = %v", rootGI.MatchesPath("ignored_dir/"))
+	}
 
 	dir1GI, err := LoadGitignore(filepath.Join(root, "dir1"))
 	require.NoError(t, err, "Failed to load dir1 .gitignore")
 
-	t.Logf("- dir1 gitignore.MatchesPath('subdir2') = %v", dir1GI.MatchesPath("subdir2"))
-	t.Logf("- dir1 gitignore.MatchesPath('subdir2/') = %v", dir1GI.MatchesPath("subdir2/"))
+	if testing.Verbose() {
+		t.Logf("- dir1 gitignore.MatchesPath('subdir2') = %v", dir1GI.MatchesPath("subdir2"))
+		t.Logf("- dir1 gitignore.MatchesPath('subdir2/') = %v", dir1GI.MatchesPath("subdir2/"))
+	}
 
 	// Call the function we want to test
 	dirs, ignoreChains, err := ListDirsWithIgnores(root)
@@ -118,7 +122,9 @@ func TestListDirsWithIgnores(t *testing.T) {
 	require.NoError(t, err, "ListDirsWithIgnores should not return an error with valid directory")
 
 	// Print the directories we found for debugging
-	t.Logf("Found directories: %v", dirs)
+	if testing.Verbose() {
+		t.Logf("Found directories: %v", dirs)
+	}
 
 	// Check that we got the expected directories (and not the ignored ones)
 	assert.Contains(t, dirs, root, "Result should include the root directory")
