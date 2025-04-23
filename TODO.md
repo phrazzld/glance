@@ -22,7 +22,7 @@
         1. Log messages clearly indicate regeneration reasons (e.g., forced, file change, parent marked).
     - **Depends‑on:** [T001]
 
-- [ ] **T003 · Test · P2: verify `filesystem.BubbleUpParents` unit tests**
+- [x] **T003 · Test · P2: verify `filesystem.BubbleUpParents` unit tests**
     - **Context:** Testing Strategy #1
     - **Action:**
         1. Review existing tests for `filesystem.BubbleUpParents` in `filesystem/utils_test.go`.
