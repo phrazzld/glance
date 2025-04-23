@@ -24,7 +24,7 @@
     - **Depends‑on:** none
 
 ## Testing
-- [ ] **T003 · Test · P1: update integration tests to use production `processDirectories`**
+- [x] **T003 · Test · P1: update integration tests to use production `processDirectories`**
     - **Context:** cr-02 Refactor Tests to Use Production Code (Steps 2-3)
     - **Action:**
         1. Modify integration tests to call the refactored production `processDirectories` function, providing necessary test doubles for dependencies.
