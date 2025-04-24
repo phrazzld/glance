@@ -156,11 +156,18 @@ repos:
         description: Checks for the existence of private keys in committed files
         exclude: '^precommit-tests/test_private_key.txt$|^vendor/'
 
-      - id: no-commit-to-branch
-        name: Prevent direct commits to protected branches
-        description: Prevents direct commits to protected branches (still allows merges)
-        args: [--branch, main, --branch, master]
-        stages: [pre-commit]  # Only run during regular commits, not during merges
+# Replacing the standard no-commit-to-branch hook with a custom implementation
+# that allows merge commits but blocks direct commits to protected branches
+
+  # Custom hooks - local repository for branch protection
+  - repo: local
+    hooks:
+      - id: no-direct-master
+        name: Prevent direct commits to master (allow merges)
+        entry: bash -c 'branch=$(git rev-parse --abbrev-ref HEAD); if [[ "$branch" =~ ^(main|master)$ ]]; then parent_count=$(git rev-list --parents -n1 HEAD | wc -w); if (( parent_count <= 2 )); then echo "✋ Direct commits to $branch are forbidden. Please open a PR." >&2; exit 1; fi; fi; exit 0'
+        language: system
+        pass_filenames: false
+        always_run: true
 
   # Optimized secrets detection
   - repo: https://github.com/Yelp/detect-secrets
