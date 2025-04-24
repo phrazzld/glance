@@ -164,7 +164,7 @@ repos:
     hooks:
       - id: no-direct-master
         name: Prevent direct commits to master (allow merges)
-        entry: bash -c 'branch=$(git rev-parse --abbrev-ref HEAD); if [[ "$branch" =~ ^(main|master)$ ]]; then parent_count=$(git rev-list --parents -n1 HEAD | wc -w); if (( parent_count <= 2 )); then echo "✋ Direct commits to $branch are forbidden. Please open a PR." >&2; exit 1; fi; fi; exit 0'
+        entry: bash -c 'branch=$(git rev-parse --abbrev-ref HEAD); if [[ "$branch" =~ ^(main|master)$ ]]; then parent_count=$(git rev-list --parents -n1 HEAD | wc -w); if [[ $parent_count -lt 3 ]]; then echo "✋ Direct commits to $branch are forbidden. Please open a PR." >&2; exit 1; fi; fi; exit 0'
         language: system
         pass_filenames: false
         always_run: true
