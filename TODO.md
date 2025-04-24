@@ -77,7 +77,7 @@
         3. No reference to old progress bar abstractions.
     - **Depends‑on:** T001, T002, T003
 
-- [ ] **T005 · Test · P2: manually verify CLI progress bar appearance**
+- [x] **T005 · Test · P2: manually verify CLI progress bar appearance**
     - **Context:** Verify user experience
     - **Action:**
         1. Run the `glance` command locally on a sample set of directories.
