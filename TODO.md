@@ -17,7 +17,7 @@
         3. Code won't compile but that's expected at this stage.
     - **Depends‑on:** none
 
-- [ ] **T002 · Feature · P1: implement direct progress bar usage in glance.go**
+- [x] **T002 · Feature · P1: implement direct progress bar usage in glance.go**
     - **Context:** Radical simplification - use library directly
     - **Action:**
         1. Import the progress bar library directly in `glance.go`:

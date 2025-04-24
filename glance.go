@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	_ "github.com/joho/godotenv" // Used by the config package for loading environment variables
+	progressbar "github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 
 	"glance/config"
@@ -60,11 +61,8 @@ func main() {
 		logrus.WithField("error", err).Fatal("Directory scan failed - Check file permissions and disk space")
 	}
 
-	// Create progress tracker factory
-	progressFactory := &ui.DefaultProgressTrackerFactory{}
-
 	// Process directories and generate glance.md files
-	results, _ := processDirectories(dirs, ignoreChains, cfg, llmService, progressFactory)
+	results, _ := processDirectories(dirs, ignoreChains, cfg, llmService)
 
 	// Print summary of results
 	printDebrief(results)
@@ -183,12 +181,16 @@ func processDirectories(
 	dirToIgnoreChain map[string]filesystem.IgnoreChain,
 	cfg *config.Config,
 	llmService *llm.Service,
-	progressFactory ui.ProgressTrackerFactory,
 ) ([]result, map[string]bool) {
 	logrus.Info("Preparing to generate glance.md files...")
 
-	// Create progress bar using the factory interface
-	bar := progressFactory.NewProcessor(len(dirsList))
+	// Create progress bar directly
+	bar := progressbar.NewOptions(len(dirsList),
+		progressbar.OptionSetDescription("Creating glance files"),
+		progressbar.OptionShowCount(),
+		progressbar.OptionSetWidth(40),
+		progressbar.OptionSetPredictTime(false),
+	)
 
 	// Create map to track directories needing regeneration due to child changes
 	needsRegen := make(map[string]bool)
@@ -221,9 +223,8 @@ func processDirectories(
 		r := processDirectory(d, forceDir, ignoreChain, cfg, llmService)
 		finalResults = append(finalResults, r)
 
-		if err := bar.Increment(); err != nil {
-			logrus.WithField("error", err).Warn("Failed to increment progress bar")
-		}
+		// Ignore error for non-critical UI
+		_ = bar.Add(1)
 
 		// Bubble up parent's regeneration flag if needed - only when regeneration was
 		// successful and actually attempted (not skipped)
@@ -236,7 +237,9 @@ func processDirectories(
 		}
 	}
 
-	fmt.Println()
+	// Finish the progress bar (ignore errors for non-critical UI)
+	_ = bar.Finish()
+
 	logrus.WithField("target_dir", cfg.TargetDir).Info("All done! glance.md files have been generated for your codebase")
 
 	return finalResults, needsRegen
