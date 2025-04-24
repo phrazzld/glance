@@ -87,7 +87,7 @@
         2. User experience is maintained.
     - **Depends‑on:** T002
 
-- [ ] **T006 · Chore · P2: run linters/formatters and fix issues**
+- [x] **T006 · Chore · P2: run linters/formatters and fix issues**
     - **Context:** Code cleanup
     - **Action:**
         1. Run `go fmt ./...`
