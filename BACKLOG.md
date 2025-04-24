@@ -1,13 +1,5 @@
 # BACKLOG
 
-## Completed
-
-- ✅ Simplify the progress bar tracking system by removing unnecessary interfaces and factory patterns (April 2025)
-  - Radical simplification: completely removed abstraction layer for progress bars
-  - Implemented direct progress bar usage in glance.go
-  - Added test output suppression mechanism
-  - Updated all tests to work with the new implementation
-
 ## Current
 
 - improve performance -- make *fast*
