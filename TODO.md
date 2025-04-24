@@ -45,7 +45,7 @@
         3. Code compiles.
     - **Depends‑on:** none
 
-- [ ] **T003 · Feature · P1: add test output suppression mechanism**
+- [x] **T003 · Feature · P1: add test output suppression mechanism**
     - **Context:** Radical simplification - test output handling
     - **Action:**
         1. Add a simple mechanism to suppress progress bar output in tests.

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,8 +62,8 @@ func main() {
 		logrus.WithField("error", err).Fatal("Directory scan failed - Check file permissions and disk space")
 	}
 
-	// Process directories and generate glance.md files
-	results, _ := processDirectories(dirs, ignoreChains, cfg, llmService)
+	// Process directories and generate glance.md files (not a test run)
+	results, _ := processDirectories(dirs, ignoreChains, cfg, llmService, false)
 
 	// Print summary of results
 	printDebrief(results)
@@ -175,22 +176,31 @@ func scanDirectories(cfg *config.Config) ([]string, map[string]filesystem.Ignore
 }
 
 // processDirectories generates glance.md files for each directory in the list and returns the map of directories
-// needing regeneration for testing purposes
+// needing regeneration for testing purposes. The testing parameter controls whether the progress bar output should be suppressed.
 func processDirectories(
 	dirsList []string,
 	dirToIgnoreChain map[string]filesystem.IgnoreChain,
 	cfg *config.Config,
 	llmService *llm.Service,
+	testing bool,
 ) ([]result, map[string]bool) {
 	logrus.Info("Preparing to generate glance.md files...")
 
-	// Create progress bar directly
-	bar := progressbar.NewOptions(len(dirsList),
+	// Set up options for the progress bar
+	options := []progressbar.Option{
 		progressbar.OptionSetDescription("Creating glance files"),
 		progressbar.OptionShowCount(),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionSetPredictTime(false),
-	)
+	}
+
+	// Suppress output in tests by setting the writer to io.Discard
+	if testing {
+		options = append(options, progressbar.OptionSetWriter(io.Discard))
+	}
+
+	// Create progress bar with the configured options
+	bar := progressbar.NewOptions(len(dirsList), options...)
 
 	// Create map to track directories needing regeneration due to child changes
 	needsRegen := make(map[string]bool)
