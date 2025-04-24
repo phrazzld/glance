@@ -107,7 +107,7 @@
         1. `BACKLOG.md` reflects the completed progress bar simplification.
     - **Depends‑on:** T001, T002, T003, T004, T005, T006
 
-- [ ] **T008 · Refactor · P3: clean up imports and dependencies**
+- [x] **T008 · Refactor · P3: clean up imports and dependencies**
     - **Context:** Code cleanup
     - **Action:**
         1. Remove any unused imports left after removing progress bar code.
