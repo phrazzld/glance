@@ -18,10 +18,6 @@ architect_output/
 architect_output_tasks/
 thinktank_output/
 thinktank_output_tasks/
-
-# Symlinked documentation files
-DEVELOPMENT_PHILOSOPHY.md
-DEVELOPMENT_PHILOSOPHY_APPENDIX_GO.md
 docs/prompts
 
 # System files

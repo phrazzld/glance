@@ -280,6 +280,66 @@ func TestBubbleUpParents(t *testing.T) {
 		assert.True(t, needsRegen["/test/root/parent"], "Should mark grandparent")
 		assert.False(t, needsRegen["/test/root"], "Should not mark root")
 	})
+
+	// Test case 6: Immediate child of root
+	t.Run("Immediate child of root", func(t *testing.T) {
+		root := "/test/root"
+		dir := "/test/root/child"
+		needsRegen := make(map[string]bool)
+
+		BubbleUpParents(dir, root, needsRegen)
+
+		// Should be empty since the only parent is the root
+		assert.Empty(t, needsRegen, "Should not mark root directory")
+	})
+
+	// Test case 7: Windows-style paths
+	t.Run("Windows-style paths", func(t *testing.T) {
+		// This test is useful on all platforms because filepath.Dir will
+		// process paths according to the host platform
+		root := filepath.FromSlash("C:/Users/test")
+		dir := filepath.FromSlash("C:/Users/test/Documents/folder/subfolder")
+		needsRegen := make(map[string]bool)
+
+		BubbleUpParents(dir, root, needsRegen)
+
+		documents := filepath.FromSlash("C:/Users/test/Documents")
+		documentsFolder := filepath.FromSlash("C:/Users/test/Documents/folder")
+
+		assert.True(t, needsRegen[documentsFolder], "Should mark parent folders correctly on Windows paths")
+		assert.True(t, needsRegen[documents], "Should mark grandparent folders correctly on Windows paths")
+		assert.False(t, needsRegen[root], "Should not mark root on Windows paths")
+	})
+
+	// Test case 8: Map with false values
+	t.Run("Map with false values", func(t *testing.T) {
+		root := "/test/root"
+		dir := "/test/root/parent/child/grandchild"
+		needsRegen := make(map[string]bool)
+
+		// Pre-populate the map with false values
+		needsRegen["/test/root/parent"] = false
+		needsRegen["/test/root/parent/child"] = false
+
+		BubbleUpParents(dir, root, needsRegen)
+
+		// Should overwrite false values with true
+		assert.True(t, needsRegen["/test/root/parent/child"], "Should overwrite false with true")
+		assert.True(t, needsRegen["/test/root/parent"], "Should overwrite false with true")
+	})
+
+	// Test case 9: Empty directory path (edge case)
+	t.Run("Empty directory path", func(t *testing.T) {
+		root := "/test/root"
+		dir := ""
+		needsRegen := make(map[string]bool)
+
+		// This should handle gracefully without panicking
+		BubbleUpParents(dir, root, needsRegen)
+
+		// Should not mark anything as the loop should exit immediately
+		assert.Empty(t, needsRegen, "Should handle empty directory path gracefully")
+	})
 }
 
 func TestLatestModTime_EdgeCases(t *testing.T) {

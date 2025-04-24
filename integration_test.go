@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,6 +17,7 @@ import (
 	"glance/filesystem"
 	"glance/internal/mocks"
 	"glance/llm"
+	"glance/ui"
 )
 
 // Helper functions for integration testing
@@ -83,6 +86,47 @@ func (m *MockClient) Generate(ctx context.Context, prompt string) (string, error
 // Close delegates to the mock
 func (m *MockClient) Close() {
 	m.LLMClient.Close()
+}
+
+// MockProgressBar implements the ui.ProgressBar interface for testing
+type MockProgressBar struct {
+	CurrentValue int
+	TotalValue   int
+	Finished     bool
+}
+
+// Increment advances the progress bar by one step
+func (m *MockProgressBar) Increment() error {
+	m.CurrentValue++
+	return nil
+}
+
+// Set sets the progress bar to a specific value
+func (m *MockProgressBar) Set(value int) error {
+	m.CurrentValue = value
+	return nil
+}
+
+// Finish completes the progress bar
+func (m *MockProgressBar) Finish() error {
+	m.Finished = true
+	return nil
+}
+
+// MockProgressTrackerFactory implements ui.ProgressTrackerFactory for testing
+type MockProgressTrackerFactory struct {
+	Bars []*MockProgressBar
+}
+
+// NewProcessor creates a new progress bar for processing directories
+func (f *MockProgressTrackerFactory) NewProcessor(total int) ui.ProgressBar {
+	bar := &MockProgressBar{
+		CurrentValue: 0,
+		TotalValue:   total,
+		Finished:     false,
+	}
+	f.Bars = append(f.Bars, bar)
+	return bar
 }
 
 // ProcessDirectoryResults represents the results of processing a directory
@@ -198,6 +242,46 @@ func setupIntegrationTest(t *testing.T) (string, func()) {
 	}
 }
 
+// setupMultiLevelDirectoryStructure creates a nested directory structure for testing parent propagation
+func setupMultiLevelDirectoryStructure(t *testing.T) (string, map[string]string, func()) {
+	rootDir, err := os.MkdirTemp("", "glance-parent-regen-test-*")
+	require.NoError(t, err, "Failed to create root test directory")
+
+	// Create nested directory structure: root/level1/level2/level3
+	level1Dir := filepath.Join(rootDir, "level1")
+	level2Dir := filepath.Join(level1Dir, "level2")
+	level3Dir := filepath.Join(level2Dir, "level3")
+
+	// Create all directories
+	for _, dir := range []string{level1Dir, level2Dir, level3Dir} {
+		err := os.MkdirAll(dir, 0755)
+		require.NoError(t, err, "Failed to create directory: "+dir)
+	}
+
+	// Create files in each directory
+	paths := map[string]string{
+		"root":   rootDir,
+		"level1": level1Dir,
+		"level2": level2Dir,
+		"level3": level3Dir,
+	}
+
+	// Add a file to each directory
+	for level, dir := range paths {
+		filePath := filepath.Join(dir, level+".txt")
+		err := os.WriteFile(filePath, []byte("Content for "+level), 0644)
+		require.NoError(t, err, "Failed to create file in "+level)
+	}
+
+	// Return cleanup function
+	return rootDir, paths, func() {
+		err := os.RemoveAll(rootDir)
+		if err != nil {
+			t.Logf("Warning: failed to clean up test directory: %v", err)
+		}
+	}
+}
+
 // TestFileSystemLLMIntegration verifies the integration between the filesystem
 // package and the LLM package, particularly the flow of scanning files and
 // generating glance.md content.
@@ -298,4 +382,504 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		// Verify only the expectations we care about - Generate was called
 		mockLLMClient.AssertCalled(t, "Generate", mock.Anything, mock.Anything)
 	})
+}
+
+// TestParentRegenerationPropagation tests that when a file in a child directory is changed,
+// the glance.md files in all parent directories are regenerated
+func TestParentRegenerationPropagation(t *testing.T) {
+	// Create test directory with multi-level structure
+	rootDir, dirs, cleanup := setupMultiLevelDirectoryStructure(t)
+	defer cleanup()
+
+	// Create a mock LLM client and service (not really used in this test)
+	mockLLMClient := new(mocks.LLMClient)
+	mockClient := &MockClient{LLMClient: mockLLMClient}
+	mockLLMClient.On("Generate", mock.Anything, mock.Anything).Return("# Mock Glance\n\nThis is a mock glance.md summary.", nil)
+	mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(100, nil)
+	service, err := llm.NewService(mockClient)
+	require.NoError(t, err, "Failed to create LLM service")
+
+	// Configure application
+	cfg := config.NewDefaultConfig().
+		WithTargetDir(rootDir)
+
+	// Get all directories to process
+	dirsList, dirToIgnoreChain, err := filesystem.ListDirsWithIgnores(rootDir)
+	require.NoError(t, err, "Failed to list directories")
+
+	// Reverse dirsList to process from deepest to shallowest
+	for i, j := 0, len(dirsList)-1; i < j; i, j = i+1, j-1 {
+		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
+	}
+
+	// Create a mock progress tracker factory
+	progressFactory := &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Initial run to generate all glance.md files - force to ensure all are generated
+	cfg = cfg.WithForce(true)
+	// Use the real processDirectories function with our mock dependencies
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, cfg, service, progressFactory)
+
+	// Verify all directories have glance.md files
+	for _, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
+	}
+
+	// Get initial modification times
+	initialModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		initialModTimes[level] = info.ModTime()
+	}
+
+	// Wait to ensure file timestamps will be different
+	time.Sleep(1 * time.Second)
+
+	// Modify a file in the deepest level (level3)
+	deepestFilePath := filepath.Join(dirs["level3"], "level3.txt")
+	newContent := "Modified content for level3 - " + time.Now().String()
+	err = os.WriteFile(deepestFilePath, []byte(newContent), 0644)
+	require.NoError(t, err, "Failed to modify file in deepest directory")
+
+	// Also explicitly touch the file to ensure modification time is updated
+	currentTime := time.Now().Local()
+	err = os.Chtimes(deepestFilePath, currentTime, currentTime)
+	require.NoError(t, err, "Failed to update file modification time")
+
+	// Wait to ensure timestamp detection works reliably
+	time.Sleep(100 * time.Millisecond)
+
+	// Reset the progress tracker for the second run
+	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Run without global force flag, so only changed dirs and parents regenerate
+	cfg = cfg.WithForce(false)
+	_, parentRegenMap := processDirectories(dirsList, dirToIgnoreChain, cfg, service, progressFactory)
+
+	// Check that parent dirs are marked for regeneration in the map
+	for level, dir := range dirs {
+		if level == "level1" || level == "level2" {
+			// These should be marked for regeneration from bubbling up
+			assert.True(t, parentRegenMap[dir],
+				fmt.Sprintf("%s directory should be marked for regeneration", level))
+		}
+	}
+
+	// Get new modification times
+	finalModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		finalModTimes[level] = info.ModTime()
+	}
+
+	// Level3 (changed directory) should be regenerated
+	if testing.Verbose() {
+		t.Logf("level3 initial: %v, final: %v", initialModTimes["level3"], finalModTimes["level3"])
+	}
+	assert.True(t, finalModTimes["level3"].After(initialModTimes["level3"]),
+		"level3 glance.md should have been regenerated (final time should be after initial time)")
+
+	// Parent directories should be regenerated due to bubbling up
+	if testing.Verbose() {
+		t.Logf("level2 initial: %v, final: %v", initialModTimes["level2"], finalModTimes["level2"])
+	}
+	assert.True(t, finalModTimes["level2"].After(initialModTimes["level2"]),
+		"level2 glance.md should have been regenerated due to child change")
+
+	if testing.Verbose() {
+		t.Logf("level1 initial: %v, final: %v", initialModTimes["level1"], finalModTimes["level1"])
+	}
+	assert.True(t, finalModTimes["level1"].After(initialModTimes["level1"]),
+		"level1 glance.md should have been regenerated due to child change")
+}
+
+// TestForcedChildRegenerationBubblesUp tests that when a child directory is forcibly regenerated,
+// the glance.md files in all parent directories are also regenerated
+func TestForcedChildRegenerationBubblesUp(t *testing.T) {
+	// Create test directory with multi-level structure
+	rootDir, dirs, cleanup := setupMultiLevelDirectoryStructure(t)
+	defer cleanup()
+
+	// Create a mock LLM client and service
+	mockLLMClient := new(mocks.LLMClient)
+	mockClient := &MockClient{LLMClient: mockLLMClient}
+	mockLLMClient.On("Generate", mock.Anything, mock.Anything).Return("# Mock Glance\n\nThis is a mock glance.md summary.", nil)
+	mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(100, nil)
+	service, err := llm.NewService(mockClient)
+	require.NoError(t, err, "Failed to create LLM service")
+
+	// Configure application for the root directory
+	rootCfg := config.NewDefaultConfig().
+		WithTargetDir(rootDir)
+
+	// Get all directories to process
+	dirsList, dirToIgnoreChain, err := filesystem.ListDirsWithIgnores(rootDir)
+	require.NoError(t, err, "Failed to list directories")
+
+	// Reverse dirsList to process from deepest to shallowest
+	for i, j := 0, len(dirsList)-1; i < j; i, j = i+1, j-1 {
+		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
+	}
+
+	// Create a mock progress tracker factory
+	progressFactory := &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Initial run to generate all glance.md files without force flag
+	rootCfg = rootCfg.WithForce(false)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, progressFactory)
+
+	// Verify all directories have glance.md files
+	for _, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
+	}
+
+	// Get initial modification times
+	initialModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		initialModTimes[level] = info.ModTime()
+	}
+
+	// Wait to ensure file timestamps will be different
+	time.Sleep(1 * time.Second)
+
+	// Create a new directory list with just the level3 directory
+	level3Dir := dirs["level3"]
+	level3DirsList := []string{level3Dir}
+	level3IgnoreChain := map[string]filesystem.IgnoreChain{level3Dir: dirToIgnoreChain[level3Dir]}
+
+	// Configure level3 config with the force flag set to true - this is the key change
+	// using the actual application's force mechanism instead of manual simulation
+	level3Cfg := config.NewDefaultConfig().
+		WithTargetDir(level3Dir).
+		WithForce(true) // Using the actual force mechanism here
+
+	// Reset the progress tracker for the level3 run
+	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Process level3 directory with force flag to trigger regeneration
+	_, _ = processDirectories(level3DirsList, level3IgnoreChain, level3Cfg, service, progressFactory)
+
+	// Wait a bit to ensure timestamps will be different if files are regenerated
+	time.Sleep(100 * time.Millisecond)
+
+	// Manually bubble up regeneration from level3 to parents to make the test more reliable
+	// This simulates what happens in the application code but makes it explicit in our test
+	needsRegen := make(map[string]bool)
+	filesystem.BubbleUpParents(level3Dir, rootDir, needsRegen)
+
+	// Verify parent directories are correctly marked for regeneration in our manual check
+	assert.True(t, needsRegen[dirs["level2"]], "level2 directory should be marked for regeneration in manual check")
+	assert.True(t, needsRegen[dirs["level1"]], "level1 directory should be marked for regeneration in manual check")
+
+	// Reset the progress tracker for the main run
+	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Process all directories to propagate changes
+	rootCfg = rootCfg.WithForce(false)
+	// We're not asserting on the regenMap anymore since we've already verified the bubbling behavior above
+	// The important part is that the timestamps show files actually get regenerated
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, progressFactory)
+
+	// Get new modification times
+	finalModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		finalModTimes[level] = info.ModTime()
+	}
+
+	// Level3 (forced directory) should be regenerated
+	if testing.Verbose() {
+		t.Logf("level3 initial: %v, final: %v", initialModTimes["level3"], finalModTimes["level3"])
+	}
+	assert.True(t, finalModTimes["level3"].After(initialModTimes["level3"]),
+		"level3 glance.md should have been regenerated due to force flag")
+
+	// Parent directories should be regenerated due to bubbling up
+	if testing.Verbose() {
+		t.Logf("level2 initial: %v, final: %v", initialModTimes["level2"], finalModTimes["level2"])
+	}
+	assert.True(t, finalModTimes["level2"].After(initialModTimes["level2"]),
+		"level2 glance.md should have been regenerated due to forced child")
+
+	if testing.Verbose() {
+		t.Logf("level1 initial: %v, final: %v", initialModTimes["level1"], finalModTimes["level1"])
+	}
+	assert.True(t, finalModTimes["level1"].After(initialModTimes["level1"]),
+		"level1 glance.md should have been regenerated due to forced child")
+}
+
+// TestNoChangesMeansNoRegeneration tests that when no files have changed between runs,
+// no glance.md files are regenerated (optimization)
+func TestNoChangesMeansNoRegeneration(t *testing.T) {
+	// Create test directory with multi-level structure
+	rootDir, dirs, cleanup := setupMultiLevelDirectoryStructure(t)
+	defer cleanup()
+
+	// Create a mock LLM client and service
+	mockLLMClient := new(mocks.LLMClient)
+	mockClient := &MockClient{LLMClient: mockLLMClient}
+	mockLLMClient.On("Generate", mock.Anything, mock.Anything).Return("# Mock Glance\n\nThis is a mock glance.md summary.", nil)
+	mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(100, nil)
+	service, err := llm.NewService(mockClient)
+	require.NoError(t, err, "Failed to create LLM service")
+
+	// Configure application
+	cfg := config.NewDefaultConfig().
+		WithTargetDir(rootDir)
+
+	// Get all directories to process
+	dirsList, dirToIgnoreChain, err := filesystem.ListDirsWithIgnores(rootDir)
+	require.NoError(t, err, "Failed to list directories")
+
+	// Reverse dirsList to process from deepest to shallowest
+	for i, j := 0, len(dirsList)-1; i < j; i, j = i+1, j-1 {
+		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
+	}
+
+	// Create a mock progress tracker factory
+	progressFactory := &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Initial run to generate all glance.md files - force to ensure all are generated initially
+	firstRunCfg := cfg.WithForce(true)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, firstRunCfg, service, progressFactory)
+
+	// Verify all directories have glance.md files
+	for _, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
+	}
+
+	// Wait a moment to ensure file timestamps would be different if files were regenerated
+	time.Sleep(1 * time.Second)
+
+	// Get the modification times after the first run
+	initialModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		initialModTimes[level] = info.ModTime()
+		if testing.Verbose() {
+			t.Logf("Initial mod time for %s: %v", level, initialModTimes[level])
+		}
+	}
+
+	// Reset the progress tracker for the second run
+	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Run again without force flag and without any file changes
+	secondRunCfg := cfg.WithForce(false)
+	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, progressFactory)
+
+	// Verify no directories were marked for regeneration
+	for level, dir := range dirs {
+		assert.False(t, regenMap[dir],
+			fmt.Sprintf("%s directory should NOT be marked for regeneration", level))
+	}
+
+	// Get modification times after the second run
+	finalModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		finalModTimes[level] = info.ModTime()
+		if testing.Verbose() {
+			t.Logf("Final mod time for %s: %v", level, finalModTimes[level])
+		}
+	}
+
+	// Verify no glance.md files were regenerated (modification times should be unchanged)
+	for level := range dirs {
+		assert.Equal(t, initialModTimes[level], finalModTimes[level],
+			fmt.Sprintf("%s's glance.md should NOT have been regenerated (mod times should be equal)", level))
+	}
+}
+
+// setupBranchingDirectoryStructure creates a directory structure with multiple branches
+// for testing sibling directory isolation
+// Structure:
+//
+//	root/
+//	├── branch_a/
+//	│   └── deep_a/
+//	│       └── nested_a/
+//	└── branch_b/
+//	    └── deep_b/
+func setupBranchingDirectoryStructure(t *testing.T) (string, map[string]string, func()) {
+	rootDir, err := os.MkdirTemp("", "glance-sibling-isolation-test-*")
+	require.NoError(t, err, "Failed to create root test directory")
+
+	// Create branching directory structure with two separate branches
+	branchADir := filepath.Join(rootDir, "branch_a")
+	deepADir := filepath.Join(branchADir, "deep_a")
+	nestedADir := filepath.Join(deepADir, "nested_a")
+
+	branchBDir := filepath.Join(rootDir, "branch_b")
+	deepBDir := filepath.Join(branchBDir, "deep_b")
+
+	// Create all directories
+	for _, dir := range []string{branchADir, deepADir, nestedADir, branchBDir, deepBDir} {
+		err := os.MkdirAll(dir, 0755)
+		require.NoError(t, err, "Failed to create directory: "+dir)
+	}
+
+	// Create files in each directory
+	paths := map[string]string{
+		"root":     rootDir,
+		"branch_a": branchADir,
+		"deep_a":   deepADir,
+		"nested_a": nestedADir,
+		"branch_b": branchBDir,
+		"deep_b":   deepBDir,
+	}
+
+	// Add a file to each directory
+	for level, dir := range paths {
+		filePath := filepath.Join(dir, level+".txt")
+		err := os.WriteFile(filePath, []byte("Content for "+level), 0644)
+		require.NoError(t, err, "Failed to create file in "+level)
+	}
+
+	// Return cleanup function
+	return rootDir, paths, func() {
+		err := os.RemoveAll(rootDir)
+		if err != nil {
+			t.Logf("Warning: failed to clean up test directory: %v", err)
+		}
+	}
+}
+
+// TestSiblingDirectoryIsolation tests that when a file in one branch of the directory structure
+// changes, glance.md files in sibling branches are not regenerated
+func TestSiblingDirectoryIsolation(t *testing.T) {
+	// Create test directory with branching structure
+	rootDir, dirs, cleanup := setupBranchingDirectoryStructure(t)
+	defer cleanup()
+
+	// Create a mock LLM client and service
+	mockLLMClient := new(mocks.LLMClient)
+	mockClient := &MockClient{LLMClient: mockLLMClient}
+	mockLLMClient.On("Generate", mock.Anything, mock.Anything).Return("# Mock Glance\n\nThis is a mock glance.md summary.", nil)
+	mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(100, nil)
+	service, err := llm.NewService(mockClient)
+	require.NoError(t, err, "Failed to create LLM service")
+
+	// Configure application for the root directory
+	cfg := config.NewDefaultConfig().
+		WithTargetDir(rootDir)
+
+	// Get all directories to process
+	dirsList, dirToIgnoreChain, err := filesystem.ListDirsWithIgnores(rootDir)
+	require.NoError(t, err, "Failed to list directories")
+
+	// Reverse dirsList to process from deepest to shallowest
+	for i, j := 0, len(dirsList)-1; i < j; i, j = i+1, j-1 {
+		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
+	}
+
+	// Create a mock progress tracker factory
+	progressFactory := &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Initial run to generate all glance.md files
+	initialCfg := cfg.WithForce(true)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, initialCfg, service, progressFactory)
+
+	// Verify all directories have glance.md files
+	for _, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
+	}
+
+	// Wait to ensure file timestamps will be different if files are regenerated
+	time.Sleep(1 * time.Second)
+
+	// Get initial modification times for all directories
+	initialModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		initialModTimes[level] = info.ModTime()
+		if testing.Verbose() {
+			t.Logf("Initial mod time for %s: %v", level, initialModTimes[level])
+		}
+	}
+
+	// Modify a file in the nested_a branch
+	nestedAFilePath := filepath.Join(dirs["nested_a"], "nested_a.txt")
+	newContent := "Modified content for nested_a - " + time.Now().String()
+	err = os.WriteFile(nestedAFilePath, []byte(newContent), 0644)
+	require.NoError(t, err, "Failed to modify file in nested_a directory")
+
+	// Explicitly touch the file to ensure modification time is updated
+	now := time.Now()
+	err = os.Chtimes(nestedAFilePath, now, now)
+	require.NoError(t, err, "Failed to update file modification time")
+
+	// Reset the progress tracker for the second run
+	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
+
+	// Run again without the force flag
+	secondRunCfg := cfg.WithForce(false)
+	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, progressFactory)
+
+	// Get final modification times
+	finalModTimes := make(map[string]time.Time)
+	for level, dir := range dirs {
+		glancePath := filepath.Join(dir, "glance.md")
+		info, err := os.Stat(glancePath)
+		require.NoError(t, err, "Failed to stat glance.md in "+level)
+		finalModTimes[level] = info.ModTime()
+		if testing.Verbose() {
+			t.Logf("Final mod time for %s: %v", level, finalModTimes[level])
+		}
+	}
+
+	// Affected Paths: nested_a, deep_a, branch_a
+	// These should be regenerated based on file changes and bubble-up
+	affectedPaths := []string{"nested_a", "deep_a", "branch_a"}
+	for _, path := range affectedPaths {
+		if testing.Verbose() {
+			t.Logf("Checking affected path: %s", path)
+		}
+		assert.True(t, finalModTimes[path].After(initialModTimes[path]),
+			fmt.Sprintf("%s glance.md should have been regenerated (final time should be after initial time)", path))
+
+		// For all affected paths, they should be marked for regeneration or be the source of change
+		assert.True(t, regenMap[dirs[path]] || path == "nested_a",
+			fmt.Sprintf("%s should be marked for regeneration or be the modified directory", path))
+	}
+
+	// The root directory should also be regenerated, but it's not always in the regenMap
+	// since it's the target directory and is handled differently
+	if testing.Verbose() {
+		t.Logf("Checking root directory")
+	}
+	assert.True(t, finalModTimes["root"].After(initialModTimes["root"]),
+		"root glance.md should have been regenerated (final time should be after initial time)")
+
+	// Unaffected Paths: branch_b, deep_b
+	// These should NOT be regenerated
+	unaffectedPaths := []string{"branch_b", "deep_b"}
+	for _, path := range unaffectedPaths {
+		if testing.Verbose() {
+			t.Logf("Checking unaffected path: %s", path)
+		}
+		assert.Equal(t, initialModTimes[path], finalModTimes[path],
+			fmt.Sprintf("%s glance.md should NOT have been regenerated (mod times should be equal)", path))
+		assert.False(t, regenMap[dirs[path]],
+			fmt.Sprintf("%s should NOT be marked for regeneration", path))
+	}
 }
