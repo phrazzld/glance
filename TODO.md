@@ -97,7 +97,7 @@
         1. Code passes all linting and formatting checks
     - **Depends‑on:** T001, T002, T003, T004
 
-- [ ] **T007 · Chore · P3: update BACKLOG.md**
+- [x] **T007 · Chore · P3: update BACKLOG.md**
     - **Context:** Documentation update
     - **Action:**
         1. Locate all progress bar related tasks in `BACKLOG.md`.
