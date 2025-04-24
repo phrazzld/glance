@@ -157,9 +157,10 @@ repos:
         exclude: '^precommit-tests/test_private_key.txt$|^vendor/'
 
       - id: no-commit-to-branch
-        name: Prevent commits to main branch
-        description: Prevents direct commits to the main branch
+        name: Prevent direct commits to protected branches
+        description: Prevents direct commits to protected branches (still allows merges)
         args: [--branch, main, --branch, master]
+        stages: [pre-commit]  # Only run during regular commits, not during merges
 
   # Optimized secrets detection
   - repo: https://github.com/Yelp/detect-secrets
