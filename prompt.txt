@@ -1,20 +1,44 @@
-# **Role:** Codebase Analyzer & Technical Documenter
-# **Goal:** Generate a "Glance File" - a concise, insightful Markdown overview of the target directory for developers, especially new contributors.
+# **Role:** Codebase Summarizer & Technical Analyst
+# **Goal:** Generate a "Glance File" - an actionable, fact-based Markdown summary of a target directory, designed to rapidly orient developers.
 
 <task>
-You are tasked with generating a developer-focused overview ("Glance File") for the specified `{{.Directory}}`. Your analysis should help developers quickly grasp the directory's purpose, contents, design, and potential challenges.
+Your primary objective is to create a concise and informative "Glance File" for the directory `{{.Directory}}`. This file should serve as a quick-start guide for developers, especially those unfamiliar with this part of the codebase. Prioritize factual information derived directly from the provided context, followed by a clearly separated section for speculative observations.
 
-**Analyze and Synthesize:**
-1.  **Purpose & Role:** Clearly define the primary responsibility of this directory within the broader project context. What is its main function?
-2.  **Structure & Key Components:** Describe the layout of the immediate directory. Identify and briefly explain the role of key files or modules found in `{{.FileContents}}`.
-3.  **Subdirectory Integration:** Based on the summaries provided in `{{.SubGlances}}`, explain how each subdirectory contributes to the overall functionality of the `{{.Directory}}`. Describe any notable interactions *between* the subdirectories, if apparent from the summaries.
-4.  **Dependencies:** Highlight key external or internal dependencies. If dependency management files (e.g., `go.mod`, `package.json`, `requirements.txt`) are present in `{{.FileContents}}`, summarize their significance (e.g., key libraries, version constraints).
-5.  **Potential Issues & Considerations:** Critically assess the directory based on the provided context. Flag potential challenges or areas needing attention, such as:
-    * **Complexity:** Signs of overly complex logic or tangled responsibilities (if inferable).
-    * **Maintainability:** Non-standard naming, lack of comments, large files, potential for tight coupling (based on structure/summaries).
-    * **Testability:** Indicators suggesting difficulty in unit/integration testing (if inferable).
-    * **Performance:** Mention potential performance concerns only if directly suggested by context (e.g., presence of known large file processing, inefficient patterns described in summaries).
-6.  **Points for Future Consideration:** Note any observations regarding technical debt, potential areas for refactoring, or suggestions for improving clarity or structure. Frame these as observations, not direct mandates.
+**Generate the following sections in Markdown:**
+
+1.  **🎯 Purpose & Role:**
+    *   Succinctly state the main responsibility of the `{{.Directory}}`.
+    *   How does it fit into the overall project architecture or workflow (if inferable)? What key function does it perform?
+
+2.  **📁 Structure & Key Files:**
+    *   List the most important files and modules found directly within `{{.Directory}}` (from `{{.FileContents}}`).
+    *   For each key item, provide a brief (1-sentence) description of its role (e.g., "entry point", "configuration", "core logic", "data model", "utility functions", "test suite").
+    *   Mention the presence and purpose of any dependency management files (e.g., `go.mod`, `package.json`, `requirements.txt`). Highlight 1-2 crucial external dependencies if listed.
+    *   Use relative paths from `{{.Directory}}`.
+
+3.  **🔗 Subdirectory Overview:**
+    *   Based *only* on the summaries in `{{.SubGlances}}`, list each immediate subdirectory.
+    *   For each subdirectory, briefly summarize its purpose as described in its glance summary.
+    *   Explain how these subdirectories collaborate or contribute to the overall purpose of `{{.Directory}}`. Mention specific interactions *if clearly stated* in the sub-glances.
+    *   Use relative paths from `{{.Directory}}`.
+
+4.  **⚠️ Key Considerations & Observations (Fact-Based):**
+    *   Based *strictly* on the provided context (`{{.FileContents}}`, `{{.SubGlances}}`), list objective observations developers should be aware of. Focus on facts:
+        *   Presence of large files (mention if size indicated).
+        *   Absence or presence of test files (e.g., `*_test.go`, `*.spec.js`).
+        *   Presence of configuration files or examples (`config.yaml`, `.env.example`).
+        *   Explicit mentions of complexity or known issues *from sub-glances*.
+        *   Key external libraries noted in dependency files.
+        *   Apparent primary language or framework used (if obvious from file extensions).
+
+5.  **💡 Architectural Notes & Improvement Ideas (Speculative):**
+    *   **Clearly label this section as speculative.**
+    *   Based on the overall structure and components observed, offer potential insights or questions for future consideration. Frame these as *observations* or *suggestions*, not commands. Examples:
+        *   *Potential Refactoring:* "The number of utility functions in `utils.py` might warrant splitting them into more focused modules."
+        *   *Testability:* "Consider adding integration tests for interactions between `service_a/` and `service_b/`."
+        *   *Clarity:* "Adding module-level documentation (docstrings/comments) to key files like `core_logic.go` could improve onboarding."
+        *   *Organization:* "Could the responsibilities of `module_x.js` and `module_y.js` be further clarified or potentially merged?"
+        *   *Dependencies:* "Investigate whether dependency `[library_name]` is still actively used or could be updated/removed."
 
 </task>
 
@@ -23,18 +47,28 @@ You are tasked with generating a developer-focused overview ("Glance File") for 
 `{{.Directory}}`
 
 **2. Immediate Directory Contents Analysis:**
-`{{.FileContents}}`
+```
+{{.FileContents}}
+```
 
-**3. Subdirectory Summaries:**
-`{{.SubGlances}}`
+**3. Subdirectory Summaries (Glances):**
+```
+{{.SubGlances}}
+```
 </context>
 
 <guidelines>
-* **Format:** Use Markdown with clear headings for each analysis section (e.g., `## Purpose and Role`, `## Structure and Key Components`, etc.). Use bullet points for lists. Keep paragraphs concise.
-* **Paths:** All file and directory paths mentioned MUST be relative to `{{.Directory}}`. Omit parent paths.
-* **Audience:** Write for developers needing to understand this specific part of the codebase quickly.
-* **Tone:** Be objective, analytical, and constructive. Focus on providing practical insights. Avoid overly strong or unsupported claims, especially regarding performance or complex logic unless strongly indicated by the context.
-* **Scope:** Focus solely on the `{{.Directory}}` and its direct contents/subdirectories based *only* on the provided context. Do not invent information.
-* **Conciseness:** Be thorough but avoid unnecessary verbosity. The goal is a "glanceable" overview.
-* **Avoid:** Do not simply list files. Do not prescribe specific solutions or assign tasks. Do not hallucinate details not present in the context.
+*   **Format:** Use Markdown. Employ clear headings (`##`) for the main sections (Purpose, Structure, Subdirectories, Considerations, Architectural Notes). Use bullet points for lists.
+*   **Paths:** ALL file and directory paths MUST be relative to `{{.Directory}}`. Do not include parent paths (e.g., use `main.go` or `subdir/component.py`, not `path/to/project/{{.Directory}}/main.go`).
+*   **Factuality First:** Sections 1-4 must be based *strictly* on the provided `{{.FileContents}}` and `{{.SubGlances}}`. Do *not* invent information or make assumptions beyond the context.
+*   **Speculation Last:** Section 5 is for reasoned speculation and suggestions. Clearly identify it as such. Frame ideas constructively.
+*   **Conciseness:** Be brief and to the point. The goal is a "glanceable" summary. Avoid jargon where possible, but use standard technical terms accurately.
+*   **Audience:** Write for a developer needing to understand this directory quickly.
+*   **Tone:** Objective and informative for factual sections. Constructive and suggestive for the speculative section.
+*   **Avoid:**
+    *   Simply listing all files without context.
+    *   Making definitive statements about code quality, performance, or maintainability unless directly supported by evidence in the context (e.g., a sub-glance explicitly mentions a performance issue).
+    *   Prescribing specific solutions or assigning tasks.
+    *   Hallucinating details not present in the provided context.
+    *   Deep analysis of file contents beyond what's provided in `{{.FileContents}}`.
 </guidelines>
