@@ -160,7 +160,7 @@ repos:
         name: Prevent direct commits to protected branches
         description: Prevents direct commits to protected branches (still allows merges)
         args: [--branch, main, --branch, master]
-        stages: [commit]  # Only run during regular commits, not during merges
+        stages: [pre-commit]  # Only run during regular commits, not during merges
 
   # Optimized secrets detection
   - repo: https://github.com/Yelp/detect-secrets
