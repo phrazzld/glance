@@ -178,169 +178,8 @@ func TestCustomSpinnerOptions(t *testing.T) {
 	})
 }
 
-// -----------------------------------------------------------------------------
-// Progress Bar Tests
-// -----------------------------------------------------------------------------
-
-func TestNewProcessor(t *testing.T) {
-	// Create a progress bar for 10 items
-	bar := NewProcessor(10)
-
-	// Verify progress bar is properly configured
-	assert.NotNil(t, bar, "Progress bar should not be nil")
-	assert.Equal(t, 10, bar.total)
-	assert.NotNil(t, bar.bar, "Underlying progress bar should be initialized")
-	assert.Contains(t, bar.description, "Creating glance files")
-	assert.Equal(t, 40, bar.width)
-	assert.Equal(t, DefaultTheme, bar.theme)
-}
-
-func TestNewFileProcessor(t *testing.T) {
-	// Create a file processor progress bar
-	bar := NewFileProcessor(15)
-
-	// Verify progress bar is properly configured
-	assert.NotNil(t, bar, "File processor bar should not be nil")
-	assert.Equal(t, 15, bar.total)
-	assert.NotNil(t, bar.bar, "Underlying progress bar should be initialized")
-	assert.Contains(t, bar.description, "Processing files")
-	assert.Equal(t, 40, bar.width)
-	assert.Equal(t, DefaultTheme, bar.theme)
-}
-
-func TestProgressBarMethods(t *testing.T) {
-	t.Run("Increment", func(t *testing.T) {
-		// Create a progress bar with 3 items
-		bar := NewProcessor(3)
-
-		// Test increment (can't easily test actual progress, just ensure no panic)
-		err := bar.Increment()
-		assert.NoError(t, err, "Increment should not return an error")
-	})
-
-	t.Run("Set", func(t *testing.T) {
-		// Create a progress bar
-		bar := NewProcessor(10)
-
-		// Test set (can't easily test actual progress, just ensure no panic)
-		err := bar.Set(5)
-		assert.NoError(t, err, "Set should not return an error")
-	})
-
-	t.Run("Finish", func(t *testing.T) {
-		// Create a progress bar
-		bar := NewProcessor(3)
-
-		// Test finish (can't easily test actual completion, just ensure no panic)
-		err := bar.Finish()
-		assert.NoError(t, err, "Finish should not return an error")
-	})
-
-	t.Run("Sequence of operations", func(t *testing.T) {
-		// Create a progress bar with 3 items
-		bar := NewProcessor(3)
-
-		// Test that increments don't panic and check errors
-		err := bar.Increment()
-		assert.NoError(t, err, "Increment should not return an error")
-		err = bar.Increment()
-		assert.NoError(t, err, "Increment should not return an error")
-		err = bar.Set(3) // Skip to the end
-		assert.NoError(t, err, "Set should not return an error")
-		err = bar.Finish()
-		assert.NoError(t, err, "Finish should not return an error")
-
-		// Success if we get here without panicking
-		assert.True(t, true)
-	})
-}
-
-func TestNewCustomProgressBar(t *testing.T) {
-	// Test creation with default options
-	t.Run("Default values", func(t *testing.T) {
-		bar := NewCustomProgressBar(20)
-		assert.NotNil(t, bar, "Progress bar should not be nil")
-		assert.Equal(t, 20, bar.total)
-		assert.Equal(t, "Processing", bar.description)
-		assert.Equal(t, 40, bar.width)
-		assert.Equal(t, DefaultTheme, bar.theme)
-		assert.NotNil(t, bar.bar, "Underlying progress bar should be initialized")
-	})
-
-	// Test with custom options
-	t.Run("Custom options", func(t *testing.T) {
-		customTheme := ProgressBarTheme{
-			Saucer:        "*",
-			SaucerPadding: "-",
-			BarStart:      "<",
-			BarEnd:        ">",
-		}
-
-		bar := NewCustomProgressBar(15,
-			WithDescription("Custom progress"),
-			WithWidth(30),
-			WithTheme(customTheme),
-		)
-
-		assert.Equal(t, 15, bar.total)
-		assert.Equal(t, "Custom progress", bar.description)
-		assert.Equal(t, 30, bar.width)
-		assert.Equal(t, customTheme, bar.theme)
-	})
-}
-
-func TestProgressBarOptions(t *testing.T) {
-	// Individual tests for each option function
-
-	t.Run("WithDescription", func(t *testing.T) {
-		opt := WithDescription("Test description")
-		p := &ConcreteProgressBar{}
-		opt(p)
-		assert.Equal(t, "Test description", p.description)
-	})
-
-	t.Run("WithWidth", func(t *testing.T) {
-		opt := WithWidth(60)
-		p := &ConcreteProgressBar{}
-		opt(p)
-		assert.Equal(t, 60, p.width)
-	})
-
-	t.Run("WithTheme", func(t *testing.T) {
-		theme := ProgressBarTheme{
-			Saucer:        "#",
-			SaucerPadding: "_",
-			BarStart:      "{",
-			BarEnd:        "}",
-		}
-		opt := WithTheme(theme)
-		p := &ConcreteProgressBar{}
-		opt(p)
-		assert.Equal(t, theme, p.theme)
-	})
-
-	// Test that options properly modify the progress bar
-	t.Run("Multiple options", func(t *testing.T) {
-		bar := NewCustomProgressBar(5,
-			WithDescription("Custom description"),
-			WithWidth(50),
-			WithTheme(ProgressBarTheme{
-				Saucer:        "X",
-				SaucerPadding: ".",
-				BarStart:      "(",
-				BarEnd:        ")",
-			}),
-		)
-
-		assert.Equal(t, 5, bar.total)
-		assert.Equal(t, "Custom description", bar.description)
-		assert.Equal(t, 50, bar.width)
-		assert.Equal(t, "X", bar.theme.Saucer)
-		assert.Equal(t, ".", bar.theme.SaucerPadding)
-		assert.Equal(t, "(", bar.theme.BarStart)
-		assert.Equal(t, ")", bar.theme.BarEnd)
-	})
-}
+// Progress bar tests have been removed as part of the simplification process.
+// Progress bars are now used directly in glance.go with the progressbar library.
 
 // -----------------------------------------------------------------------------
 // Error Reporting Tests
@@ -397,9 +236,8 @@ func TestReportError(t *testing.T) {
 // Integration Tests
 // -----------------------------------------------------------------------------
 
-func TestSpinnerWithProgressBarIntegration(t *testing.T) {
-	// This test shows a typical usage pattern where a spinner is used
-	// during initialization, followed by a progress bar for tracking
+func TestSpinnerOnly(t *testing.T) {
+	// This test shows basic spinner functionality
 
 	// Create a spinner for initialization
 	spinner := NewScanner()
@@ -410,22 +248,6 @@ func TestSpinnerWithProgressBarIntegration(t *testing.T) {
 
 	// Stop the spinner
 	spinner.Stop()
-
-	// Create a progress bar for tracking items
-	total := 3
-	bar := NewProcessor(total)
-
-	// Process items
-	for i := 0; i < total; i++ {
-		// Simulate processing work
-		time.Sleep(10 * time.Millisecond)
-		err := bar.Increment()
-		assert.NoError(t, err, "Increment should not return an error")
-	}
-
-	// Finish the progress bar
-	err := bar.Finish()
-	assert.NoError(t, err, "Finish should not return an error")
 
 	// If we got here without panicking, the test passes
 	assert.True(t, true)
