@@ -17,7 +17,6 @@ import (
 	"glance/filesystem"
 	"glance/internal/mocks"
 	"glance/llm"
-	"glance/ui"
 )
 
 // Helper functions for integration testing
@@ -88,46 +87,8 @@ func (m *MockClient) Close() {
 	m.LLMClient.Close()
 }
 
-// MockProgressBar implements the ui.ProgressBar interface for testing
-type MockProgressBar struct {
-	CurrentValue int
-	TotalValue   int
-	Finished     bool
-}
-
-// Increment advances the progress bar by one step
-func (m *MockProgressBar) Increment() error {
-	m.CurrentValue++
-	return nil
-}
-
-// Set sets the progress bar to a specific value
-func (m *MockProgressBar) Set(value int) error {
-	m.CurrentValue = value
-	return nil
-}
-
-// Finish completes the progress bar
-func (m *MockProgressBar) Finish() error {
-	m.Finished = true
-	return nil
-}
-
-// MockProgressTrackerFactory implements ui.ProgressTrackerFactory for testing
-type MockProgressTrackerFactory struct {
-	Bars []*MockProgressBar
-}
-
-// NewProcessor creates a new progress bar for processing directories
-func (f *MockProgressTrackerFactory) NewProcessor(total int) ui.ProgressBar {
-	bar := &MockProgressBar{
-		CurrentValue: 0,
-		TotalValue:   total,
-		Finished:     false,
-	}
-	f.Bars = append(f.Bars, bar)
-	return bar
-}
+// Progress bar mocks have been removed in favor of using the real progress bar
+// with suppressed output through the testing parameter
 
 // ProcessDirectoryResults represents the results of processing a directory
 type ProcessDirectoryResults struct {
@@ -412,13 +373,10 @@ func TestParentRegenerationPropagation(t *testing.T) {
 		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
 	}
 
-	// Create a mock progress tracker factory
-	progressFactory := &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Initial run to generate all glance.md files - force to ensure all are generated
 	cfg = cfg.WithForce(true)
-	// Use the real processDirectories function with our mock dependencies
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, cfg, service, progressFactory)
+	// Use the real processDirectories function with testing=true to suppress output
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, cfg, service, true)
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
@@ -452,12 +410,9 @@ func TestParentRegenerationPropagation(t *testing.T) {
 	// Wait to ensure timestamp detection works reliably
 	time.Sleep(100 * time.Millisecond)
 
-	// Reset the progress tracker for the second run
-	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Run without global force flag, so only changed dirs and parents regenerate
 	cfg = cfg.WithForce(false)
-	_, parentRegenMap := processDirectories(dirsList, dirToIgnoreChain, cfg, service, progressFactory)
+	_, parentRegenMap := processDirectories(dirsList, dirToIgnoreChain, cfg, service, true)
 
 	// Check that parent dirs are marked for regeneration in the map
 	for level, dir := range dirs {
@@ -526,12 +481,9 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
 	}
 
-	// Create a mock progress tracker factory
-	progressFactory := &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Initial run to generate all glance.md files without force flag
 	rootCfg = rootCfg.WithForce(false)
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, progressFactory)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, true)
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
@@ -562,11 +514,8 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 		WithTargetDir(level3Dir).
 		WithForce(true) // Using the actual force mechanism here
 
-	// Reset the progress tracker for the level3 run
-	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Process level3 directory with force flag to trigger regeneration
-	_, _ = processDirectories(level3DirsList, level3IgnoreChain, level3Cfg, service, progressFactory)
+	_, _ = processDirectories(level3DirsList, level3IgnoreChain, level3Cfg, service, true)
 
 	// Wait a bit to ensure timestamps will be different if files are regenerated
 	time.Sleep(100 * time.Millisecond)
@@ -580,14 +529,11 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 	assert.True(t, needsRegen[dirs["level2"]], "level2 directory should be marked for regeneration in manual check")
 	assert.True(t, needsRegen[dirs["level1"]], "level1 directory should be marked for regeneration in manual check")
 
-	// Reset the progress tracker for the main run
-	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Process all directories to propagate changes
 	rootCfg = rootCfg.WithForce(false)
 	// We're not asserting on the regenMap anymore since we've already verified the bubbling behavior above
 	// The important part is that the timestamps show files actually get regenerated
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, progressFactory)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, true)
 
 	// Get new modification times
 	finalModTimes := make(map[string]time.Time)
@@ -647,12 +593,9 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
 	}
 
-	// Create a mock progress tracker factory
-	progressFactory := &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Initial run to generate all glance.md files - force to ensure all are generated initially
 	firstRunCfg := cfg.WithForce(true)
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, firstRunCfg, service, progressFactory)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, firstRunCfg, service, true)
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
@@ -675,12 +618,9 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 		}
 	}
 
-	// Reset the progress tracker for the second run
-	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Run again without force flag and without any file changes
 	secondRunCfg := cfg.WithForce(false)
-	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, progressFactory)
+	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, true)
 
 	// Verify no directories were marked for regeneration
 	for level, dir := range dirs {
@@ -789,12 +729,9 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 		dirsList[i], dirsList[j] = dirsList[j], dirsList[i]
 	}
 
-	// Create a mock progress tracker factory
-	progressFactory := &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Initial run to generate all glance.md files
 	initialCfg := cfg.WithForce(true)
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, initialCfg, service, progressFactory)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, initialCfg, service, true)
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
@@ -828,12 +765,9 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 	err = os.Chtimes(nestedAFilePath, now, now)
 	require.NoError(t, err, "Failed to update file modification time")
 
-	// Reset the progress tracker for the second run
-	progressFactory = &MockProgressTrackerFactory{Bars: []*MockProgressBar{}}
-
 	// Run again without the force flag
 	secondRunCfg := cfg.WithForce(false)
-	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, progressFactory)
+	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, true)
 
 	// Get final modification times
 	finalModTimes := make(map[string]time.Time)

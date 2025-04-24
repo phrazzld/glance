@@ -64,7 +64,7 @@
         2. Code compiles.
     - **Depends‑on:** T002
 
-- [ ] **T004 · Test · P1: update integration tests**
+- [x] **T004 · Test · P1: update integration tests**
     - **Context:** Radical simplification - adapt tests
     - **Action:**
         1. Identify and update all tests that involve progress bar.
