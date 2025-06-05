@@ -25,3 +25,5 @@ docs/prompts
 
 # Backup files
 *.bak
+
+**/.claude/settings.local.json
