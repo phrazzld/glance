@@ -1,23 +1,44 @@
 # Glance Documentation
 
-This directory contains detailed documentation for the Glance project.
+Welcome to the Glance project documentation. This directory contains comprehensive guides, development philosophy, and technical references.
 
-## Available Documentation
+## 📚 Documentation Structure
 
-- [**PRECOMMIT.md**](./PRECOMMIT.md): Comprehensive guide to pre-commit hooks setup, configuration, and usage
-- [**PRECOMMIT_TESTING.md**](./PRECOMMIT_TESTING.md): Instructions for testing pre-commit hooks
-- [**GITHUB_ACTIONS.md**](./GITHUB_ACTIONS.md): Detailed information about GitHub Actions workflows, configurations, and troubleshooting
+### 🎯 [Development Philosophy](../DEVELOPMENT_PHILOSOPHY.md)
+Core principles, coding standards, and mandatory practices that guide all development work.
 
-## Prompts
+### 🔧 [Development Guides](./guides/)
+Practical guides for working with the project:
+- [GitHub Actions](./guides/github-actions.md) - CI/CD pipeline configuration
+- [Linting](./guides/linting.md) - Code quality and linting setup
+- [Pre-commit Hooks](./guides/precommit.md) - Git hooks configuration
+- [Pre-commit Testing](./guides/precommit-testing.md) - Testing pre-commit hooks
+- [Security Suppressions](./guides/security-suppressions.md) - Security scanning configuration
+- [Mocking Approach](./guides/mocking-approach.md) - Testing and mocking guidelines
 
-The [`prompts`](./prompts/) directory contains templates and instructions for various AI-assisted development tasks.
+### 🏗️ [Development Patterns](./leyline/)
+Detailed development philosophy implementation:
+- [Core Tenets](./leyline/tenets/) - Fundamental principles
+- [Pattern Bindings](./leyline/bindings/) - Language-specific implementations
+- [Go Patterns](./leyline/bindings/categories/go/) - Go-specific best practices
 
-## Contributing to Documentation
+## 🚀 Quick Start
 
-When adding new documentation:
+1. Read the [Development Philosophy](../DEVELOPMENT_PHILOSOPHY.md) first
+2. Check the [Go Appendix](../DEVELOPMENT_PHILOSOPHY_APPENDIX_GO.md) for language-specific rules
+3. Review relevant guides in the [guides/](./guides/) directory
+4. Follow the patterns in [leyline/](./leyline/) for implementation details
 
-1. Create Markdown files with clear, descriptive names
-2. Use proper Markdown formatting with headers, lists, and code blocks
-3. Update this README.md file with links to new documentation
-4. Make sure code examples are accurate and up-to-date
-5. Cross-reference related documentation where appropriate
+## 📝 Contributing to Documentation
+
+- Keep documentation close to code when possible
+- Use clear, actionable language
+- Include examples and rationale
+- Follow the established directory structure
+- Update this index when adding new documentation
+
+## 🔍 Need Help?
+
+- Check the main [README](../README.md) for project overview
+- Review [CLAUDE.md](../CLAUDE.md) for AI coding assistant guidelines
+- Look for package-specific documentation in respective directories

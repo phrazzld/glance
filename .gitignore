@@ -22,6 +22,19 @@ docs/prompts
 
 # System files
 .DS_Store
+**/.DS_Store
+Thumbs.db
+*.tmp
+
+# Editor and IDE files
+**/.vscode/
+**/.idea/
+*.swp
+*.swo
+*~
+
+# Auto-generated glance files (reduce clutter)
+**/GLANCE.md
 
 # Backup files
 *.bak
