@@ -50,7 +50,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
     - **Depends-on:** [T002]
 
 ### Emergency Safety Valve
-- [ ] **T004 · Feature · P1: Implement emergency override protocol**
+- [x] **T004 · Feature · P1: Implement emergency override protocol**
     - **Context:** Business continuity for critical hotfixes
     - **Action:**
         1. Add `EMERGENCY_SECURITY_OVERRIDE=true` environment variable check
@@ -83,7 +83,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
         1. Inspect artifact JSON structure for completeness and correlation ID presence
     - **Depends-on:** [T001]
 
-- [ ] **T006 · Feature · P2: Implement artifact management with retention**
+- [x] **T006 · Feature · P2: Implement artifact management with retention**
     - **Context:** Audit trail and historical analysis capabilities
     - **Action:**
         1. Upload JSON reports as GitHub artifacts with 30-day retention

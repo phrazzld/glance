@@ -106,7 +106,18 @@ jobs:
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
+      - name: Setup GitHub CLI for issue creation
+        run: |
+          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+
       - name: Run vulnerability scan with severity thresholds
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Read configuration from .govulncheck.yaml
           echo "Reading vulnerability scan configuration..."
@@ -293,16 +304,103 @@ jobs:
             echo "   WARNING: Override usage is logged and audited"
             echo ""
 
-            # Final failure message with correlation ID
-            echo "💥 BUILD TERMINATED"
-            echo "Reason: Security policy violation - vulnerable dependencies detected"
-            echo "Policy: All HIGH/CRITICAL vulnerabilities must be resolved before deployment"
-            echo "Track this incident: $CORRELATION_ID"
-            echo ""
-            echo "This pipeline will not proceed until vulnerabilities are addressed."
+            # Check for emergency override before terminating build
+            if [ "${EMERGENCY_SECURITY_OVERRIDE:-false}" = "true" ]; then
+              echo ""
+              echo "🚨🚨🚨 EMERGENCY SECURITY OVERRIDE ACTIVATED 🚨🚨🚨"
+              echo "=============================================================="
+              echo "⚠️  CRITICAL WARNING: Security policy has been bypassed!"
+              echo "⚠️  This allows vulnerable code to proceed to deployment!"
+              echo "=============================================================="
+              echo ""
+              echo "📋 Override Audit Trail:"
+              echo "   • Override timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+              echo "   • Correlation ID: $CORRELATION_ID"
+              echo "   • Git commit: $(git rev-parse --short HEAD)"
+              echo "   • Git branch: $(git rev-parse --abbrev-ref HEAD)"
+              echo "   • Triggered by: ${{ github.actor }}"
+              echo "   • Workflow run: ${{ github.run_id }}"
+              echo ""
+              echo "🔒 Security Policy Requirements:"
+              echo "   • This override MUST be approved by security team"
+              echo "   • Justification MUST be documented in follow-up issue"
+              echo "   • Vulnerabilities MUST be resolved within 48 hours"
+              echo "   • All override usage is logged and audited"
+              echo ""
 
-            # FAIL-FAST: Immediate exit with clear failure code
-            exit 1
+              # Create security debt tracking issue
+              echo "📝 Creating security debt tracking issue..."
+
+              ISSUE_TITLE="🚨 Security Override Used - Vulnerability Remediation Required"
+
+              # Create issue body using printf to avoid YAML parsing issues
+              ISSUE_BODY="$(printf '%s\n' \
+                "## Emergency Security Override Report" \
+                "" \
+                "**Override Details:**" \
+                "- **Correlation ID:** \`$CORRELATION_ID\`" \
+                "- **Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" \
+                "- **Git Commit:** \`$(git rev-parse --short HEAD)\`" \
+                "- **Git Branch:** \`$(git rev-parse --abbrev-ref HEAD)\`" \
+                "- **Triggered By:** ${{ github.actor }}" \
+                "- **Workflow Run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
+                "" \
+                "**Security Policy Violation:**" \
+                "The emergency security override was activated to bypass vulnerability scanning failures. This allows potentially vulnerable code to proceed to deployment." \
+                "" \
+                "**Immediate Actions Required:**" \
+                "1. **Security Team Review:** Validate the justification for this override" \
+                "2. **Risk Assessment:** Evaluate the impact of detected vulnerabilities" \
+                "3. **Remediation Plan:** Update vulnerable dependencies within 48 hours" \
+                "4. **Documentation:** Record approval and remediation timeline" \
+                "" \
+                "**Vulnerabilities Detected:**" \
+                "The following vulnerability scan detected issues that triggered this override:" \
+                "- Run \`govulncheck ./...\` to see detailed vulnerability information" \
+                "- Check the [workflow artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for structured reports" \
+                "" \
+                "**Compliance Requirements:**" \
+                "- [ ] Security team approval documented" \
+                "- [ ] Justification recorded in this issue" \
+                "- [ ] Remediation plan with 48-hour timeline" \
+                "- [ ] Follow-up vulnerability scan confirms resolution" \
+                "- [ ] Post-incident review completed" \
+                "" \
+                "**⚠️ This issue must be resolved before the next deployment cycle.**")"
+
+              # Create GitHub issue using gh CLI
+              if command -v gh >/dev/null 2>&1; then
+                echo "Creating GitHub issue for security debt tracking..."
+                gh issue create \
+                  --title "$ISSUE_TITLE" \
+                  --body "$ISSUE_BODY" \
+                  --label "security-debt,priority-high,compliance" \
+                  --assignee "${{ github.actor }}" \
+                  || echo "⚠️  Failed to create GitHub issue - manual tracking required"
+              else
+                echo "⚠️  GitHub CLI not available - manual issue creation required"
+                echo "    Title: $ISSUE_TITLE"
+                echo "    Labels: security-debt, priority-high, compliance"
+              fi
+
+              echo ""
+              echo "✅ OVERRIDE COMPLETE - Build allowed to proceed with security debt"
+              echo "🔴 REMINDER: Vulnerabilities must be resolved within 48 hours"
+              echo "📊 Track remediation progress via created GitHub issue"
+              echo ""
+
+            else
+              # Standard failure path - no override
+              echo "💥 BUILD TERMINATED"
+              echo "Reason: Security policy violation - vulnerable dependencies detected"
+              echo "Policy: All HIGH/CRITICAL vulnerabilities must be resolved before deployment"
+              echo "Track this incident: $CORRELATION_ID"
+              echo ""
+              echo "This pipeline will not proceed until vulnerabilities are addressed."
+
+              # FAIL-FAST: Immediate exit with clear failure code
+              exit 1
+            fi
           fi
 
           set -e  # Re-enable exit on error
