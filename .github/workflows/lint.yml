@@ -124,6 +124,10 @@ jobs:
 
           if [ ! -f ".govulncheck.yaml" ]; then
             echo "Error: .govulncheck.yaml configuration file not found"
+
+            # Log configuration error (using basic format since structured function not yet defined)
+            echo "{\"timestamp\": \"$(date -u '+%Y-%m-%dT%H:%M:%S.%3NZ')\", \"level\": \"ERROR\", \"service_name\": \"vulnerability-scanner\", \"message\": \"Configuration file .govulncheck.yaml not found\"}" >&2
+
             exit 1
           fi
 
@@ -138,10 +142,56 @@ jobs:
           echo "  Scan level: $SCAN_LEVEL"
           echo ""
 
+          # Log configuration loaded
+          log_structured "INFO" "Configuration loaded successfully" "" "{\"fail_on_severity\": [\"HIGH\", \"CRITICAL\"], \"timeout_seconds\": $TIMEOUT, \"scan_level\": \"$SCAN_LEVEL\"}"
+
           # Generate correlation ID for traceability
           CORRELATION_ID="vuln-scan-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
+          SCAN_START_TIME=$(date +%s%3N)  # Milliseconds since epoch
           echo "Correlation ID: $CORRELATION_ID"
           echo ""
+
+          # Structured logging function
+          log_structured() {
+            local level="$1"
+            local message="$2"
+            local scan_result="${3:-}"
+            local vulnerability_counts="${4:-}"
+            local scan_duration_ms="${5:-}"
+
+            local timestamp=$(date -u '+%Y-%m-%dT%H:%M:%S.%3NZ')
+            local git_commit=$(git rev-parse --short HEAD)
+
+            # Build JSON log entry
+            local log_entry="{"
+            log_entry="${log_entry}\"timestamp\": \"$timestamp\","
+            log_entry="${log_entry}\"level\": \"$level\","
+            log_entry="${log_entry}\"service_name\": \"vulnerability-scanner\","
+            log_entry="${log_entry}\"correlation_id\": \"$CORRELATION_ID\","
+            log_entry="${log_entry}\"git_commit\": \"$git_commit\","
+            log_entry="${log_entry}\"message\": \"$message\""
+
+            # Add optional fields if provided
+            if [ -n "$scan_result" ]; then
+              log_entry="${log_entry},\"scan_result\": \"$scan_result\""
+            fi
+
+            if [ -n "$vulnerability_counts" ]; then
+              log_entry="${log_entry},\"vulnerability_counts\": $vulnerability_counts"
+            fi
+
+            if [ -n "$scan_duration_ms" ]; then
+              log_entry="${log_entry},\"scan_duration_ms\": $scan_duration_ms"
+            fi
+
+            log_entry="${log_entry}}"
+
+            # Output structured log to stderr for observability
+            echo "$log_entry" >&2
+          }
+
+          # Log scan start
+          log_structured "INFO" "Vulnerability scan started" "in_progress"
 
           # Run govulncheck with JSON output for detailed analysis
           echo "Running vulnerability scan..."
@@ -238,11 +288,19 @@ jobs:
 
           echo "Structured report generated: vuln-report-${CORRELATION_ID}.json"
 
+          # Calculate scan duration
+          SCAN_END_TIME=$(date +%s%3N)
+          SCAN_DURATION_MS=$((SCAN_END_TIME - SCAN_START_TIME))
+
           # Check for timeout
           if [ $SCAN_EXIT_CODE -eq 124 ]; then
             echo "❌ FAILURE: Vulnerability scan timed out after ${TIMEOUT} seconds"
             echo "This may indicate network issues or an unusually large codebase."
             echo "Consider increasing timeout_seconds in .govulncheck.yaml"
+
+            # Log timeout failure
+            log_structured "ERROR" "Vulnerability scan timed out" "timeout" "" "$SCAN_DURATION_MS"
+
             exit 1
           fi
 
@@ -256,6 +314,9 @@ jobs:
             echo "   • Status: Clean - no vulnerabilities detected"
             echo "   • Scan level: $SCAN_LEVEL (symbol-level analysis)"
             echo "   • Configuration: HIGH/CRITICAL severity blocking enabled"
+
+            # Log successful clean scan
+            log_structured "INFO" "Vulnerability scan completed successfully" "clean" "{\"critical_count\": 0, \"high_count\": 0, \"medium_count\": 0, \"low_count\": 0, \"total_vulnerabilities\": 0}" "$SCAN_DURATION_MS"
           else
             # FAIL-FAST: Immediately halt pipeline on vulnerability detection
             echo "🔴 CRITICAL SECURITY FAILURE"
@@ -293,6 +354,16 @@ jobs:
             echo "   • Update dependencies: 'go get -u && go mod tidy'"
             echo "   • Dependency management: https://go.dev/doc/modules/managing-dependencies"
             echo ""
+
+            # Log vulnerability detection with counts
+            # Extract actual counts from the generated report for logging
+            CRITICAL_COUNT=$(yq eval '.vulnerability_summary.critical_count' "vuln-report-${CORRELATION_ID}.json" 2>/dev/null || echo "0")
+            HIGH_COUNT=$(yq eval '.vulnerability_summary.high_count' "vuln-report-${CORRELATION_ID}.json" 2>/dev/null || echo "0")
+            MEDIUM_COUNT=$(yq eval '.vulnerability_summary.medium_count' "vuln-report-${CORRELATION_ID}.json" 2>/dev/null || echo "0")
+            LOW_COUNT=$(yq eval '.vulnerability_summary.low_count' "vuln-report-${CORRELATION_ID}.json" 2>/dev/null || echo "0")
+            TOTAL_VULNS=$(yq eval '.vulnerability_summary.total_vulnerabilities' "vuln-report-${CORRELATION_ID}.json" 2>/dev/null || echo "0")
+
+            log_structured "ERROR" "Vulnerabilities detected - security policy violation" "vulnerabilities_found" "{\"critical_count\": $CRITICAL_COUNT, \"high_count\": $HIGH_COUNT, \"medium_count\": $MEDIUM_COUNT, \"low_count\": $LOW_COUNT, \"total_vulnerabilities\": $TOTAL_VULNS}" "$SCAN_DURATION_MS"
 
             # Emergency override instructions
             echo "🚨 EMERGENCY OVERRIDE (Critical Hotfixes Only):"
@@ -383,6 +454,9 @@ jobs:
                 echo "    Labels: security-debt, priority-high, compliance"
               fi
 
+              # Log emergency override activation
+              log_structured "WARN" "Emergency security override activated - vulnerable code proceeding to deployment" "override_activated" "{\"critical_count\": $CRITICAL_COUNT, \"high_count\": $HIGH_COUNT, \"medium_count\": $MEDIUM_COUNT, \"low_count\": $LOW_COUNT, \"total_vulnerabilities\": $TOTAL_VULNS, \"override_user\": \"${{ github.actor }}\"}" "$SCAN_DURATION_MS"
+
               echo ""
               echo "✅ OVERRIDE COMPLETE - Build allowed to proceed with security debt"
               echo "🔴 REMINDER: Vulnerabilities must be resolved within 48 hours"
@@ -397,6 +471,9 @@ jobs:
               echo "Track this incident: $CORRELATION_ID"
               echo ""
               echo "This pipeline will not proceed until vulnerabilities are addressed."
+
+              # Log build termination due to security policy violation
+              log_structured "ERROR" "Build terminated due to security policy violation" "build_terminated" "{\"critical_count\": $CRITICAL_COUNT, \"high_count\": $HIGH_COUNT, \"medium_count\": $MEDIUM_COUNT, \"low_count\": $LOW_COUNT, \"total_vulnerabilities\": $TOTAL_VULNS}" "$SCAN_DURATION_MS"
 
               # FAIL-FAST: Immediate exit with clear failure code
               exit 1

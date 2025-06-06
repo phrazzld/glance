@@ -112,7 +112,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
     - **Depends-on:** [T005]
 
 ### Observability Foundation
-- [ ] **T008 · Feature · P2: Implement structured logging with correlation**
+- [~] **T008 · Feature · P2: Implement structured logging with correlation**
     - **Context:** Integration with existing observability infrastructure
     - **Action:**
         1. Generate structured JSON logs at scan start/completion
