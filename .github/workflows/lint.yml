@@ -153,25 +153,61 @@ jobs:
             echo "✅ SUCCESS: No vulnerabilities found"
             echo "Scan completed successfully with correlation ID: $CORRELATION_ID"
           else
-            # govulncheck found vulnerabilities
-            echo "⚠️  VULNERABILITIES DETECTED"
+            # FAIL-FAST: Immediately halt pipeline on vulnerability detection
+            echo "🔴 CRITICAL SECURITY FAILURE"
+            echo "=========================================="
+            echo "❌ VULNERABILITIES DETECTED - BUILD BLOCKED"
+            echo "=========================================="
             echo ""
 
-            # For now, treat any found vulnerability as HIGH severity
-            # Future enhancement: parse JSON to determine actual severity levels
-            echo "Security policy: Failing build due to vulnerability detection"
-            echo "Rationale: Current configuration treats all vulnerabilities as HIGH severity"
-            echo ""
-            echo "To override in emergency situations, use EMERGENCY_SECURITY_OVERRIDE=true"
-            echo "Correlation ID for tracking: $CORRELATION_ID"
-            echo ""
-
-            # Show summary from JSON report
-            echo "Vulnerability Summary:"
-            govulncheck ./...  # Show human-readable output
+            # Show correlation ID for incident tracking
+            echo "📋 Incident Details:"
+            echo "   • Correlation ID: $CORRELATION_ID"
+            echo "   • Scan timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "   • Git commit: $(git rev-parse --short HEAD)"
+            echo "   • Security policy: HIGH/CRITICAL vulnerabilities block deployment"
             echo ""
 
-            echo "❌ BUILD FAILED: Vulnerabilities detected that violate security policy"
+            # Display vulnerability details
+            echo "🔍 Vulnerability Summary:"
+            echo "----------------------------------------"
+            govulncheck ./...  # Show human-readable output for developers
+            echo "----------------------------------------"
+            echo ""
+
+            # Provide clear remediation guidance
+            echo "🛠️  IMMEDIATE ACTIONS REQUIRED:"
+            echo "   1. Review the vulnerability details above"
+            echo "   2. Update affected dependencies to secure versions"
+            echo "   3. Run 'govulncheck ./...' locally to verify fixes"
+            echo "   4. Re-commit and push updated dependencies"
+            echo ""
+
+            echo "📚 Resources:"
+            echo "   • Go vulnerability database: https://vuln.go.dev"
+            echo "   • Update dependencies: 'go get -u && go mod tidy'"
+            echo "   • Dependency management: https://go.dev/doc/modules/managing-dependencies"
+            echo ""
+
+            # Emergency override instructions
+            echo "🚨 EMERGENCY OVERRIDE (Critical Hotfixes Only):"
+            echo "   If this is a critical production hotfix that cannot wait:"
+            echo "   1. Get security team approval for temporary override"
+            echo "   2. Document justification and 48-hour remediation plan"
+            echo "   3. Set EMERGENCY_SECURITY_OVERRIDE=true in CI environment"
+            echo "   4. Create follow-up security debt issue immediately"
+            echo "   WARNING: Override usage is logged and audited"
+            echo ""
+
+            # Final failure message with correlation ID
+            echo "💥 BUILD TERMINATED"
+            echo "Reason: Security policy violation - vulnerable dependencies detected"
+            echo "Policy: All HIGH/CRITICAL vulnerabilities must be resolved before deployment"
+            echo "Track this incident: $CORRELATION_ID"
+            echo ""
+            echo "This pipeline will not proceed until vulnerabilities are addressed."
+
+            # FAIL-FAST: Immediate exit with clear failure code
             exit 1
           fi
 
