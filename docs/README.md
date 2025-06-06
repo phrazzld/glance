@@ -10,6 +10,7 @@ Core principles, coding standards, and mandatory practices that guide all develo
 ### 🔧 [Development Guides](./guides/)
 Practical guides for working with the project:
 - [GitHub Actions](./guides/github-actions.md) - CI/CD pipeline configuration
+- [Security Scanning](./guides/security-scanning.md) - Vulnerability scanning and security policies
 - [Linting](./guides/linting.md) - Code quality and linting setup
 - [Pre-commit Hooks](./guides/precommit.md) - Git hooks configuration
 - [Pre-commit Testing](./guides/precommit-testing.md) - Testing pre-commit hooks
