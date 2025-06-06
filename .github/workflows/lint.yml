@@ -137,8 +137,95 @@ jobs:
           set +e  # Don't exit immediately on command failure
 
           # Run scan with timeout
-          timeout "${TIMEOUT}s" govulncheck -format json -scan "$SCAN_LEVEL" ./... > govulncheck-report.json 2>&1
+          timeout "${TIMEOUT}s" govulncheck -format json -scan "$SCAN_LEVEL" ./... > govulncheck-raw.json 2>&1
           SCAN_EXIT_CODE=$?
+
+          # Generate structured vulnerability report
+          echo "Generating structured vulnerability report..."
+
+          # Create structured report with correlation ID and metadata
+          cat > "vuln-report-${CORRELATION_ID}.json" <<'JSONEOF'
+          {
+            "scan_metadata": {
+              "correlation_id": "CORRELATION_ID_PLACEHOLDER",
+              "timestamp": "TIMESTAMP_PLACEHOLDER",
+              "git_commit": "COMMIT_PLACEHOLDER",
+              "git_branch": "BRANCH_PLACEHOLDER",
+              "scan_exit_code": 0,
+              "scan_duration_ms": null,
+              "scanner_version": "govulncheck@v1.1.3"
+            },
+            "scan_configuration": {
+              "fail_on_severity": ["HIGH", "CRITICAL"],
+              "timeout_seconds": 300,
+              "scan_level": "symbol",
+              "scan_mode": "source"
+            },
+            "vulnerability_summary": {
+              "total_vulnerabilities": 0,
+              "critical_count": 0,
+              "high_count": 0,
+              "medium_count": 0,
+              "low_count": 0,
+              "scan_result": "unknown"
+            },
+            "findings": [],
+            "remediation": {
+              "update_commands": [
+                "go get -u && go mod tidy",
+                "govulncheck ./..."
+              ],
+              "resources": [
+                "https://vuln.go.dev",
+                "https://go.dev/doc/modules/managing-dependencies"
+              ]
+            }
+          }
+          JSONEOF
+
+          # Replace placeholders with actual values
+          sed -i "s/CORRELATION_ID_PLACEHOLDER/$CORRELATION_ID/g" "vuln-report-${CORRELATION_ID}.json"
+          sed -i "s/TIMESTAMP_PLACEHOLDER/$(date -u '+%Y-%m-%dT%H:%M:%SZ')/g" "vuln-report-${CORRELATION_ID}.json"
+          sed -i "s/COMMIT_PLACEHOLDER/$(git rev-parse --short HEAD)/g" "vuln-report-${CORRELATION_ID}.json"
+          sed -i "s/BRANCH_PLACEHOLDER/$(git rev-parse --abbrev-ref HEAD)/g" "vuln-report-${CORRELATION_ID}.json"
+
+          # Update with actual configuration values
+          yq eval ".scan_configuration.fail_on_severity = $(yq eval '.fail_on_severity' .govulncheck.yaml -o=json)" -i "vuln-report-${CORRELATION_ID}.json"
+          yq eval ".scan_configuration.timeout_seconds = $TIMEOUT" -i "vuln-report-${CORRELATION_ID}.json"
+          yq eval ".scan_configuration.scan_level = \"$SCAN_LEVEL\"" -i "vuln-report-${CORRELATION_ID}.json"
+          yq eval ".scan_metadata.scan_exit_code = $SCAN_EXIT_CODE" -i "vuln-report-${CORRELATION_ID}.json"
+
+          # Parse JSON output and extract vulnerability information
+          if [ -f "govulncheck-raw.json" ]; then
+            # Extract vulnerability count and details from JSON
+            VULN_COUNT=$(grep -c '"osv"' govulncheck-raw.json || echo "0")
+
+            # Extract config information if available
+            if grep -q '"config"' govulncheck-raw.json; then
+              SCANNER_VERSION=$(grep -A 10 '"config"' govulncheck-raw.json | grep '"scanner_version"' | cut -d'"' -f4 || echo "unknown")
+              DB_LAST_MODIFIED=$(grep -A 10 '"config"' govulncheck-raw.json | grep '"db_last_modified"' | cut -d'"' -f4 || echo "unknown")
+            fi
+
+            # Update the structured report with actual findings
+            if [ "$VULN_COUNT" -gt 0 ]; then
+              # Extract vulnerability details (simplified for now)
+              # In a production environment, this would use jq for proper JSON parsing
+              FINDINGS_JSON="[]"
+
+              # For now, we'll treat all found vulnerabilities as HIGH severity
+              # Future enhancement: parse actual severity from OSV data
+              yq eval ".vulnerability_summary.total_vulnerabilities = $VULN_COUNT" -i "vuln-report-${CORRELATION_ID}.json"
+              yq eval ".vulnerability_summary.high_count = $VULN_COUNT" -i "vuln-report-${CORRELATION_ID}.json"
+              yq eval '.vulnerability_summary.scan_result = "vulnerabilities_found"' -i "vuln-report-${CORRELATION_ID}.json"
+            else
+              yq eval '.vulnerability_summary.scan_result = "clean"' -i "vuln-report-${CORRELATION_ID}.json"
+            fi
+
+            # Add scan duration if we can calculate it (simplified)
+            yq eval ".scan_metadata.scanner_version = \"$SCANNER_VERSION\"" -i "vuln-report-${CORRELATION_ID}.json"
+          fi
+
+          echo "Structured report generated: vuln-report-${CORRELATION_ID}.json"
 
           # Check for timeout
           if [ $SCAN_EXIT_CODE -eq 124 ]; then
@@ -152,6 +239,12 @@ jobs:
           if [ $SCAN_EXIT_CODE -eq 0 ]; then
             echo "✅ SUCCESS: No vulnerabilities found"
             echo "Scan completed successfully with correlation ID: $CORRELATION_ID"
+            echo ""
+            echo "📊 Structured Report:"
+            echo "   • Report file: vuln-report-${CORRELATION_ID}.json"
+            echo "   • Status: Clean - no vulnerabilities detected"
+            echo "   • Scan level: $SCAN_LEVEL (symbol-level analysis)"
+            echo "   • Configuration: HIGH/CRITICAL severity blocking enabled"
           else
             # FAIL-FAST: Immediately halt pipeline on vulnerability detection
             echo "🔴 CRITICAL SECURITY FAILURE"
@@ -166,6 +259,7 @@ jobs:
             echo "   • Scan timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "   • Git commit: $(git rev-parse --short HEAD)"
             echo "   • Security policy: HIGH/CRITICAL vulnerabilities block deployment"
+            echo "   • Structured report: vuln-report-${CORRELATION_ID}.json"
             echo ""
 
             # Display vulnerability details
@@ -212,3 +306,14 @@ jobs:
           fi
 
           set -e  # Re-enable exit on error
+
+      - name: Upload vulnerability scan reports as artifacts
+        uses: actions/upload-artifact@v4
+        if: always()  # Upload artifacts even if vulnerability scan fails
+        with:
+          name: vulnerability-scan-reports-${{ github.run_id }}
+          path: |
+            vuln-report-*.json
+            govulncheck-raw.json
+          retention-days: 30
+          if-no-files-found: warn
