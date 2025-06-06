@@ -22,7 +22,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
         1. Create test PR and confirm job execution order and timing
     - **Depends-on:** none
 
-- [ ] **T002 · Feature · P0: Configure severity-based failure thresholds**
+- [x] **T002 · Feature · P0: Configure severity-based failure thresholds**
     - **Context:** Core security enforcement mechanism
     - **Action:**
         1. Create `.govulncheck.yaml` with `fail_on_severity: ["HIGH", "CRITICAL"]`

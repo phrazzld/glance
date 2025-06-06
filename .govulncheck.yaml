@@ -1,0 +1,29 @@
+# govulncheck configuration for security scanning
+# This file defines thresholds and behavior for vulnerability scanning in CI
+
+# Severity levels that cause build failure
+# Available levels: CRITICAL, HIGH, MEDIUM, LOW
+fail_on_severity:
+  - "HIGH"
+  - "CRITICAL"
+
+# Scan timeout in seconds
+timeout_seconds: 300
+
+# Scan level: module, package, or symbol
+scan_level: "symbol"
+
+# Output format for reports
+output_format: "json"
+
+# Retry attempts for network failures
+retry_attempts: 2
+
+# Reporting configuration
+reporting:
+  # Include vulnerability details in output
+  include_details: true
+  # Include remediation guidance
+  include_remediation: true
+  # Generate correlation ID for traceability
+  generate_correlation_id: true
