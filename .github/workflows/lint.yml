@@ -405,6 +405,92 @@ jobs:
 
           set -e  # Re-enable exit on error
 
+      - name: Generate GitHub Actions Summary
+        if: always()  # Generate summary regardless of scan outcome
+        run: |
+          echo "## 🔍 Vulnerability Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Find the most recent vulnerability report
+          REPORT_FILE=$(ls -t vuln-report-*.json 2>/dev/null | head -1 || echo "")
+
+          if [ -n "$REPORT_FILE" ] && [ -f "$REPORT_FILE" ]; then
+            # Extract metadata from the report
+            CORRELATION_ID=$(yq eval '.scan_metadata.correlation_id' "$REPORT_FILE" 2>/dev/null || echo "unknown")
+            TIMESTAMP=$(yq eval '.scan_metadata.timestamp' "$REPORT_FILE" 2>/dev/null || echo "unknown")
+            SCAN_RESULT=$(yq eval '.vulnerability_summary.scan_result' "$REPORT_FILE" 2>/dev/null || echo "unknown")
+            TOTAL_VULNS=$(yq eval '.vulnerability_summary.total_vulnerabilities' "$REPORT_FILE" 2>/dev/null || echo "0")
+            CRITICAL_COUNT=$(yq eval '.vulnerability_summary.critical_count' "$REPORT_FILE" 2>/dev/null || echo "0")
+            HIGH_COUNT=$(yq eval '.vulnerability_summary.high_count' "$REPORT_FILE" 2>/dev/null || echo "0")
+            MEDIUM_COUNT=$(yq eval '.vulnerability_summary.medium_count' "$REPORT_FILE" 2>/dev/null || echo "0")
+            LOW_COUNT=$(yq eval '.vulnerability_summary.low_count' "$REPORT_FILE" 2>/dev/null || echo "0")
+
+            # Display scan metadata
+            echo "**Scan Details:**" >> $GITHUB_STEP_SUMMARY
+            echo "- **Correlation ID:** \`$CORRELATION_ID\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Timestamp:** $TIMESTAMP" >> $GITHUB_STEP_SUMMARY
+            echo "- **Git Commit:** \`$(git rev-parse --short HEAD)\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Display vulnerability summary based on scan result
+            if [ "$SCAN_RESULT" = "clean" ]; then
+              echo "### ✅ Clean Scan" >> $GITHUB_STEP_SUMMARY
+              echo "No vulnerabilities detected in your dependencies." >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Vulnerability Breakdown:**" >> $GITHUB_STEP_SUMMARY
+              echo "- 🔴 Critical: $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "- 🟠 High: $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "- 🟡 Medium: $MEDIUM_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "- 🟢 Low: $LOW_COUNT" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### 🚨 Vulnerabilities Detected" >> $GITHUB_STEP_SUMMARY
+              echo "**Total Vulnerabilities:** $TOTAL_VULNS" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Severity Breakdown:**" >> $GITHUB_STEP_SUMMARY
+              echo "- 🔴 Critical: $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "- 🟠 High: $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "- 🟡 Medium: $MEDIUM_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "- 🟢 Low: $LOW_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+
+              if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
+                echo "### 🛠️ Required Actions" >> $GITHUB_STEP_SUMMARY
+                echo "This build is **blocked** due to HIGH/CRITICAL severity vulnerabilities." >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "**Immediate Steps:**" >> $GITHUB_STEP_SUMMARY
+                echo "1. Review vulnerability details in the workflow logs above" >> $GITHUB_STEP_SUMMARY
+                echo "2. Update affected dependencies to secure versions" >> $GITHUB_STEP_SUMMARY
+                echo "3. Run \`govulncheck ./...\` locally to verify fixes" >> $GITHUB_STEP_SUMMARY
+                echo "4. Commit and push updated dependencies" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "### ℹ️ Advisory Information" >> $GITHUB_STEP_SUMMARY
+                echo "MEDIUM/LOW severity vulnerabilities detected but not blocking the build." >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "**Recommended Actions:**" >> $GITHUB_STEP_SUMMARY
+                echo "- Consider updating affected dependencies when convenient" >> $GITHUB_STEP_SUMMARY
+                echo "- Monitor for security advisories on these packages" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📚 Resources" >> $GITHUB_STEP_SUMMARY
+            echo "- [Go Vulnerability Database](https://vuln.go.dev)" >> $GITHUB_STEP_SUMMARY
+            echo "- [Dependency Management Guide](https://go.dev/doc/modules/managing-dependencies)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Quick Fix:** \`go get -u && go mod tidy\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "---" >> $GITHUB_STEP_SUMMARY
+            echo "*Scan Report: [\`$REPORT_FILE\`](../artifacts) • Policy: HIGH/CRITICAL vulnerabilities block deployment*" >> $GITHUB_STEP_SUMMARY
+
+          else
+            echo "### ⚠️ Scan Report Unavailable" >> $GITHUB_STEP_SUMMARY
+            echo "Could not locate vulnerability scan report. Check workflow logs for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Troubleshooting:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Verify govulncheck executed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- Check for network connectivity issues" >> $GITHUB_STEP_SUMMARY
+            echo "- Review workflow logs for error messages" >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Upload vulnerability scan reports as artifacts
         uses: actions/upload-artifact@v4
         if: always()  # Upload artifacts even if vulnerability scan fails
