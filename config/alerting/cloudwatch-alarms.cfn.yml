@@ -1,0 +1,65 @@
+# CloudWatch Alarm Configurations (CloudFormation format)
+# Use this template to deploy vulnerability scanning alarms in AWS CloudWatch
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudWatch Alarms for Vulnerability Scanning Metrics'
+
+Parameters:
+  CriticalAlertsSnsTopic:
+    Type: String
+    Description: SNS Topic ARN for critical alerts
+  WarningAlertsSnsTopic:
+    Type: String
+    Description: SNS Topic ARN for warning alerts
+
+Resources:
+  CriticalVulnerabilitiesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CriticalVulnerabilitiesDetected
+      AlarmDescription: Critical vulnerabilities detected in repository
+      MetricName: vulnerability_count
+      Namespace: Security/VulnerabilityScanning
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: severity
+          Value: critical
+      AlarmActions:
+        - !Ref CriticalAlertsSnsTopic
+      TreatMissingData: notBreaching
+
+  VulnerabilityScanFailuresAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: VulnerabilityScanFailures
+      AlarmDescription: Multiple vulnerability scan failures detected
+      MetricName: vulnerability_scan_errors_total
+      Namespace: Security/VulnerabilityScanning
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 2
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref WarningAlertsSnsTopic
+      TreatMissingData: notBreaching
+
+  EmergencyOverrideAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: EmergencySecurityOverrideUsed
+      AlarmDescription: Emergency security override has been activated
+      MetricName: vulnerability_scan_overrides_total
+      Namespace: Security/VulnerabilityScanning
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref CriticalAlertsSnsTopic
+      TreatMissingData: notBreaching

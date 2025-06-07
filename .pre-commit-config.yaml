@@ -27,7 +27,7 @@ repos:
       - id: check-yaml
         name: Check YAML syntax
         description: Validates all YAML files
-        exclude: '^vendor/|^\.git/|^precommit-tests/test_invalid_yaml.yaml$'
+        exclude: '^vendor/|^\.git/|^precommit-tests/test_invalid_yaml.yaml$|.*\.cfn\.yml$'
 
       - id: check-json
         name: Check JSON syntax

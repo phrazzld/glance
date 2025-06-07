@@ -1,0 +1,57 @@
+{
+  "_comment": "Datadog Monitor Configurations for Vulnerability Scanning",
+  "_description": "Use these configurations to create equivalent monitors in Datadog via API",
+  "monitors": [
+    {
+      "name": "Critical Vulnerabilities Detected",
+      "type": "metric alert",
+      "query": "vulnerability_count{severity:critical}.last() > 0",
+      "message": "Critical vulnerabilities detected in {{repository.name}}.\n@slack-security-team @pagerduty-security",
+      "options": {
+        "thresholds": {
+          "critical": 0
+        },
+        "no_data_timeframe": 10
+      },
+      "tags": [
+        "team:security",
+        "severity:critical",
+        "component:vulnerability-scanner"
+      ]
+    },
+    {
+      "name": "Vulnerability Scan Failures",
+      "type": "metric alert",
+      "query": "sum(last_5m):diff(vulnerability_scan_errors_total{*}) > 2",
+      "message": "Multiple vulnerability scan failures detected.\n@slack-platform-team",
+      "options": {
+        "thresholds": {
+          "critical": 2
+        },
+        "evaluation_delay": 60
+      },
+      "tags": [
+        "team:platform",
+        "severity:warning",
+        "component:vulnerability-scanner"
+      ]
+    },
+    {
+      "name": "Emergency Security Override Used",
+      "type": "metric alert",
+      "query": "sum(last_1h):diff(vulnerability_scan_overrides_total{*}) > 0",
+      "message": "Emergency security override activated!\n@slack-security-team @pagerduty-security",
+      "options": {
+        "thresholds": {
+          "critical": 0
+        },
+        "no_data_timeframe": 5
+      },
+      "tags": [
+        "team:security",
+        "severity:critical",
+        "component:vulnerability-scanner"
+      ]
+    }
+  ]
+}

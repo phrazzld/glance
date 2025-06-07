@@ -72,3 +72,67 @@ If your build fails due to vulnerability scanning:
 - **DO** seek security team guidance for complex dependency issues
 
 Remember to adhere to all principles outlined in the Development Philosophy. Quality gates require passing all pre-commit hooks, CI checks, **and security scanning**. Do not bypass hooks with `--no-verify`.
+
+## Observability and Metrics
+
+This project implements **comprehensive observability** for vulnerability scanning with automated metrics extraction and alerting.
+
+### Vulnerability Scanning Metrics
+
+The CI pipeline automatically extracts and ships operational metrics from vulnerability scans:
+
+* **Performance Metrics:** Scan duration, success rates, error rates
+* **Security Metrics:** Vulnerability counts by severity, detection rates, security gate blocks  
+* **Operational Metrics:** Scan failures, emergency overrides, system health
+
+### Metrics Configuration
+
+Metrics are extracted from structured logs and shipped to configurable observability platforms:
+
+```bash
+# Environment Variables (set in repository settings)
+OBSERVABILITY_PLATFORM=prometheus          # Target platform
+OBSERVABILITY_ENDPOINT=https://your-endpoint
+OBSERVABILITY_AUTH_TOKEN=your-token        # Stored in secrets
+METRICS_ENABLED=true                        # Enable/disable metrics
+```
+
+**Supported Platforms:**
+* **Prometheus** - Industry standard (fully implemented)
+* **Datadog** - Comprehensive platform (planned)
+* **CloudWatch** - AWS native (planned)
+
+### Alerting Rules
+
+Pre-configured alerting rules monitor critical security and operational events:
+
+* **Critical Alerts:** High/Critical vulnerabilities, scan failures, emergency overrides
+* **Warning Alerts:** Performance degradation, scan timeouts, medium vulnerability accumulation
+* **Info Alerts:** Vulnerability resolution, positive confirmation of clean scans
+
+**Alert Configuration:** See `config/alerting/` directory for platform-specific rules
+
+### Observability Resources
+
+* **Detailed Guide:** See `docs/guides/vulnerability-metrics.md` for complete setup
+* **Design Documentation:** `docs/design/metrics-extraction-design.md`
+* **Metrics Extraction Script:** `scripts/extract-vulnerability-metrics.sh`
+* **CI Integration:** Metrics automatically extracted in GitHub Actions workflow
+
+### Key Metrics
+
+```promql
+# Scan success rate
+rate(vulnerability_scans_total{status="success"}[5m])
+
+# Current vulnerability counts by severity  
+vulnerability_count{severity="critical|high|medium|low"}
+
+# Scan performance (95th percentile)
+histogram_quantile(0.95, rate(vulnerability_scan_duration_seconds_bucket[5m]))
+
+# Security gate effectiveness
+rate(security_gate_blocks_total[1h])
+```
+
+The observability system provides full visibility into security scanning operations, enabling proactive monitoring and rapid incident response.

@@ -1,0 +1,242 @@
+# Vulnerability Scanning Alerting Rules - Prometheus/Grafana
+#
+# This file contains alerting rules for vulnerability scanning metrics.
+# Configure your Prometheus AlertManager or Grafana to import these rules.
+#
+# For other platforms, see:
+# - Datadog: config/alerting/datadog-monitors.json
+# - CloudWatch: config/alerting/cloudwatch-alarms.yml
+
+groups:
+  - name: vulnerability_scanning
+    rules:
+      # Critical Alerts - Immediate Action Required
+
+      - alert: CriticalVulnerabilitiesDetected
+        expr: vulnerability_count{severity="critical"} > 0
+        for: 0m  # Immediate alert
+        labels:
+          severity: critical
+          team: security
+          component: vulnerability-scanner
+        annotations:
+          summary: "Critical vulnerabilities detected in {{ $labels.repository }}"
+          description: |
+            Critical severity vulnerabilities have been detected in {{ $labels.repository }} on branch {{ $labels.branch }}.
+
+            Current counts:
+            - Critical: {{ $value }}
+
+            Immediate actions required:
+            1. Review vulnerability details in the CI pipeline
+            2. Update affected dependencies to secure versions
+            3. Re-run vulnerability scan to verify fixes
+
+            Repository: {{ $labels.repository }}
+            Branch: {{ $labels.branch }}
+            Environment: {{ $labels.environment }}
+          runbook_url: "https://docs.example.com/runbooks/critical-vulnerabilities"
+          dashboard_url: "https://monitoring.example.com/d/vuln-scanning/vulnerability-scanning"
+
+      - alert: HighVulnerabilitiesDetected
+        expr: vulnerability_count{severity="high"} > 0
+        for: 0m  # Immediate alert
+        labels:
+          severity: critical
+          team: security
+          component: vulnerability-scanner
+        annotations:
+          summary: "High severity vulnerabilities detected in {{ $labels.repository }}"
+          description: |
+            High severity vulnerabilities have been detected in {{ $labels.repository }} on branch {{ $labels.branch }}.
+
+            Current counts:
+            - High: {{ $value }}
+
+            Immediate actions required:
+            1. Review vulnerability details in the CI pipeline
+            2. Update affected dependencies to secure versions
+            3. Re-run vulnerability scan to verify fixes
+
+            Repository: {{ $labels.repository }}
+            Branch: {{ $labels.branch }}
+            Environment: {{ $labels.environment }}
+          runbook_url: "https://docs.example.com/runbooks/high-vulnerabilities"
+
+      - alert: VulnerabilityScanFailureSpike
+        expr: increase(vulnerability_scan_errors_total[5m]) > 2
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+          component: vulnerability-scanner
+        annotations:
+          summary: "Multiple vulnerability scan failures detected"
+          description: |
+            Multiple vulnerability scan failures have been detected in the last 5 minutes.
+
+            Failure count: {{ $value }}
+            Repository: {{ $labels.repository }}
+            Error type: {{ $labels.error_type }}
+
+            This may indicate:
+            - Network connectivity issues
+            - Vulnerability database problems
+            - Scanner configuration issues
+            - Infrastructure problems
+
+            Check the CI pipeline logs and scanner infrastructure.
+          runbook_url: "https://docs.example.com/runbooks/scan-failures"
+
+      - alert: EmergencySecurityOverrideUsed
+        expr: increase(vulnerability_scan_overrides_total[1h]) > 0
+        for: 0m  # Immediate alert
+        labels:
+          severity: critical
+          team: security
+          component: vulnerability-scanner
+        annotations:
+          summary: "Emergency security override activated by {{ $labels.user }}"
+          description: |
+            An emergency security override has been activated, allowing vulnerable code to proceed to deployment.
+
+            Override details:
+            - User: {{ $labels.user }}
+            - Repository: {{ $labels.repository }}
+            - Branch: {{ $labels.branch }}
+
+            Security policy requirements:
+            1. Verify security team approval was obtained
+            2. Ensure justification is documented
+            3. Confirm 48-hour remediation timeline
+            4. Create follow-up security debt issue
+
+            All overrides are audited and tracked for compliance.
+          runbook_url: "https://docs.example.com/runbooks/security-overrides"
+
+      # Warning Alerts - Action Required Soon
+
+      - alert: VulnerabilityScanTimeout
+        expr: increase(vulnerability_scan_errors_total{error_type="timeout"}[15m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+          component: vulnerability-scanner
+        annotations:
+          summary: "Vulnerability scans timing out in {{ $labels.repository }}"
+          description: |
+            Vulnerability scans are timing out in {{ $labels.repository }}.
+
+            This may indicate:
+            - Large dependency tree requiring longer scan time
+            - Network connectivity issues
+            - Vulnerability database performance issues
+
+            Consider:
+            - Increasing timeout_seconds in .govulncheck.yaml
+            - Checking network connectivity
+            - Optimizing dependency management
+          runbook_url: "https://docs.example.com/runbooks/scan-timeouts"
+
+      - alert: VulnerabilityScanPerformanceDegradation
+        expr: |
+          (
+            histogram_quantile(0.95,
+              rate(vulnerability_scan_duration_seconds[10m])
+            ) > 45
+          ) and (
+            rate(vulnerability_scans_total[10m]) > 0
+          )
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          component: vulnerability-scanner
+        annotations:
+          summary: "Vulnerability scan performance degraded"
+          description: |
+            Vulnerability scan performance has degraded. 95th percentile scan time is {{ $value }}s.
+
+            Expected scan time: < 30s
+            Current 95th percentile: {{ $value }}s
+
+            This may indicate:
+            - Vulnerability database performance issues
+            - Network latency problems
+            - Increased codebase complexity
+
+            Monitor scan performance and investigate if trend continues.
+          runbook_url: "https://docs.example.com/runbooks/scan-performance"
+
+      - alert: MediumVulnerabilitiesAccumulating
+        expr: vulnerability_count{severity="medium"} > 5
+        for: 1h
+        labels:
+          severity: warning
+          team: security
+          component: vulnerability-scanner
+        annotations:
+          summary: "Medium severity vulnerabilities accumulating in {{ $labels.repository }}"
+          description: |
+            Medium severity vulnerabilities are accumulating in {{ $labels.repository }}.
+
+            Current count: {{ $value }}
+            Repository: {{ $labels.repository }}
+            Branch: {{ $labels.branch }}
+
+            While not blocking deployment, consider:
+            - Scheduling dependency updates
+            - Monitoring for security advisories
+            - Planning remediation work
+          runbook_url: "https://docs.example.com/runbooks/medium-vulnerabilities"
+
+      # Informational Alerts - Positive Confirmation
+
+      - alert: VulnerabilityCountDecrease
+        expr: |
+          (
+            (vulnerability_count{severity=~"critical|high"} offset 1h) -
+            vulnerability_count{severity=~"critical|high"}
+          ) > 0
+        for: 0m
+        labels:
+          severity: info
+          team: security
+          component: vulnerability-scanner
+        annotations:
+          summary: "Vulnerabilities resolved in {{ $labels.repository }}"
+          description: |
+            High/Critical vulnerabilities have been resolved in {{ $labels.repository }}.
+
+            Previous count: {{ $value }} {{ $labels.severity }} vulnerabilities
+            Current count: {{ $query }}
+
+            Good job on resolving security issues!
+          runbook_url: "https://docs.example.com/runbooks/vulnerability-resolution"
+
+      # Health Monitoring
+
+      - alert: VulnerabilityScannerDown
+        expr: |
+          (
+            absent(vulnerability_scans_total) or
+            (time() - last_over_time(vulnerability_scans_total[1h]) > 3600)
+          )
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          component: vulnerability-scanner
+        annotations:
+          summary: "Vulnerability scanner appears to be down"
+          description: |
+            No vulnerability scan metrics have been received in the last hour.
+
+            This may indicate:
+            - CI pipeline not running
+            - Metrics extraction failing
+            - Observability platform connectivity issues
+
+            Check CI pipeline health and metrics infrastructure.
+          runbook_url: "https://docs.example.com/runbooks/scanner-health"
