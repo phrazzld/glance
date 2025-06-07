@@ -627,3 +627,32 @@ jobs:
             /tmp/vulnerability-metrics.prom
           retention-days: 7
           if-no-files-found: warn
+
+      - name: Validate vulnerability scan performance
+        if: always()  # Run performance validation even if previous steps failed
+        env:
+          PERFORMANCE_TEST_MODE: quick
+          PERFORMANCE_THRESHOLD_SECONDS: 60
+          PERFORMANCE_WARNING_SECONDS: 45
+          CI_ENVIRONMENT: true
+        run: |
+          echo "Running vulnerability scan performance validation..."
+
+          # Install jq for JSON analysis if not available
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+          # Run performance validation
+          chmod +x scripts/performance-validation.sh
+          ./scripts/performance-validation.sh "$PERFORMANCE_TEST_MODE"
+
+      - name: Upload performance reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-reports-${{ github.run_id }}
+          path: |
+            performance-reports/
+          retention-days: 30
+          if-no-files-found: warn

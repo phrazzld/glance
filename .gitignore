@@ -40,3 +40,5 @@ Thumbs.db
 *.bak
 
 **/.claude/settings.local.json
+performance-reports/
+performance-report-*.json
