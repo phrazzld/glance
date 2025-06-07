@@ -143,7 +143,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
         2. Test documentation with team members unfamiliar with process
     - **Depends-on:** [T004]
 
-- [ ] **T010 · Chore · P2: Update existing documentation for new security gate**
+- [~] **T010 · Chore · P2: Update existing documentation for new security gate**
     - **Context:** Consistency across documentation ecosystem
     - **Action:**
         1. Update `docs/guides/github-actions.md` with vulnerability scanning integration
