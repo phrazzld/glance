@@ -189,7 +189,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
         1. Run integration test suite and verify all scenarios pass
     - **Depends-on:** [T003, T004]
 
-- [ ] **T013 · Test · P2: Implement performance validation**
+- [x] **T013 · Test · P2: Implement performance validation**
     - **Context:** Ensure scanning doesn't impact development velocity
     - **Action:**
         1. Measure scan execution time on representative codebases
@@ -204,7 +204,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
     - **Depends-on:** [T001]
 
 ### Configuration Testing
-- [ ] **T014 · Test · P2: Validate configuration parsing and edge cases**
+- [x] **T014 · Test · P2: Validate configuration parsing and edge cases**
     - **Context:** Robust configuration handling
     - **Action:**
         1. Write unit tests for `.govulncheck.yaml` parsing logic
