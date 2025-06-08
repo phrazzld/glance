@@ -95,11 +95,37 @@ reporting:
 
 ### When Scans Run
 
-Vulnerability scans are automatically triggered on:
+Vulnerability scans are automatically triggered in the following scenarios:
 
-- **Push to master branch** (excluding documentation changes)
-- **Pull requests** targeting the master branch
-- **Monthly dependency checks** (1st of each month at 01:00 UTC)
+#### Branch-Specific Scanning Behavior
+
+**Master Branch:**
+- ✅ **Direct pushes** to master branch trigger full vulnerability scanning
+- ✅ **Scheduled scans** run monthly (1st of each month at 01:00 UTC)
+- ❌ **Documentation-only changes** are excluded (see [excluded paths](#excluded-paths))
+
+**Feature Branches:**
+- ✅ **Pull requests** targeting master branch trigger vulnerability scanning
+- ❌ **Direct pushes** to feature branches do NOT trigger vulnerability scanning
+- ❌ **Pull requests** targeting non-master branches do NOT trigger vulnerability scanning
+
+**Release/Hotfix Branches:**
+- ✅ **Pull requests** to master trigger scanning (same as feature branches)
+- ❌ **Direct pushes** to release branches do NOT trigger vulnerability scanning
+
+#### Excluded Paths
+
+The following changes do NOT trigger vulnerability scans (even on master):
+- `**.md` - All Markdown documentation files
+- `docs/**` - Documentation directory
+- `LICENSE` - License file
+- `.github/ISSUE_TEMPLATE/**` - GitHub issue templates
+- `.github/PULL_REQUEST_TEMPLATE.md` - PR template
+
+#### Manual Triggering
+
+- **Workflow Dispatch**: Some workflows support manual triggering for testing
+- **Emergency Scans**: Can be triggered manually during security incident response
 
 ### Scan Process
 
@@ -117,6 +143,56 @@ Vulnerability scans are automatically triggered on:
 - **Target Duration**: Under 60 seconds for typical projects
 - **Timeout**: 300 seconds (configurable)
 - **Parallel Execution**: Runs alongside linting and testing workflows
+
+### Branch Workflow Implications
+
+Understanding when scans run is critical for effective development workflows:
+
+#### Feature Branch Development
+
+**✅ Recommended Workflow:**
+1. Create feature branch from master
+2. Develop and commit changes on feature branch
+3. **Create pull request** to master → triggers vulnerability scan
+4. Address any vulnerabilities found during PR review
+5. Merge to master after scan passes
+
+**⚠️ Important Notes:**
+- Direct pushes to feature branches are NOT scanned
+- Vulnerabilities may only be discovered when creating PR to master
+- Consider running `govulncheck ./...` locally before creating PR
+
+#### Hotfix/Release Workflow
+
+**For urgent fixes:**
+1. Create hotfix branch from master
+2. Implement minimal fix
+3. **Create PR to master** → triggers vulnerability scan
+4. If scan fails and fix is critical, use [emergency override](#emergency-override-procedures)
+5. Merge after scan passes or override is approved
+
+#### Dependency Updates
+
+**When updating dependencies:**
+- New vulnerabilities may be introduced even in patch updates
+- Always create PR to master to trigger scanning before merge
+- Consider running `govulncheck ./...` locally after `go get -u`
+
+#### Development Best Practices
+
+**Local Testing:**
+```bash
+# Run vulnerability scan locally before pushing
+govulncheck ./...
+
+# Check for dependency updates that might introduce vulnerabilities  
+go get -u && go mod tidy && govulncheck ./...
+```
+
+**Branch Protection:**
+- Master branch protection ensures all changes go through PR process
+- This guarantees vulnerability scanning for all code reaching master
+- Direct pushes to master bypass this protection (admin access only)
 
 ## Developer Workflow
 
@@ -579,6 +655,99 @@ Complete record of all security-related actions:
 - **Compliance reports**: Override usage and remediation status
 - **Incident tracking**: Correlation ID based investigation
 - **Performance metrics**: Scan duration and success rates
+
+---
+
+## Branch Scanning Behavior Validation
+
+This section documents the testing and validation performed to verify branch-specific scanning behavior described in this guide.
+
+### Testing Methodology
+
+The branch scanning behavior was validated through systematic analysis of GitHub Actions workflow configurations and trigger patterns:
+
+#### Workflow Configuration Analysis
+
+**Files Analyzed:**
+- `.github/workflows/lint.yml` (contains vulnerability scanning)
+- `.github/workflows/test.yml`
+- `.github/workflows/build.yml`
+- `.github/workflows/vulnerability-scan-optimized.yml` (prototype)
+
+**Trigger Pattern Findings:**
+All production workflows use identical trigger configuration:
+```yaml
+on:
+  push:
+    branches: [master]
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md']
+  pull_request:
+    branches: [master]
+```
+
+#### Validation Results
+
+**✅ Confirmed Behaviors:**
+
+1. **Master Branch Scanning**
+   - Direct pushes to master trigger all workflows including vulnerability scanning
+   - Scheduled monthly scans run only for lint workflow (1st of month at 01:00 UTC)
+   - Documentation changes are properly excluded via `paths-ignore`
+
+2. **Feature Branch Scanning**
+   - Pull requests targeting master correctly trigger vulnerability scanning
+   - Direct pushes to feature branches do NOT trigger any CI workflows
+   - Pull requests targeting non-master branches do NOT trigger workflows
+
+3. **Path Exclusions**
+   - Documentation files (`**.md`, `docs/**`) are excluded from triggers
+   - Template files and LICENSE are excluded as expected
+   - Code changes always trigger scanning regardless of branch (when PR targets master)
+
+4. **Workflow Consistency**
+   - All production workflows (lint, test, build) use identical branch triggers
+   - Vulnerability scanning runs in parallel with other CI jobs
+   - Concurrency controls prevent duplicate workflow runs
+
+#### Branch Testing Scenarios
+
+**Scenario 1: Feature Branch Development**
+- Current branch: `20-integrate-mandatory-vulnerability-scanning-govulncheck-into-ci`
+- Behavior: Direct pushes do NOT trigger CI (as expected)
+- PR to master: Would trigger vulnerability scanning (validated via config)
+
+**Scenario 2: Documentation Changes**
+- Changes to `docs/guides/security-scanning.md`
+- Behavior: Excluded from CI triggers via `paths-ignore` (as expected)
+- Exception: Still triggers if other non-excluded files are modified
+
+**Scenario 3: Mixed Changes**
+- Documentation + code changes in same commit
+- Behavior: CI triggers run because code changes are present
+- Scanning includes all files but triggered by non-excluded changes
+
+### Validation Limitations
+
+**Not Tested (Requires Live CI Environment):**
+- Actual workflow execution timing
+- Real vulnerability detection in different branch contexts
+- Emergency override functionality across branch types
+- Performance impact of scanning frequency
+
+**Future Validation Recommended:**
+- Live testing with intentional vulnerabilities on different branch types
+- Monitoring of scan frequency and resource usage
+- Validation of artifact generation and retention across branches
+
+### Configuration Consistency Verification
+
+All vulnerability scanning behavior is consistent across:
+- ✅ **lint.yml**: Primary vulnerability scanning workflow
+- ✅ **test.yml**: Testing workflow (same triggers)
+- ✅ **build.yml**: Build workflow (same triggers)  
+- ✅ **vulnerability-scan-optimized.yml**: Prototype with caching optimizations
+
+This ensures that vulnerability scanning behavior matches the broader CI/CD pipeline trigger patterns, providing predictable and consistent security enforcement across all development workflows.
 
 ---
 
