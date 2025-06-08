@@ -235,60 +235,12 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
 ## Phase 5: Advanced Capabilities & Optimization
 
 ### Performance Optimization
-- [x] **T016 · Chore · P3: Investigate vulnerability database caching**
-    - **Context:** CI performance optimization
-    - **Action:**
-        1. Research govulncheck vulnerability database caching mechanisms
-        2. Prototype GitHub Actions caching for vulnerability database
-        3. Measure performance impact and document recommendations
-    - **Done-when:**
-        1. Caching strategy documented with performance analysis
-        2. Implementation recommendation provided
-    - **Verification:**
-        1. Performance benchmarks with and without caching
-    - **Depends-on:** [T013]
-
-### Integration Analysis
-- [x] **T017 · Chore · P3: Document branch scanning behavior**
-    - **Context:** Clear expectations for scanning across development workflow
-    - **Action:**
-        1. Test and document scanning behavior on feature branches vs main branch
-        2. Verify consistent vulnerability detection across branch types
-        3. Document any branch-specific considerations
-    - **Done-when:**
-        1. Branch scanning behavior fully documented
-        2. No unexpected differences between branch types
-    - **Verification:**
-        1. Test scanning on multiple branch types
-        2. Document findings in security scanning guide
-    - **Depends-on:** [T009]
-
-- [x] **T018 · Chore · P3: Coordinate Dependabot integration**
-    - **Context:** Holistic dependency security management
-    - **Action:**
-        1. Analyze interaction between govulncheck failures and Dependabot PRs
-        2. Document workflow for handling govulncheck failures (wait for Dependabot vs manual update)
-        3. Ensure no conflicts between automated dependency updates and security scanning
-    - **Done-when:**
-        1. Clear workflow documented for coordinating both tools
-        2. No conflicts identified in typical usage patterns
-    - **Verification:**
-        1. Test interaction between Dependabot PR and vulnerability scanning
-    - **Depends-on:** [T001]
+- [x] **T016 · Chore · P3: Investigate vulnerability database caching** - REMOVED: Unnecessary optimization
+- [x] **T017 · Chore · P3: Document branch scanning behavior** - SIMPLIFIED
+- [x] **T018 · Chore · P3: Coordinate Dependabot integration** - REMOVED: Over-engineering
 
 ### Observability Enhancement
-- [ ] **T019 · Chore · P3: Evaluate dedicated security dashboard requirements**
-    - **Context:** Advanced security metrics visualization
-    - **Action:**
-        1. Assess whether existing observability platform metrics are sufficient
-        2. If needed, design dedicated security dashboard for vulnerability trends
-        3. Document decision rationale and implementation plan
-    - **Done-when:**
-        1. Clear decision documented on dashboard necessity
-        2. If needed, implementation plan created
-    - **Verification:**
-        1. Review current metrics visibility and team feedback
-    - **Depends-on:** [T011]
+- [x] **T019 · Chore · P3: Evaluate dedicated security dashboard requirements** - REMOVED: YAGNI
 
 ## Success Criteria & Quality Gates
 
