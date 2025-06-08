@@ -239,6 +239,76 @@ git commit -m "fix: update dependencies to resolve security vulnerabilities"
 - Monitor for security advisories on these packages
 - Plan updates during next maintenance window
 
+### Dependabot Integration
+
+**Overview**: This project uses GitHub Dependabot for automated dependency updates, which works in coordination with vulnerability scanning.
+
+#### When Dependabot Creates PRs
+
+**Dependabot Security Update PRs**:
+- ✅ **Automatically trigger** vulnerability scanning
+- ✅ **Usually pass** scanning (fixing known vulnerabilities)
+- ✅ **Should be reviewed and merged promptly**
+
+**Dependabot Version Update PRs**:
+- ⚠️ **May occasionally introduce** new vulnerabilities
+- ⚠️ **Will be blocked** if HIGH/CRITICAL vulnerabilities detected
+- ⚠️ **Require investigation** if scan fails
+
+#### Coordinating Manual Fixes vs Dependabot
+
+**Decision Matrix**:
+
+| Situation | Recommended Action |
+|-----------|-------------------|
+| Vulnerability detected, no Dependabot PR | Wait 24-48 hours for Dependabot |
+| Vulnerability detected, urgent fix needed | Create manual fix PR |
+| Dependabot PR exists but fails scanning | Investigate and wait for new Dependabot PR |
+| Multiple dependency PRs exist | Choose most comprehensive fix |
+
+**Best Practices**:
+- **Check for existing Dependabot PRs** before creating manual dependency updates
+- **Merge Dependabot security PRs quickly** to reduce exposure time
+- **Close redundant PRs** with clear explanation of choice
+- **Document rationale** for manual fixes over Dependabot
+
+#### Common Dependabot Scenarios
+
+**Scenario 1: Dependabot Fixes Vulnerabilities**
+```
+✅ Recommended Flow:
+1. Dependabot creates PR with security fix
+2. PR automatically triggers vulnerability scan  
+3. Scan passes → Review and merge immediately
+4. Main branch security restored
+```
+
+**Scenario 2: Dependabot Update Introduces Vulnerabilities**
+```
+⚠️ Investigation Required:
+1. Dependabot creates PR with version update
+2. PR triggers vulnerability scan
+3. Scan fails → Investigate vulnerability details
+4. Options:
+   - Wait for new Dependabot PR with safer version
+   - Create manual fix with pinned secure version
+   - Use emergency override if critically needed
+```
+
+**Scenario 3: Manual Fix vs Dependabot Race**
+```
+🤝 Coordination Required:
+1. Developer notices vulnerability
+2. Starts working on manual fix
+3. Dependabot creates PR during development
+4. Choose one approach:
+   - Use Dependabot PR if it's sufficient
+   - Continue with manual PR if more comprehensive
+   - Combine approaches if needed
+```
+
+**For complete Dependabot coordination workflows, see: [Dependabot Integration Guide](dependabot-integration.md)**
+
 ### Local Development
 
 #### Install govulncheck
@@ -756,6 +826,7 @@ This ensures that vulnerability scanning behavior matches the broader CI/CD pipe
 - **Go Vulnerability Database**: https://vuln.go.dev
 - **govulncheck Documentation**: https://go.dev/doc/security/vuln/
 - **Dependency Management Guide**: https://go.dev/doc/modules/managing-dependencies
+- **Dependabot Integration**: [dependabot-integration.md](dependabot-integration.md)
 - **GitHub Actions Workflows**: [github-actions.md](github-actions.md)
 - **Security Policy**: Contact security team for current policies
 
