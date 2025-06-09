@@ -80,7 +80,7 @@ jobs:
       - name: Check for misspellings
         run: |
           go install github.com/client9/misspell/cmd/misspell@latest
-          $(go env GOPATH)/bin/misspell -error -locale US .
+          $(go env GOPATH)/bin/misspell -error .
 
   vulnerability-scan:
     name: Block vulnerable dependencies
