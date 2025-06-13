@@ -39,7 +39,7 @@
 - **Estimate**: 30 minutes
 - **Completed**: Updated test to use semantic check accepting both "No vulnerabilities found" and "=== Symbol Results ===" output formats
 
-### T004: Fix Timeout Test Duration - HIGH
+### T004: Fix Timeout Test Duration - HIGH [x]
 - **Priority**: P1 (Test reliability)
 - **Description**: Fix TestTimeoutHandling/Very_short_timeout test that doesn't actually timeout
 - **Files**: `network_failure_test.go:120-124`
@@ -49,6 +49,7 @@
   - Option B: Use larger test project that takes longer to scan
 - **Validation**: Timeout test properly demonstrates timeout behavior
 - **Estimate**: 45 minutes
+- **Completed**: Changed timeout from 1 second to 100ms (Option A), test now reliably times out and completes in ~100ms
 
 ### T005: Research and Create Actual Vulnerable Test Project - HIGH
 - **Priority**: P1 (Test validity)

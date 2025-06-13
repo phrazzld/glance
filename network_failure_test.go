@@ -117,8 +117,8 @@ func TestTimeoutHandling(t *testing.T) {
 		expectedMessage string
 	}{
 		{
-			name:            "Very short timeout (1 second)",
-			timeoutSeconds:  1,
+			name:            "Very short timeout (100ms)",
+			timeoutSeconds:  0, // Special case: will be converted to 100ms in test execution
 			shouldTimeout:   true,
 			expectedMessage: "signal: killed",
 		},
@@ -143,13 +143,25 @@ func TestTimeoutHandling(t *testing.T) {
 			defer os.Remove(configPath)
 
 			// Run scan with timeout configuration - use exact timeout to force timeout on short durations
-			result := runGovulncheckWithConfig(t, configPath, time.Duration(tc.timeoutSeconds)*time.Second)
+			var timeout time.Duration
+			if tc.timeoutSeconds == 0 {
+				timeout = 100 * time.Millisecond // Special case: very short timeout
+			} else {
+				timeout = time.Duration(tc.timeoutSeconds) * time.Second
+			}
+			result := runGovulncheckWithConfig(t, configPath, timeout)
 
 			if tc.shouldTimeout {
 				// Should timeout with context deadline exceeded
 				assert.True(t, result.TimedOut, "Should indicate timeout occurred")
 				assert.Contains(t, strings.ToLower(result.ErrorMessage), tc.expectedMessage, "Should contain timeout message")
-				assert.LessOrEqual(t, result.Duration, time.Duration(tc.timeoutSeconds+5)*time.Second, "Should timeout within expected window")
+				var maxDuration time.Duration
+				if tc.timeoutSeconds == 0 {
+					maxDuration = 500 * time.Millisecond // Allow up to 500ms for 100ms timeout
+				} else {
+					maxDuration = time.Duration(tc.timeoutSeconds+5) * time.Second
+				}
+				assert.LessOrEqual(t, result.Duration, maxDuration, "Should timeout within expected window")
 			} else {
 				// Should complete (may find vulnerabilities with exit code 3, or succeed with 0)
 				assert.False(t, result.TimedOut, "Should not timeout")
