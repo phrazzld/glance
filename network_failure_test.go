@@ -208,25 +208,7 @@ func TestErrorMessaging(t *testing.T) {
 	}
 }
 
-// TestGracefulDegradation tests behavior when network is partially available
-func TestGracefulDegradation(t *testing.T) {
-	t.Skip("TEMPORARY: Skipping graceful degradation tests - custom network simulation removed during simplification")
-	t.Run("Partial network failure with degraded performance", func(t *testing.T) {
-		cleanup := setupSlowNetwork(t)
-		defer cleanup()
-
-		result := runVulnerabilityScanWithNetworkConditions(t, 120*time.Second)
-
-		// Should either succeed (slowly) or fail gracefully with clear message
-		if result.ExitCode == 0 {
-			// Success case - should be slower than normal
-			assert.Greater(t, result.Duration, 10*time.Second, "Should be slower due to network issues")
-		} else {
-			// Failure case - should have clear error message
-			assert.Contains(t, strings.ToLower(result.StdErr), "slow", "Should mention slow network")
-		}
-	})
-}
+// TestGracefulDegradation - REMOVED: custom network simulation was removed during simplification
 
 // Helper functions for network condition simulation
 

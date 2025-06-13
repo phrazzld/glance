@@ -291,7 +291,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
         1. Run network and timeout tests specifically: `go test -run TestTimeout -run TestNetwork`
     - **Depends-on:** [T021]
 
-- [ ] **T023 · Refactor · P1: Remove obsolete tests for deleted functionality**
+- [x] **T023 · Refactor · P1: Remove obsolete tests for deleted functionality**
     - **Context:** Many tests verify features that no longer exist in simplified system
     - **Action:**
         1. Remove tests for retry wrapper functionality (no longer exists)

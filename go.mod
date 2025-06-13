@@ -13,7 +13,6 @@ require (
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/api v0.228.0
 	google.golang.org/genai v1.1.0
-	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
