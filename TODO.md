@@ -276,7 +276,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
     - **Depends-on:** [T020]
 
 ### Test Logic Modernization
-- [ ] **T022 · Fix · P1: Update test expectations for simplified govulncheck behavior**
+- [x] **T022 · Fix · P1: Update test expectations for simplified govulncheck behavior**
     - **Context:** Tests expect custom timeout codes and error messages from complex system
     - **Action:**
         1. Update timeout tests to expect standard govulncheck exit codes (0/1) instead of custom codes (124)

@@ -24,9 +24,8 @@ type NetworkTestResult struct {
 	ErrorMessage string        `json:"error_message"`
 }
 
-// TestNetworkFailureScenarios tests various network failure conditions
+// TestNetworkFailureScenarios tests various network failure conditions with direct govulncheck
 func TestNetworkFailureScenarios(t *testing.T) {
-	t.Skip("TEMPORARY: Skipping network failure tests - custom network simulation removed during simplification")
 	// Skip network tests in CI unless explicitly enabled
 	if os.Getenv("RUN_NETWORK_TESTS") != "true" {
 		t.Skip("Network failure tests skipped - set RUN_NETWORK_TESTS=true to enable")
@@ -109,32 +108,31 @@ func TestNetworkFailureScenarios(t *testing.T) {
 	}
 }
 
-// TestTimeoutHandling specifically tests timeout behavior
+// TestTimeoutHandling specifically tests timeout behavior with direct govulncheck
 func TestTimeoutHandling(t *testing.T) {
-	t.Skip("TEMPORARY: Skipping custom timeout behavior tests - simplified system uses standard govulncheck timeouts")
 	testCases := []struct {
-		name             string
-		timeoutSeconds   int
-		expectedExitCode int
-		expectedMessage  string
+		name            string
+		timeoutSeconds  int
+		shouldTimeout   bool
+		expectedMessage string
 	}{
 		{
-			name:             "Short timeout (5 seconds)",
-			timeoutSeconds:   5,
-			expectedExitCode: 124, // timeout exit code
-			expectedMessage:  "timed out",
+			name:            "Very short timeout (1 second)",
+			timeoutSeconds:  1,
+			shouldTimeout:   true,
+			expectedMessage: "signal: killed",
 		},
 		{
-			name:             "Medium timeout (30 seconds)",
-			timeoutSeconds:   30,
-			expectedExitCode: 124,
-			expectedMessage:  "timed out",
+			name:            "Medium timeout (30 seconds)",
+			timeoutSeconds:  30,
+			shouldTimeout:   false,
+			expectedMessage: "",
 		},
 		{
-			name:             "Normal timeout (300 seconds)",
-			timeoutSeconds:   300,
-			expectedExitCode: 0, // Should complete normally in most cases
-			expectedMessage:  "",
+			name:            "Normal timeout (300 seconds)",
+			timeoutSeconds:  300,
+			shouldTimeout:   false,
+			expectedMessage: "",
 		},
 	}
 
@@ -144,83 +142,27 @@ func TestTimeoutHandling(t *testing.T) {
 			configPath := createTemporaryConfig(t, tc.timeoutSeconds)
 			defer os.Remove(configPath)
 
-			// Run scan with timeout configuration
-			result := runGovulncheckWithConfig(t, configPath, time.Duration(tc.timeoutSeconds+10)*time.Second)
+			// Run scan with timeout configuration - use exact timeout to force timeout on short durations
+			result := runGovulncheckWithConfig(t, configPath, time.Duration(tc.timeoutSeconds)*time.Second)
 
-			if tc.expectedExitCode == 124 {
-				// Should timeout
-				assert.Equal(t, tc.expectedExitCode, result.ExitCode, "Should exit with timeout code")
-				assert.Contains(t, strings.ToLower(result.StdOut+result.StdErr), tc.expectedMessage, "Should contain timeout message")
+			if tc.shouldTimeout {
+				// Should timeout with context deadline exceeded
+				assert.True(t, result.TimedOut, "Should indicate timeout occurred")
+				assert.Contains(t, strings.ToLower(result.ErrorMessage), tc.expectedMessage, "Should contain timeout message")
 				assert.LessOrEqual(t, result.Duration, time.Duration(tc.timeoutSeconds+5)*time.Second, "Should timeout within expected window")
 			} else {
-				// Should complete successfully
-				assert.Equal(t, 0, result.ExitCode, "Should complete successfully")
+				// Should complete (may find vulnerabilities with exit code 3, or succeed with 0)
+				assert.False(t, result.TimedOut, "Should not timeout")
+				assert.True(t, result.ExitCode == 0 || result.ExitCode == 3, "Should complete with success (0) or vulnerabilities found (3)")
 			}
 		})
 	}
 }
 
-// TestRetryLogic tests the retry mechanism for network failures
-func TestRetryLogic(t *testing.T) {
-	t.Skip("TEMPORARY: Skipping retry logic tests - simplified system uses direct govulncheck without custom retry")
-	// This test verifies that retry logic is properly implemented
-	// Note: Since govulncheck doesn't natively support retries, we test the wrapper logic
+// TestRetryLogic - REMOVED: simplified system uses direct govulncheck without custom retry logic
 
-	testCases := []struct {
-		name          string
-		retryCount    int
-		shouldSucceed bool
-	}{
-		{
-			name:          "No retries (0)",
-			retryCount:    0,
-			shouldSucceed: false,
-		},
-		{
-			name:          "Single retry (1)",
-			retryCount:    1,
-			shouldSucceed: false, // With network issues, still unlikely to succeed
-		},
-		{
-			name:          "Multiple retries (3)",
-			retryCount:    3,
-			shouldSucceed: false, // Network is completely down
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Create configuration with specific retry count
-			configPath := createTemporaryConfigWithRetries(t, tc.retryCount)
-			defer os.Remove(configPath)
-
-			// Setup network failure condition
-			cleanup := setupNetworkIsolation(t)
-			defer cleanup()
-
-			// Run scan and measure retry attempts
-			start := time.Now()
-			result := runGovulncheckWithConfig(t, configPath, 60*time.Second)
-			duration := time.Since(start)
-
-			// Validate retry behavior
-			if tc.retryCount > 0 {
-				// Should take longer due to retries
-				minExpectedDuration := time.Duration(tc.retryCount) * 5 * time.Second
-				assert.GreaterOrEqual(t, duration, minExpectedDuration, "Should take time for retries")
-			}
-
-			// Should fail regardless due to network isolation
-			assert.NotEqual(t, 0, result.ExitCode, "Should fail due to network issues")
-
-			t.Logf("Retry test completed in %v with %d retries", duration, tc.retryCount)
-		})
-	}
-}
-
-// TestErrorMessaging validates that clear error messages are provided
+// TestErrorMessaging validates that standard govulncheck error messages are provided
 func TestErrorMessaging(t *testing.T) {
-	t.Skip("TEMPORARY: Skipping custom error messaging tests - simplified system uses standard govulncheck messages")
 	testCases := []struct {
 		name            string
 		networkSetup    func() func()
@@ -231,14 +173,14 @@ func TestErrorMessaging(t *testing.T) {
 			networkSetup: func() func() {
 				return setupNetworkIsolation(t)
 			},
-			expectedStrings: []string{"timeout", "network", "vulnerability database"},
+			expectedStrings: []string{"dial", "connection", "refused"},
 		},
 		{
 			name: "DNS resolution errors",
 			networkSetup: func() func() {
 				return setupDNSFailure(t)
 			},
-			expectedStrings: []string{"dns", "resolution", "vuln.go.dev"},
+			expectedStrings: []string{"dial", "connection", "refused"},
 		},
 	}
 
@@ -256,12 +198,12 @@ func TestErrorMessaging(t *testing.T) {
 					"Error output should contain '%s' for %s", expectedStr, tc.name)
 			}
 
-			// Verify error is actionable
+			// Verify error indicates network/connection issue
 			assert.True(t,
-				strings.Contains(combinedOutput, "check") ||
-					strings.Contains(combinedOutput, "verify") ||
-					strings.Contains(combinedOutput, "network"),
-				"Error message should provide actionable guidance")
+				strings.Contains(combinedOutput, "connection") ||
+					strings.Contains(combinedOutput, "network") ||
+					strings.Contains(combinedOutput, "dial"),
+				"Error message should indicate connection issue")
 		})
 	}
 }
@@ -450,27 +392,7 @@ retry_attempts: 2
 	return tempFile.Name()
 }
 
-// createTemporaryConfigWithRetries creates a configuration with specific retry count
-func createTemporaryConfigWithRetries(t *testing.T, retryCount int) string {
-	config := fmt.Sprintf(`
-fail_on_severity:
-  - "HIGH"
-  - "CRITICAL"
-timeout_seconds: 30
-scan_level: "symbol"
-output_format: "json"
-retry_attempts: %d
-`, retryCount)
-
-	tempFile, err := os.CreateTemp("", "govulncheck-retry-test-*.yaml")
-	require.NoError(t, err)
-	defer tempFile.Close()
-
-	_, err = tempFile.WriteString(config)
-	require.NoError(t, err)
-
-	return tempFile.Name()
-}
+// createTemporaryConfigWithRetries - REMOVED: simplified system doesn't use custom retry configuration
 
 // createMinimalGoProject creates a minimal Go project for testing
 func createMinimalGoProject(t *testing.T, dir string) {
