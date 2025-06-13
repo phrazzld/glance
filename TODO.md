@@ -260,7 +260,7 @@ This synthesis consolidates analysis from 11 AI models to create a definitive im
         2. Manually run `govulncheck ./...` to verify security scanning works
     - **Depends-on:** none
 
-- [ ] **T021 · Fix · P0: Recreate missing test infrastructure for simplified system**
+- [x] **T021 · Fix · P0: Recreate missing test infrastructure for simplified system**
     - **Context:** Tests expect complex infrastructure files that were removed during simplification
     - **Action:**
         1. Recreate `testdata/vulnerable-project/` with minimal vulnerable Go project
