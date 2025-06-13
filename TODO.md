@@ -51,7 +51,7 @@
 - **Estimate**: 45 minutes
 - **Completed**: Changed timeout from 1 second to 100ms (Option A), test now reliably times out and completes in ~100ms
 
-### T005: Research and Create Actual Vulnerable Test Project - HIGH
+### T005: Research and Create Actual Vulnerable Test Project - HIGH [x]
 - **Priority**: P1 (Test validity)
 - **Description**: Fix TestVulnerabilityDetectionIntegration/Vulnerable_project_scan by using real vulnerabilities
 - **Files**: `testdata/vulnerable-project/go.mod`, `testdata/vulnerable-project/main.go`
@@ -65,6 +65,7 @@
   - govulncheck database for v1.1.3 timeframe
 - **Validation**: Vulnerable project test returns non-zero exit code and detects vulnerabilities
 - **Estimate**: 2 hours
+- **Completed**: Verified vulnerable project already detects real vulnerabilities (GO-2022-1059, GO-2021-0113 in x/text, multiple in x/crypto) and returns exit code 3
 
 ## MEDIUM - Improve Test Reliability
 
