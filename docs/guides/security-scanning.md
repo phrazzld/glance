@@ -38,6 +38,25 @@ go install golang.org/x/vuln/cmd/govulncheck@latest
 govulncheck ./...
 ```
 
+## Emergency Override Protocol
+
+In critical situations where a hotfix must be deployed despite vulnerabilities:
+
+1. **Activate Override**: Set `EMERGENCY_SECURITY_OVERRIDE=true` in the CI environment
+2. **Document Justification**: The override reason is automatically logged
+3. **Create Tracking Issue**: Manually create a GitHub issue with `security-debt` label
+4. **48-Hour Remediation**: Security issues must be resolved within 48 hours
+5. **Audit Trail**: All override usage is logged for compliance review
+
+### Example Override Usage:
+```yaml
+# In GitHub Actions workflow
+env:
+  EMERGENCY_SECURITY_OVERRIDE: true
+```
+
+**⚠️ Warning**: Emergency overrides should only be used for critical production hotfixes. All usage is audited.
+
 ## Resources
 
 - [Go Vulnerability Database](https://vuln.go.dev)

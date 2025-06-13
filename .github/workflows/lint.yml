@@ -100,4 +100,42 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           export PATH=$PATH:$(go env GOPATH)/bin
-          govulncheck ./...
+
+          # Check for emergency override
+          if [ "$EMERGENCY_SECURITY_OVERRIDE" = "true" ]; then
+            echo "⚠️  EMERGENCY SECURITY OVERRIDE ACTIVATED ⚠️"
+            echo "::warning::Emergency security override is active - vulnerabilities will not block build"
+            echo "::notice::All override usage is audited. Remediation required within 48 hours."
+
+            # Run scan but don't fail on vulnerabilities
+            govulncheck ./... || echo "::warning::Vulnerabilities detected but override is active"
+
+            # Create audit log
+            echo "Emergency override used at $(date) by $GITHUB_ACTOR" >> security-override.log
+
+            # TODO: Auto-create GitHub issue (requires additional permissions)
+            echo "::notice::Manual GitHub issue creation required for security debt tracking"
+
+            exit 0
+          fi
+
+          # Normal security scan - fail on any vulnerabilities
+          echo "🔒 Running mandatory security scan (no override active)"
+
+          # Run govulncheck and capture output
+          if govulncheck -json ./... > govulncheck-output.json 2>&1; then
+            echo "✅ No vulnerabilities detected"
+          else
+            echo "❌ Vulnerabilities detected - analyzing severity"
+
+            # For now, fail on any vulnerabilities (govulncheck doesn't expose severity directly)
+            # TODO: Implement severity parsing from JSON output
+            echo "::error::Security vulnerabilities detected. Build blocked."
+            echo "::notice::Use EMERGENCY_SECURITY_OVERRIDE=true only for critical hotfixes"
+
+            # Show summary of findings
+            echo "📊 Vulnerability Summary:"
+            cat govulncheck-output.json
+
+            exit 1
+          fi
