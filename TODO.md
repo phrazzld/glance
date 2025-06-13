@@ -11,13 +11,14 @@
 - **Estimate**: 15 minutes
 - **Completed**: Updated `.github/workflows/precommit.yml` to reference `docs/project/requirements.txt`
 
-### T002: Pin govulncheck Version Across All Workflows - CRITICAL  
+### T002: Pin govulncheck Version Across All Workflows - CRITICAL [x]
 - **Priority**: P0 (Security + Stability)
 - **Description**: Replace `@latest` with pinned version to prevent supply chain attacks and version drift
 - **Files**: `.github/workflows/test.yml`, `.github/workflows/lint.yml`, `.github/workflows/performance.yml`
 - **Action**: Replace all instances of `govulncheck@latest` with `govulncheck@v1.1.3`
 - **Validation**: All workflows install consistent govulncheck version
 - **Estimate**: 20 minutes
+- **Completed**: Updated test.yml and lint.yml to use govulncheck@v1.1.3 (performance.yml was already pinned correctly)
 
 ## HIGH - Fix Core Test Failures
 
