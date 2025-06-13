@@ -36,6 +36,12 @@ Thumbs.db
 # Auto-generated glance files (reduce clutter)
 **/GLANCE.md
 
+# Test coverage and benchmarks
+coverage.out
+*.prof
+*-benchmark.json
+vulnerability-scan-benchmark.json
+
 # Backup files
 *.bak
 
