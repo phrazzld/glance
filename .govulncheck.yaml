@@ -1,0 +1,20 @@
+# Vulnerability Scanning Configuration
+# This configuration defines security scanning behavior for the CI pipeline
+
+fail_on_severity:
+  - "HIGH"
+  - "CRITICAL"
+
+timeout_seconds: 60
+scan_level: "symbol"
+output_format: "json"
+
+reporting:
+  include_details: true
+  include_remediation: true
+  generate_correlation_id: true
+
+# Emergency Override Instructions:
+# Set EMERGENCY_SECURITY_OVERRIDE=true environment variable in CI
+# to bypass vulnerability blocking for critical hotfixes.
+# All overrides are audited and require 48-hour remediation.

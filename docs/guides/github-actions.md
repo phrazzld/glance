@@ -89,7 +89,7 @@ ok  	github.com/phrazzld/glance	0.635s	coverage: 88.4% of statements
 
 **File:** `.github/workflows/lint.yml`
 
-This workflow performs static code analysis to identify potential bugs, style issues, and other code quality problems.
+This workflow performs static code analysis to identify potential bugs, style issues, and other code quality problems. It also includes mandatory vulnerability scanning to ensure dependency security.
 
 ### Configuration
 
@@ -104,7 +104,9 @@ This workflow performs static code analysis to identify potential bugs, style is
 1. Set up Go environment
 2. Check out repository code
 3. Run golangci-lint with configuration from `.golangci.yml`
-4. Run additional checks:
+4. Run vulnerability scanning with govulncheck
+5. Generate vulnerability reports and GitHub Actions summary
+6. Run additional checks:
    - Go vet
    - Go mod verify
    - Go mod tidy check
@@ -132,11 +134,17 @@ llm/client.go:75:9: S1005: unnecessary assignment to the blank identifier (gosim
 - Untidy go.mod files
 - Spelling errors in code
 - Possible race conditions
+- **Security vulnerabilities** in dependencies (HIGH/CRITICAL block builds)
+- Outdated dependencies with known security issues
 
 ### Schedule
 
 In addition to the standard triggers, this workflow runs monthly to check dependencies:
 - Scheduled on the 1st of each month at 01:00 UTC
+
+### Security Vulnerability Scanning
+
+This workflow includes comprehensive vulnerability scanning using govulncheck. For detailed information about security policies, emergency override procedures, and troubleshooting, see the [Security Scanning Guide](security-scanning.md).
 
 ## Go Build Workflow
 

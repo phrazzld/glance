@@ -1,0 +1,16 @@
+# Test configuration for vulnerable project
+# This should detect vulnerabilities and fail on HIGH/CRITICAL
+
+fail_on_severity:
+  - "HIGH"
+  - "CRITICAL"
+
+timeout_seconds: 60
+scan_level: "symbol"
+output_format: "json"
+retry_attempts: 1
+
+reporting:
+  include_details: true
+  include_remediation: true
+  generate_correlation_id: true

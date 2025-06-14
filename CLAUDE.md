@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 * **Run all tests:** `go test ./...`
 * **Run specific test:** `go test -run=TestName ./package` (e.g., `go test -run=TestLoadPromptTemplate .`)
 * **Run tests with race detection:** `go test -race ./...`
+* **Run vulnerability scan:** `govulncheck ./...`
 * **Run golangci-lint:** `golangci-lint run --config=.golangci.yml --timeout=2m`
 * **Format code:** `go fmt ./...`
 * **Run pre-commit hooks:** `pre-commit run --all-files`
@@ -24,4 +25,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 * **Always write detailed multiline conventional commit messages**
 * **NEVER sign your commit messages -- your commit messages should be strictly detailed multiline conventional commit messages about the work done**
 
-Remember to adhere to all principles outlined in the Development Philosophy. Quality gates require passing all pre-commit hooks and CI checks. Do not bypass hooks with `--no-verify`.
+## Security Requirements
+
+This project uses **mandatory vulnerability scanning** to ensure dependency security. All code changes must pass security gates before deployment.
+
+### Vulnerability Scanning
+
+* **Vulnerable dependencies BLOCK builds** - update dependencies to fix
+* **Automatic scanning** runs on all commits and pull requests via `govulncheck`
+* **Local testing:** `go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...`
+
+### Working with Security Failures
+
+When vulnerability scanning fails:
+
+1. **Update vulnerable dependencies:** `go get -u && go mod tidy`
+2. **Verify fixes locally:** `govulncheck ./...`
+3. **Commit and push** the dependency updates
+
+### Security Resources
+
+* **Guide:** See `docs/guides/security-scanning.md` for complete procedures
+* **Local Scanning:** Install govulncheck: `go install golang.org/x/vuln/cmd/govulncheck@latest`
+* **Quick Fix:** Update dependencies: `go get -u && go mod tidy`

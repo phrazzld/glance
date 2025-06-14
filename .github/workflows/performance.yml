@@ -1,0 +1,224 @@
+name: Performance Testing
+
+# Trigger configuration:
+# - Manual trigger with workflow_dispatch
+# - Weekly performance analysis (Sundays at 02:00 UTC)
+# - On performance-related changes
+on:
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Performance test mode'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - quick
+        - full
+        - benchmark
+      threshold_seconds:
+        description: 'Performance threshold in seconds'
+        required: false
+        default: '60'
+        type: string
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sundays at 02:00 UTC
+  push:
+    branches: [master]
+    paths:
+      - 'scripts/performance-validation.sh'
+      - 'performance_validation_test.go'
+      - '.github/workflows/performance.yml'
+      - '.govulncheck.yaml'
+
+# Prevent multiple identical workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  performance-validation:
+    name: Vulnerability Scan Performance Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        test_mode:
+          - ${{ github.event.inputs.test_mode || 'full' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
+
+      - name: Install analysis tools
+        run: |
+          # Install jq for JSON analysis
+          sudo apt-get update && sudo apt-get install -y jq
+
+          # Install additional performance analysis tools
+          sudo apt-get install -y bc time
+
+      - name: Run performance validation
+        env:
+          PERFORMANCE_TEST_MODE: ${{ matrix.test_mode }}
+          PERFORMANCE_THRESHOLD_SECONDS: ${{ github.event.inputs.threshold_seconds || '60' }}
+          PERFORMANCE_WARNING_SECONDS: 45
+          CI_ENVIRONMENT: true
+        run: |
+          echo "Running comprehensive performance validation..."
+          echo "Mode: $PERFORMANCE_TEST_MODE"
+          echo "Threshold: ${PERFORMANCE_THRESHOLD_SECONDS}s"
+
+          # Make scripts executable
+          chmod +x scripts/performance-validation.sh
+
+          # Run performance validation with detailed timing
+          time ./scripts/performance-validation.sh "$PERFORMANCE_TEST_MODE"
+
+      - name: Generate performance trend analysis
+        if: always()
+        run: |
+          echo "## 📈 Performance Trend Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Find performance reports
+          REPORTS_DIR="performance-reports"
+          if [ -d "$REPORTS_DIR" ]; then
+            LATEST_REPORT=$(find "$REPORTS_DIR" -name "performance-report-*.json" -type f -exec ls -t {} + 2>/dev/null | head -1)
+
+            if [ -n "$LATEST_REPORT" ] && [ -f "$LATEST_REPORT" ]; then
+              echo "**Latest Performance Results:**" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+
+              # Extract metrics
+              AVG_DURATION=$(jq -r '.summary.avg_duration' "$LATEST_REPORT" 2>/dev/null || echo "unknown")
+              MAX_DURATION=$(jq -r '.summary.max_duration' "$LATEST_REPORT" 2>/dev/null || echo "unknown")
+              TOTAL_SCANS=$(jq -r '.summary.total_scans' "$LATEST_REPORT" 2>/dev/null || echo "unknown")
+
+              echo "- **Total Scans:** $TOTAL_SCANS" >> $GITHUB_STEP_SUMMARY
+              echo "- **Average Duration:** $AVG_DURATION" >> $GITHUB_STEP_SUMMARY
+              echo "- **Maximum Duration:** $MAX_DURATION" >> $GITHUB_STEP_SUMMARY
+              echo "- **Threshold:** ${PERFORMANCE_THRESHOLD_SECONDS:-60}s" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+
+              # Performance breakdown by project type
+              echo "**Performance by Project Type:**" >> $GITHUB_STEP_SUMMARY
+              jq -r '.metrics[] | "- **\(.project_type | ascii_upcase):** \(.scan_duration)"' "$LATEST_REPORT" 2>/dev/null >> $GITHUB_STEP_SUMMARY || echo "- Details not available" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+
+              # Performance status
+              MAX_SECONDS=$(echo "$MAX_DURATION" | awk '{
+                if (/^[0-9]+(\.[0-9]+)?s$/) {
+                  gsub(/s$/, "")
+                  print int($0)
+                } else if (/^[0-9]+$/) {
+                  print int($0 / 1000000000)
+                } else {
+                  print 0
+                }
+              }')
+
+              if [ "$MAX_SECONDS" -gt "${PERFORMANCE_THRESHOLD_SECONDS:-60}" ]; then
+                echo "🔴 **Status:** Performance threshold exceeded" >> $GITHUB_STEP_SUMMARY
+              elif [ "$MAX_SECONDS" -gt "45" ]; then
+                echo "🟡 **Status:** Performance approaching threshold" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "✅ **Status:** Performance within acceptable limits" >> $GITHUB_STEP_SUMMARY
+              fi
+
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          echo "### 📋 Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Mode:** ${{ matrix.test_mode }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Go Version:** $(go version | cut -d' ' -f3)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Runner:** ubuntu-latest" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload performance artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-validation-${{ matrix.test_mode }}-${{ github.run_id }}
+          path: |
+            performance-reports/
+            performance-report-*.json
+          retention-days: 90
+          if-no-files-found: warn
+
+  benchmark-comparison:
+    name: Performance Benchmark Comparison
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event.inputs.test_mode == 'benchmark' || github.event_name == 'schedule' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
+
+      - name: Run performance benchmarks
+        run: |
+          echo "Running performance benchmarks..."
+
+          # Run benchmarks with multiple iterations for stable results
+          go test -bench=BenchmarkVulnerabilityScan -run=^$ -count=3 -benchtime=1x . > benchmark-results.txt
+
+          echo "Benchmark Results:"
+          cat benchmark-results.txt
+
+      - name: Analyze benchmark results
+        run: |
+          echo "## 🏃‍♂️ Performance Benchmarks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          cat benchmark-results.txt >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Extract key metrics
+          if grep -q "BenchmarkVulnerabilityScan" benchmark-results.txt; then
+            echo "**Key Insights:**" >> $GITHUB_STEP_SUMMARY
+
+            # Calculate average times for each project type
+            CLEAN_AVG=$(grep "CleanProject" benchmark-results.txt | awk '{sum+=$3; count++} END {if(count>0) print sum/count/1000000000 "s"; else print "N/A"}')
+            VULN_AVG=$(grep "VulnerableProject" benchmark-results.txt | awk '{sum+=$3; count++} END {if(count>0) print sum/count/1000000000 "s"; else print "N/A"}')
+            MAIN_AVG=$(grep "MainProject" benchmark-results.txt | awk '{sum+=$3; count++} END {if(count>0) print sum/count/1000000000 "s"; else print "N/A"}')
+
+            echo "- **Clean Project Average:** $CLEAN_AVG" >> $GITHUB_STEP_SUMMARY
+            echo "- **Vulnerable Project Average:** $VULN_AVG" >> $GITHUB_STEP_SUMMARY
+            echo "- **Main Project Average:** $MAIN_AVG" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: |
+            benchmark-results.txt
+          retention-days: 90
+          if-no-files-found: warn
