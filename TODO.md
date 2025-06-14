@@ -294,3 +294,66 @@ CF006 (Error messages) → Can be done in parallel
 ## Estimated Total Time: 2-3 hours
 
 **Critical Path**: CF001 → CF002 → CF003/CF004 (parallel) → Validation
+
+---
+
+# Current CI Failure Resolution Tasks
+
+*Generated: 2025-06-14T15:35:00Z*
+*PR #41 current failures: 2/7 checks failing*
+
+## CRITICAL - String Pattern Matching Fix
+
+### CF007: Fix Vulnerability Test String Pattern Matching - CRITICAL [x]
+- **Priority**: P0 (Blocks CI pipeline)
+- **Description**: Update TestVulnerabilityDetectionIntegration/Vulnerable_project_scan to use flexible pattern matching for "vulnerability" vs "vulnerabilities"
+- **Files**: `vulnerability_integration_test.go:77`
+- **Root Cause**: Test expects exact string "vulnerability" but govulncheck v1.1.3 outputs "vulnerabilities" (plural)
+- **Actual Output**: Contains "vulnerabilities", "Your code is affected by 0 vulnerabilities", etc.
+- **Current Pattern**: `expectedStrings: []string{"=== Symbol Results ===", "vulnerability", "Your code is affected"}`
+- **Action**: Replace exact "vulnerability" with flexible pattern "vulnerabilit" to match both forms
+- **Code Change**:
+  ```go
+  expectedStrings: []string{"=== Symbol Results ===", "vulnerabilit", "Your code is affected"},
+  ```
+- **Rationale**:
+  - Future-proofs against govulncheck output format changes
+  - Maintains test intent (verify vulnerability detection works)
+  - Follows existing semantic validation approach (line 69 comment)
+  - Minimal change with maximum stability improvement
+- **Validation**: TestVulnerabilityDetectionIntegration/Vulnerable_project_scan passes in both main test run and pre-commit hooks
+- **Estimate**: 10 minutes
+
+### CF008: Add Test Comment Documentation - MEDIUM [x]
+- **Priority**: P2 (Prevention)
+- **Description**: Add explanatory comments about pattern choice for future maintainers
+- **Files**: `vulnerability_integration_test.go:77`
+- **Root Cause**: No documentation explaining why flexible pattern is used
+- **Action**: Add comment explaining pattern flexibility
+- **Code Addition**:
+  ```go
+  // Use "vulnerabilit" pattern to match both "vulnerability" and "vulnerabilities"
+  // as govulncheck output format may vary between versions
+  expectedStrings: []string{"=== Symbol Results ===", "vulnerabilit", "Your code is affected"},
+  ```
+- **Validation**: Code includes clear documentation for pattern choice
+- **Estimate**: 5 minutes
+
+## Task Dependencies
+
+```
+CF007 (Fix pattern) → Independent (critical fix)
+CF008 (Add comments) → Depends on CF007
+```
+
+## Success Criteria
+
+- [x] CI pipeline shows 7/7 passing checks
+- [x] Both "Test on Go 1.24" and "pre-commit" pass
+- [x] TestVulnerabilityDetectionIntegration/Vulnerable_project_scan succeeds
+- [x] Test is robust to future govulncheck output changes
+- [x] No functional regression in vulnerability scanning capability
+
+## Estimated Total Time: 15 minutes
+
+**Critical Path**: CF007 → CF008 → CI Validation
