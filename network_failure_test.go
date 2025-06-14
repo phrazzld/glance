@@ -87,7 +87,9 @@ func TestNetworkFailureScenarios(t *testing.T) {
 
 			// Validate results based on expected outcome
 			if tc.expectFailure {
-				assert.NotEqual(t, 0, result.ExitCode, "Expected scan to fail due to network issues")
+				assert.NotEqual(t, 0, result.ExitCode,
+					"Expected scan to fail due to network issues.\nActual exit code: %d\nDuration: %v\nError message: %s\nStdOut: %s\nStdErr: %s",
+					result.ExitCode, result.Duration, result.ErrorMessage, result.StdOut, result.StdErr)
 
 				// Use comprehensive network error pattern matching
 				combinedOutput := strings.ToLower(result.StdOut + result.StdErr + result.ErrorMessage)
@@ -122,6 +124,10 @@ func TestNetworkFailureScenarios(t *testing.T) {
 
 // TestTimeoutHandling specifically tests timeout behavior with direct govulncheck
 func TestTimeoutHandling(t *testing.T) {
+	if _, err := exec.LookPath("govulncheck"); err != nil {
+		t.Skip("govulncheck not available, skipping network tests")
+	}
+
 	testCases := []struct {
 		name            string
 		timeoutSeconds  int
@@ -165,7 +171,9 @@ func TestTimeoutHandling(t *testing.T) {
 
 			if tc.shouldTimeout {
 				// Should timeout with context deadline exceeded
-				assert.True(t, result.TimedOut, "Should indicate timeout occurred")
+				assert.True(t, result.TimedOut,
+					"Should indicate timeout occurred.\nActual timeout: %v\nDuration: %v\nExit code: %d\nTimeout setting: %v\nError: %s",
+					result.TimedOut, result.Duration, result.ExitCode, timeout, result.ErrorMessage)
 				assert.Contains(t, strings.ToLower(result.ErrorMessage), tc.expectedMessage,
 					"Expected timeout message not found.\nFull error message:\n%s\nExpected pattern: %s\nMessage length: %d",
 					result.ErrorMessage, tc.expectedMessage, len(result.ErrorMessage))
@@ -189,6 +197,10 @@ func TestTimeoutHandling(t *testing.T) {
 
 // TestErrorMessaging validates that standard govulncheck error messages are provided
 func TestErrorMessaging(t *testing.T) {
+	if _, err := exec.LookPath("govulncheck"); err != nil {
+		t.Skip("govulncheck not available, skipping network tests")
+	}
+
 	testCases := []struct {
 		name            string
 		networkSetup    func() func()
