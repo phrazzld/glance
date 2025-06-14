@@ -69,7 +69,7 @@
 
 ## MEDIUM - Improve Test Reliability
 
-### T006: Add Better Test Error Context - MEDIUM
+### T006: Add Better Test Error Context - MEDIUM [x]
 - **Priority**: P2 (Debugging aid)
 - **Description**: Improve test failure messages with full context for easier debugging
 - **Files**: `vulnerability_integration_test.go`, `network_failure_test.go`
@@ -82,8 +82,9 @@
   ```
 - **Validation**: Test failures provide actionable debugging information
 - **Estimate**: 45 minutes
+- **Completed**: Updated 5 assert.Contains calls across both test files with detailed error messages showing full output, expected patterns, and output lengths
 
-### T007: Add govulncheck Version Validation Test - MEDIUM
+### T007: Add govulncheck Version Validation Test - MEDIUM [x]
 - **Priority**: P2 (Prevent future issues)
 - **Description**: Add test to validate govulncheck version matches expectations
 - **Files**: New test in appropriate test file
@@ -101,8 +102,9 @@
   ```
 - **Validation**: CI fails early if wrong govulncheck version detected
 - **Estimate**: 30 minutes
+- **Completed**: Added TestGovulncheckVersion to vulnerability_integration_test.go, successfully detected version mismatch and validated v1.1.3 after local alignment
 
-### T008: Improve Network Test Error Pattern Matching - MEDIUM
+### T008: Improve Network Test Error Pattern Matching - MEDIUM [x]
 - **Priority**: P2 (Test reliability, from synthesis recommendations)
 - **Description**: Fix network failure test assertions to check broader error patterns
 - **Files**: `network_failure_test.go` (multiple locations with network error checks)
@@ -120,6 +122,7 @@
   ```
 - **Validation**: Network tests properly detect various error types
 - **Estimate**: 30 minutes
+- **Completed**: Enhanced error pattern matching in TestNetworkFailureScenarios and TestErrorMessaging to check for network, connection, refused, timeout, and dial errors
 
 ## LOW - Documentation and Prevention
 
