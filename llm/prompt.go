@@ -31,6 +31,7 @@ generate a descriptive technical overview of this directory:
 - highlight purpose, architecture, and key file roles
 - mention important dependencies or gotchas
 - do NOT provide recommendations or next steps
+- respond with ONLY the descriptive technical overview: no preamble or concluding remarks
 
 directory: {{.Directory}}
 
