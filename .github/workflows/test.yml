@@ -54,6 +54,12 @@ jobs:
           export PATH=$PATH:$(go env GOPATH)/bin
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
+      - name: Environment Diagnostics
+        run: |
+          echo "Go version: $(go version)"
+          echo "govulncheck version: $(govulncheck -version)"
+          echo "Platform: $(uname -a)"
+
       - name: Run tests
         run: go test -race -v -coverpkg=./... -coverprofile=coverage.out ./...
 
