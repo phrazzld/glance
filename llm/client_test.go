@@ -117,7 +117,7 @@ func TestClientInterface(t *testing.T) {
 func TestClientOptions(t *testing.T) {
 	// Test default options
 	options := DefaultClientOptions()
-	assert.Equal(t, "gemini-2.0-flash", options.ModelName)
+	assert.Equal(t, "gemini-2.5-flash", options.ModelName)
 	assert.Greater(t, options.MaxRetries, 0)
 	assert.Greater(t, options.Timeout, 0)
 

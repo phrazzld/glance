@@ -38,7 +38,7 @@ type ServiceConfig struct {
 func DefaultServiceConfig() ServiceConfig {
 	return ServiceConfig{
 		MaxRetries:     3,
-		ModelName:      "gemini-2.0-flash", // Make sure this matches the client default
+		ModelName:      "gemini-2.5-flash", // Make sure this matches the client default
 		PromptTemplate: "",
 	}
 }
