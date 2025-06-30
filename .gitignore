@@ -48,3 +48,5 @@ vulnerability-scan-benchmark.json
 **/.claude/settings.local.json
 performance-reports/
 performance-report-*.json
+
+/docs/leyline
