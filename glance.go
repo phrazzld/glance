@@ -129,21 +129,69 @@ func setupLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 
 // createLLMService is the actual implementation for initializing the LLM client and service
 func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
-	// Create the client with functional options
-	client, err := llm.NewGeminiClient(
+	primaryClient, err := llm.NewGeminiClient(
 		cfg.APIKey,
 		llm.WithModelName("gemini-3-flash-preview"),
-		llm.WithMaxRetries(cfg.MaxRetries),
+		llm.WithMaxRetries(1), // Retry/failover is handled by FallbackClient.
+		llm.WithMaxOutputTokens(4096),
 		llm.WithTimeout(60),
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create LLM client: %w", err)
+		return nil, nil, fmt.Errorf("failed to create primary Gemini client: %w", err)
+	}
+
+	stableClient, err := llm.NewGeminiClient(
+		cfg.APIKey,
+		llm.WithModelName("gemini-2.5-flash"),
+		llm.WithMaxRetries(1), // Retry/failover is handled by FallbackClient.
+		llm.WithMaxOutputTokens(4096),
+		llm.WithTimeout(60),
+	)
+	if err != nil {
+		primaryClient.Close()
+		return nil, nil, fmt.Errorf("failed to create stable Gemini fallback client: %w", err)
+	}
+
+	tiers := []llm.FallbackTier{
+		{Name: "gemini-3-flash-preview", Client: primaryClient},
+		{Name: "gemini-2.5-flash", Client: stableClient},
+	}
+
+	openRouterKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY"))
+	if openRouterKey == "" {
+		logrus.Warn("OPENROUTER_API_KEY is not set; cross-provider fallback (x-ai/grok-4.1-fast) is disabled")
+	} else {
+		grokFallbackClient, grokErr := llm.NewOpenRouterClient(
+			openRouterKey,
+			llm.WithModelName("x-ai/grok-4.1-fast"),
+			llm.WithMaxRetries(1), // Retry/failover is handled by FallbackClient.
+			llm.WithMaxOutputTokens(4096),
+			llm.WithTimeout(60),
+		)
+		if grokErr != nil {
+			primaryClient.Close()
+			stableClient.Close()
+			return nil, nil, fmt.Errorf("failed to create OpenRouter Grok fallback client: %w", grokErr)
+		}
+
+		tiers = append(tiers, llm.FallbackTier{
+			Name:   "x-ai/grok-4.1-fast",
+			Client: grokFallbackClient,
+		})
+	}
+
+	client, err := llm.NewFallbackClient(tiers, cfg.MaxRetries)
+	if err != nil {
+		primaryClient.Close()
+		stableClient.Close()
+		return nil, nil, fmt.Errorf("failed to create fallback client chain: %w", err)
 	}
 
 	// Create the service with functional options
 	service, err := llm.NewService(
 		client,
-		llm.WithServiceMaxRetries(cfg.MaxRetries),
+		llm.WithServiceMaxRetries(0), // Retry/failover is handled by FallbackClient.
+		llm.WithServiceModelName("fallback(gemini-3-flash-preview->gemini-2.5-flash->x-ai/grok-4.1-fast)"),
 		llm.WithPromptTemplate(cfg.PromptTemplate),
 	)
 	if err != nil {
