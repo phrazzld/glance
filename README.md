@@ -41,6 +41,7 @@ Glance uses Google's Gemini AI model for generating summaries:
 
 - **Default Model:** `gemini-2.5-flash`
 - **Token Management:** Automatically truncates large files to avoid token limits
+- **Global Context Injection:** Prompts now include a bounded project directory map and existing root `glance.md` (when present) so each summary can describe its role in the wider architecture
 - **Error Handling:** Includes automatic retries with backoff for API failures
 - **Upgrade Path:** New Gemini models can be supported by updating the default model name in the configuration (no code changes required)
 
