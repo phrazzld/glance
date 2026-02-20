@@ -99,7 +99,7 @@ type SafetySetting struct {
 // It allows customizing client behavior while providing sensible defaults.
 type ClientOptions struct {
 	// Basic client configuration
-	// ModelName is the name of the model to use (e.g., "gemini-2.5-flash")
+	// ModelName is the name of the model to use (e.g., "gemini-3-flash-preview")
 	ModelName string
 
 	// MaxRetries is the number of times to retry failed API calls
@@ -138,7 +138,7 @@ type ClientOptions struct {
 func DefaultClientOptions() ClientOptions {
 	return ClientOptions{
 		// Basic configuration
-		ModelName:  "gemini-2.5-flash",
+		ModelName:  "gemini-3-flash-preview",
 		MaxRetries: 3,
 		Timeout:    60, // 60 seconds
 
