@@ -53,7 +53,7 @@ Glance uses a fixed model failover chain for generating summaries:
 
 Optionally, create a `.env` file in the same directory as the tool to automatically load your environment variables. For example:
 
-```
+```dotenv
 GEMINI_API_KEY=your_api_key_here
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 GLANCE_LOG_LEVEL=debug

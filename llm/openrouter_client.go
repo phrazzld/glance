@@ -116,8 +116,8 @@ func (c *OpenRouterClient) Generate(ctx context.Context, prompt string) (string,
 			WithCode(openRouterCodeBase + "-003")
 	}
 
-	maxAttempts := c.options.MaxRetries
-	if maxAttempts <= 0 {
+	maxAttempts := c.options.MaxRetries + 1
+	if maxAttempts < 1 {
 		maxAttempts = 1
 	}
 

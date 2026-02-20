@@ -182,16 +182,23 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 
 	client, err := llm.NewFallbackClient(tiers, cfg.MaxRetries)
 	if err != nil {
-		primaryClient.Close()
-		stableClient.Close()
+		for _, tier := range tiers {
+			tier.Client.Close()
+		}
 		return nil, nil, fmt.Errorf("failed to create fallback client chain: %w", err)
 	}
+
+	tierNames := make([]string, len(tiers))
+	for i, tier := range tiers {
+		tierNames[i] = tier.Name
+	}
+	compositeModelName := "fallback(" + strings.Join(tierNames, "->") + ")"
 
 	// Create the service with functional options
 	service, err := llm.NewService(
 		client,
 		llm.WithServiceMaxRetries(0), // Retry/failover is handled by FallbackClient.
-		llm.WithServiceModelName("fallback(gemini-3-flash-preview->gemini-2.5-flash->x-ai/grok-4.1-fast)"),
+		llm.WithServiceModelName(compositeModelName),
 		llm.WithPromptTemplate(cfg.PromptTemplate),
 	)
 	if err != nil {
