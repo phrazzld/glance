@@ -35,10 +35,20 @@ const (
 
 // Default prompt template used when no custom template is provided
 var defaultPromptTemplate = `you are an expert code reviewer and technical writer.
-generate a descriptive technical overview of this directory:
+generate a descriptive technical overview of this directory in the context of the full project:
+- explain this directory's role in the overall architecture
 - highlight purpose, architecture, and key file roles
 - mention important dependencies or gotchas
 - do NOT provide recommendations or next steps
+
+project root: {{.ProjectRoot}}
+directory relative path: {{.RelativeDirectory}}
+
+project directory map:
+{{.ProjectMap}}
+
+existing top-level project overview (if available):
+{{.ProjectOverview}}
 
 directory: {{.Directory}}
 

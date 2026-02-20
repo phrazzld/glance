@@ -156,7 +156,15 @@ func ProcessDirectory(cfg *config.Config, client llm.Client, service *llm.Servic
 	ctx := context.Background()
 
 	// Generate markdown content using the LLM service
-	summary, err := service.GenerateGlanceMarkdown(ctx, cfg.TargetDir, fileContents, subGlances)
+	summary, err := service.GenerateGlanceMarkdown(
+		ctx,
+		cfg.TargetDir,
+		cfg.TargetDir,
+		"",
+		"",
+		fileContents,
+		subGlances,
+	)
 	if err != nil {
 		return ProcessDirectoryResults{}, err
 	}

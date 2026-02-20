@@ -5,6 +5,7 @@ package llm
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
@@ -15,6 +16,18 @@ import (
 type PromptData struct {
 	// Directory is the path to the directory being processed
 	Directory string
+
+	// ProjectRoot is the path to the root directory being scanned
+	ProjectRoot string
+
+	// RelativeDirectory is the directory path relative to ProjectRoot
+	RelativeDirectory string
+
+	// ProjectMap contains a bounded directory map for global context
+	ProjectMap string
+
+	// ProjectOverview contains existing top-level glance context, if available
+	ProjectOverview string
 
 	// SubGlances contains the compiled contents of subdirectory glance.md files
 	SubGlances string
@@ -27,11 +40,21 @@ type PromptData struct {
 // This template is used when no custom template is provided.
 func DefaultTemplate() string {
 	return `you are an expert code reviewer and technical writer.
-generate a descriptive technical overview of this directory:
+generate a descriptive technical overview of this directory in the context of the full project:
+- explain this directory's role in the overall architecture
 - highlight purpose, architecture, and key file roles
 - mention important dependencies or gotchas
 - do NOT provide recommendations or next steps
 - respond with ONLY the descriptive technical overview: no preamble or concluding remarks
+
+project root: {{.ProjectRoot}}
+directory relative path: {{.RelativeDirectory}}
+
+project directory map:
+{{.ProjectMap}}
+
+existing top-level project overview (if available):
+{{.ProjectOverview}}
 
 directory: {{.Directory}}
 
@@ -90,16 +113,40 @@ func FormatFileContents(fileMap map[string]string) string {
 // It formats the file contents using FormatFileContents.
 //
 // Parameters:
+//   - projectRoot: The root path for the entire scan
 //   - dir: The directory path
+//   - projectMap: A bounded directory map of the full project
+//   - projectOverview: Existing top-level project context, if available
 //   - subGlances: Compiled content from subdirectory glance.md files
 //   - fileMap: A map of filenames to their content
 //
 // Returns:
 //   - A populated PromptData structure
-func BuildPromptData(dir string, subGlances string, fileMap map[string]string) *PromptData {
+func BuildPromptData(
+	projectRoot string,
+	dir string,
+	projectMap string,
+	projectOverview string,
+	subGlances string,
+	fileMap map[string]string,
+) *PromptData {
+	relativeDir := "."
+	if projectRoot != "" {
+		if rel, err := filepath.Rel(projectRoot, dir); err == nil {
+			relativeDir = filepath.ToSlash(rel)
+			if relativeDir == "" {
+				relativeDir = "."
+			}
+		}
+	}
+
 	return &PromptData{
-		Directory:    dir,
-		SubGlances:   subGlances,
-		FileContents: FormatFileContents(fileMap),
+		Directory:         dir,
+		ProjectRoot:       projectRoot,
+		RelativeDirectory: relativeDir,
+		ProjectMap:        projectMap,
+		ProjectOverview:   projectOverview,
+		SubGlances:        subGlances,
+		FileContents:      FormatFileContents(fileMap),
 	}
 }

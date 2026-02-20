@@ -100,16 +100,27 @@ func NewService(client Client, options ...func(*ServiceConfig)) (*Service, error
 //
 // Parameters:
 //   - ctx: The context for the operation
+//   - projectRoot: Root directory for the full scan
 //   - dir: The directory path being processed
+//   - projectMap: Bounded map of project directories
+//   - projectOverview: Existing top-level overview context, if any
 //   - fileMap: A map of file names to their contents
 //   - subGlances: The combined contents of subdirectory glance.md files
 //
 // Returns:
 //   - The generated markdown content
 //   - An error if generation fails after all retries
-func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMap map[string]string, subGlances string) (string, error) {
+func (s *Service) GenerateGlanceMarkdown(
+	ctx context.Context,
+	projectRoot string,
+	dir string,
+	projectMap string,
+	projectOverview string,
+	fileMap map[string]string,
+	subGlances string,
+) (string, error) {
 	// Build prompt data
-	promptData := BuildPromptData(dir, subGlances, fileMap)
+	promptData := BuildPromptData(projectRoot, dir, projectMap, projectOverview, subGlances, fileMap)
 
 	// Log start of prompt generation with structured fields
 	logrus.WithFields(logrus.Fields{

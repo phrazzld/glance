@@ -12,6 +12,10 @@ func TestDefaultTemplate(t *testing.T) {
 	template := DefaultTemplate()
 
 	// Verify it contains the expected placeholders
+	assert.Contains(t, template, "{{.ProjectRoot}}")
+	assert.Contains(t, template, "{{.RelativeDirectory}}")
+	assert.Contains(t, template, "{{.ProjectMap}}")
+	assert.Contains(t, template, "{{.ProjectOverview}}")
 	assert.Contains(t, template, "{{.Directory}}")
 	assert.Contains(t, template, "{{.SubGlances}}")
 	assert.Contains(t, template, "{{.FileContents}}")
@@ -25,9 +29,13 @@ func TestDefaultTemplate(t *testing.T) {
 func TestGeneratePrompt(t *testing.T) {
 	// Test data
 	data := &PromptData{
-		Directory:    "/test/dir",
-		SubGlances:   "Sub glance 1\nSub glance 2",
-		FileContents: "File1: content\nFile2: content",
+		Directory:         "/test/root/pkg",
+		ProjectRoot:       "/test/root",
+		RelativeDirectory: "pkg",
+		ProjectMap:        "- .\n  - pkg",
+		ProjectOverview:   "Top-level overview",
+		SubGlances:        "Sub glance 1\nSub glance 2",
+		FileContents:      "File1: content\nFile2: content",
 	}
 
 	// Test cases
@@ -40,11 +48,15 @@ func TestGeneratePrompt(t *testing.T) {
 	}{
 		{
 			name:     "Valid template",
-			template: "Dir: {{.Directory}}\nSub: {{.SubGlances}}\nFiles: {{.FileContents}}",
+			template: "Root: {{.ProjectRoot}}\nRel: {{.RelativeDirectory}}\nDir: {{.Directory}}\nMap: {{.ProjectMap}}\nOverview: {{.ProjectOverview}}\nSub: {{.SubGlances}}\nFiles: {{.FileContents}}",
 			data:     data,
 			wantErr:  false,
 			assertions: func(t *testing.T, result string) {
-				assert.Contains(t, result, "Dir: /test/dir")
+				assert.Contains(t, result, "Root: /test/root")
+				assert.Contains(t, result, "Rel: pkg")
+				assert.Contains(t, result, "Dir: /test/root/pkg")
+				assert.Contains(t, result, "Map: - .\n  - pkg")
+				assert.Contains(t, result, "Overview: Top-level overview")
 				assert.Contains(t, result, "Sub: Sub glance 1\nSub glance 2")
 				assert.Contains(t, result, "Files: File1: content\nFile2: content")
 			},
@@ -170,16 +182,23 @@ func TestFormatFileContents(t *testing.T) {
 func TestBuildPromptData(t *testing.T) {
 	// Test normal inputs
 	t.Run("Normal inputs", func(t *testing.T) {
+		projectRoot := "/test"
 		dir := "/test/dir"
+		projectMap := "- .\n  - dir"
+		projectOverview := "Overview"
 		subGlances := "Test sub glances"
 		fileMap := map[string]string{
 			"file1.txt": "Content 1",
 			"file2.go":  "Content 2",
 		}
 
-		data := BuildPromptData(dir, subGlances, fileMap)
+		data := BuildPromptData(projectRoot, dir, projectMap, projectOverview, subGlances, fileMap)
 
 		assert.Equal(t, dir, data.Directory)
+		assert.Equal(t, projectRoot, data.ProjectRoot)
+		assert.Equal(t, "dir", data.RelativeDirectory)
+		assert.Equal(t, projectMap, data.ProjectMap)
+		assert.Equal(t, projectOverview, data.ProjectOverview)
 		assert.Equal(t, subGlances, data.SubGlances)
 		assert.Contains(t, data.FileContents, "=== file: file1.txt ===")
 		assert.Contains(t, data.FileContents, "Content 1")
@@ -189,18 +208,23 @@ func TestBuildPromptData(t *testing.T) {
 
 	// Test with empty inputs
 	t.Run("Empty inputs", func(t *testing.T) {
-		data := BuildPromptData("", "", map[string]string{})
+		data := BuildPromptData("", "", "", "", "", map[string]string{})
 
 		assert.Empty(t, data.Directory)
+		assert.Empty(t, data.ProjectRoot)
+		assert.Equal(t, ".", data.RelativeDirectory)
+		assert.Empty(t, data.ProjectMap)
+		assert.Empty(t, data.ProjectOverview)
 		assert.Empty(t, data.SubGlances)
 		assert.Empty(t, data.FileContents)
 	})
 
 	// Test with nil file map
 	t.Run("Nil file map", func(t *testing.T) {
-		data := BuildPromptData("/test/dir", "Sub glances", nil)
+		data := BuildPromptData("/test", "/test/dir", "", "", "Sub glances", nil)
 
 		assert.Equal(t, "/test/dir", data.Directory)
+		assert.Equal(t, "dir", data.RelativeDirectory)
 		assert.Equal(t, "Sub glances", data.SubGlances)
 		assert.Empty(t, data.FileContents)
 	})
@@ -212,7 +236,7 @@ func TestBuildPromptData(t *testing.T) {
 			"large.txt": largeContent,
 		}
 
-		data := BuildPromptData("/test/dir", "Sub glances", fileMap)
+		data := BuildPromptData("/test", "/test/dir", "", "", "Sub glances", fileMap)
 
 		assert.Equal(t, "/test/dir", data.Directory)
 		assert.Equal(t, "Sub glances", data.SubGlances)

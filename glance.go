@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	_ "github.com/joho/godotenv" // Used by the config package for loading environment variables
@@ -29,6 +30,11 @@ type result struct {
 	success  bool
 	err      error
 }
+
+const (
+	maxProjectMapChars      = 12000
+	maxProjectOverviewChars = 16000
+)
 
 // No need for queueItem anymore as we're using the filesystem package for directory scanning
 
@@ -186,6 +192,9 @@ func processDirectories(
 ) ([]result, map[string]bool) {
 	logrus.Info("Preparing to generate glance.md files...")
 
+	projectMap := buildProjectDirectoryMap(cfg.TargetDir, dirsList, maxProjectMapChars)
+	projectOverview := loadExistingProjectOverview(cfg.TargetDir, maxProjectOverviewChars)
+
 	// Set up options for the progress bar
 	options := []progressbar.Option{
 		progressbar.OptionSetDescription("Creating glance files"),
@@ -230,7 +239,7 @@ func processDirectories(
 		}
 
 		// Process the directory with retry logic
-		r := processDirectory(d, forceDir, ignoreChain, cfg, llmService)
+		r := processDirectory(d, forceDir, ignoreChain, cfg, llmService, projectMap, projectOverview)
 		finalResults = append(finalResults, r)
 
 		// Ignore error for non-critical UI
@@ -256,7 +265,15 @@ func processDirectories(
 }
 
 // processDirectory processes a single directory with retry logic
-func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreChain, cfg *config.Config, llmService *llm.Service) result {
+func processDirectory(
+	dir string,
+	forceDir bool,
+	ignoreChain filesystem.IgnoreChain,
+	cfg *config.Config,
+	llmService *llm.Service,
+	projectMap string,
+	projectOverview string,
+) result {
 	r := result{dir: dir}
 
 	// forceDir already indicates if regeneration is needed based on filesystem.ShouldRegenerate
@@ -356,7 +373,15 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		"stage":     "llm_generation",
 	}).Debug("Generating markdown content using LLM service")
 
-	summary, llmErr := llmService.GenerateGlanceMarkdown(ctx, dir, fileContents, subGlances)
+	summary, llmErr := llmService.GenerateGlanceMarkdown(
+		ctx,
+		cfg.TargetDir,
+		dir,
+		projectMap,
+		projectOverview,
+		fileContents,
+		subGlances,
+	)
 	if llmErr != nil {
 		logrus.WithFields(logrus.Fields{
 			"directory": dir,
@@ -539,6 +564,89 @@ func gatherLocalFiles(dir string, ignoreChain filesystem.IgnoreChain, maxFileByt
 // -----------------------------------------------------------------------------
 // utility functions
 // -----------------------------------------------------------------------------
+
+// buildProjectDirectoryMap creates a bounded tree-like map of directories for prompt context.
+func buildProjectDirectoryMap(targetDir string, dirs []string, maxChars int) string {
+	if len(dirs) == 0 {
+		return ""
+	}
+
+	type dirEntry struct {
+		relPath string
+		depth   int
+	}
+
+	unique := make(map[string]struct{}, len(dirs))
+	var entries []dirEntry
+
+	for _, absPath := range dirs {
+		rel, err := filepath.Rel(targetDir, absPath)
+		if err != nil {
+			continue
+		}
+
+		rel = filepath.ToSlash(rel)
+		if rel == "" {
+			rel = "."
+		}
+
+		if _, exists := unique[rel]; exists {
+			continue
+		}
+		unique[rel] = struct{}{}
+
+		depth := 0
+		if rel != "." {
+			depth = strings.Count(rel, "/") + 1
+		}
+
+		entries = append(entries, dirEntry{relPath: rel, depth: depth})
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].depth != entries[j].depth {
+			return entries[i].depth < entries[j].depth
+		}
+		return entries[i].relPath < entries[j].relPath
+	})
+
+	var builder strings.Builder
+	builder.WriteString("project directory tree:\n")
+	for _, entry := range entries {
+		indent := strings.Repeat("  ", entry.depth)
+		line := fmt.Sprintf("%s- %s\n", indent, entry.relPath)
+		if builder.Len()+len(line) > maxChars {
+			builder.WriteString("- ... truncated for prompt budget ...\n")
+			break
+		}
+		builder.WriteString(line)
+	}
+
+	return builder.String()
+}
+
+// loadExistingProjectOverview reads the existing top-level glance.md for prompt context.
+func loadExistingProjectOverview(targetDir string, maxChars int) string {
+	glancePath := filepath.Join(targetDir, "glance.md")
+	validPath, err := filesystem.ValidateFilePath(glancePath, targetDir, true, true)
+	if err != nil {
+		return ""
+	}
+
+	content, err := filesystem.ReadTextFile(validPath, 0, targetDir)
+	if err != nil {
+		return ""
+	}
+
+	return truncateText(content, maxChars)
+}
+
+func truncateText(value string, maxChars int) string {
+	if maxChars <= 0 || len(value) <= maxChars {
+		return value
+	}
+	return value[:maxChars] + "\n\n[truncated for prompt budget]"
+}
 
 // Removed loadPromptTemplate - this functionality is now handled by the llm package
 

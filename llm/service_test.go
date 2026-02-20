@@ -92,7 +92,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
 
 		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, dir, "", "", fileMap, subGlances)
 
 		// Verify results
 		assert.NoError(t, err)
@@ -117,7 +117,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
 
 		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, dir, "", "", fileMap, subGlances)
 
 		// Verify results
 		assert.NoError(t, err)
@@ -141,7 +141,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
 
 		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, dir, "", "", fileMap, subGlances)
 
 		// Verify results
 		assert.Error(t, err)
@@ -162,7 +162,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		assert.NoError(t, err)
 
 		// This should fail due to invalid template with .MissingVar
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, dir, "", "", fileMap, subGlances)
 
 		// Now we expect an error from template generation
 		assert.Error(t, err)
@@ -195,7 +195,7 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
 
 		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+		result, err := service.GenerateGlanceMarkdown(ctx, dir, dir, "", "", fileMap, subGlances)
 
 		// Verify results
 		assert.NoError(t, err)
@@ -311,7 +311,7 @@ func TestStructuredLogging(t *testing.T) {
 	mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return("Generated content", nil)
 
 	// Call the function
-	result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
+	result, err := service.GenerateGlanceMarkdown(ctx, dir, dir, "", "", fileMap, subGlances)
 
 	// Verify function result
 	assert.NoError(t, err)
