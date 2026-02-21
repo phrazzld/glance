@@ -393,8 +393,9 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 		contents = append([]*genai.Content{systemContent}, contents...)
 	}
 
-	// Retry logic
-	for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
+	// Retry logic: MaxRetries means retries after the initial attempt
+	maxAttempts := c.options.MaxRetries + 1
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
 			logrus.WithFields(logrus.Fields{
 				"attempt":     attempt,
@@ -520,8 +521,9 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 	// Create a config for counting tokens (has fewer options than generation)
 	countConfig := &genai.CountTokensConfig{}
 
-	// Retry logic
-	for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
+	// Retry logic: MaxRetries means retries after the initial attempt
+	maxAttempts := c.options.MaxRetries + 1
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
 			logrus.WithFields(logrus.Fields{
 				"attempt":     attempt,
@@ -647,8 +649,9 @@ func (c *GeminiClient) GenerateStream(ctx context.Context, prompt string) (<-cha
 		var lastError error
 		success := false
 
-		// Retry logic
-		for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
+		// Retry logic: MaxRetries means retries after the initial attempt
+		maxAttempts := c.options.MaxRetries + 1
+		for attempt := 1; attempt <= maxAttempts; attempt++ {
 			if attempt > 1 {
 				logrus.WithFields(logrus.Fields{
 					"attempt":     attempt,
