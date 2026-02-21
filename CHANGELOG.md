@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/phrazzld/glance/compare/v1.1.0...v1.1.1) (2026-02-21)
+
+
+### Bug Fixes
+
+* **output:** rename glance.md to .glance.md to avoid build system conflicts ([#58](https://github.com/phrazzld/glance/issues/58)) ([f956d59](https://github.com/phrazzld/glance/commit/f956d591a90e20265e4208526e8de4fc06f4b390)), closes [#50](https://github.com/phrazzld/glance/issues/50) [/github.com/phrazzld/glance/pull/58#discussion_r2836447758](https://github.com//github.com/phrazzld/glance/pull/58/issues/discussion_r2836447758)
+
 # [1.1.0](https://github.com/phrazzld/glance/compare/v1.0.0...v1.1.0) (2026-02-21)
 
 
