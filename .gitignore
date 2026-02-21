@@ -50,3 +50,5 @@ performance-reports/
 performance-report-*.json
 
 /docs/leyline
+
+.flywheel/
