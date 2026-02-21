@@ -89,12 +89,19 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 		return true, nil
 	}
 
-	// Check if glance output file exists
+	// Check if glance output file exists. Fall back to the legacy filename so that
+	// users upgrading from v1.x don't trigger a full regeneration on first run.
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
-		log.WithField("directory", dir).Debug("glance output not found, will generate")
-		return true, nil
+		legacyPath := filepath.Join(dir, LegacyGlanceFilename)
+		if legacyInfo, legacyErr := os.Stat(legacyPath); legacyErr == nil {
+			log.WithField("directory", dir).Debug("Found legacy glance output, using its mtime")
+			glanceInfo = legacyInfo
+		} else {
+			log.WithField("directory", dir).Debug("glance output not found, will generate")
+			return true, nil
+		}
 	}
 
 	// Check if any file is newer than the glance output
