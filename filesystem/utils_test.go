@@ -141,8 +141,8 @@ func TestShouldRegenerate(t *testing.T) {
 	err := os.WriteFile(ignoreFile, []byte(ignoreContent), 0644)
 	require.NoError(t, err)
 
-	// Create a glance.md file
-	glanceFile := filepath.Join(baseDir, "glance.md")
+	// Create the glance output file
+	glanceFile := filepath.Join(baseDir, GlanceFilename)
 	err = os.WriteFile(glanceFile, []byte("# Glance\n\nTest summary"), 0644)
 	require.NoError(t, err)
 
@@ -199,9 +199,35 @@ func TestShouldRegenerate(t *testing.T) {
 		assert.True(t, shouldRegen, "Should return true when a file is newer than glance.md")
 	})
 
-	// Test only simple cases for ShouldRegenerate
+	t.Run("Legacy glance.md present (upgrade scenario)", func(t *testing.T) {
+		// Simulate a directory from a v1.x install: has glance.md, no .glance.md.
+		// Should always force regeneration to migrate to the new filename,
+		// even when no source files are newer than the legacy output.
+		legacyDir := filepath.Join(baseDir, "legacy")
+		err := os.Mkdir(legacyDir, 0755)
+		require.NoError(t, err)
 
-	// Skip other edge cases
+		legacyFile := filepath.Join(legacyDir, LegacyGlanceFilename)
+		err = os.WriteFile(legacyFile, []byte("# Legacy summary"), 0644)
+		require.NoError(t, err)
+
+		shouldRegen, err := ShouldRegenerate(legacyDir, false, ignoreChain)
+		assert.NoError(t, err)
+		assert.True(t, shouldRegen, "Should force regeneration to migrate legacy glance.md to new .glance.md filename")
+	})
+
+	t.Run("Unexpected stat error propagated", func(t *testing.T) {
+		// Use a regular file as the "dir" argument so that filepath.Join(dir, GlanceFilename)
+		// points to a path whose parent is not a directory. os.Stat returns ENOTDIR,
+		// which is not os.ErrNotExist and must be propagated to the caller.
+		tmpFile, err := os.CreateTemp("", "glance-stattest-*")
+		require.NoError(t, err)
+		defer os.Remove(tmpFile.Name())
+		tmpFile.Close()
+
+		_, err = ShouldRegenerate(tmpFile.Name(), false, IgnoreChain{})
+		assert.Error(t, err, "should propagate non-ErrNotExist stat errors")
+	})
 }
 
 func TestBubbleUpParents(t *testing.T) {

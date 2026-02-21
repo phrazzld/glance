@@ -17,7 +17,7 @@ import (
 // DefaultFileMode defines the file permission mode for files created by the application.
 // Value 0o600 (rw-------) ensures files are only readable and writable by the owner
 // and not accessible to group members or other users. This is important for security
-// as glance.md files may contain sensitive code analysis or information derived
+// as glance output files may contain sensitive code analysis or information derived
 // from private code repositories.
 const DefaultFileMode = 0o600
 
@@ -68,11 +68,11 @@ func LatestModTime(dir string, ignoreChain IgnoreChain) (time.Time, error) {
 	return latest, err
 }
 
-// ShouldRegenerate determines if a glance.md file in a directory needs to be regenerated.
+// ShouldRegenerate determines if the glance output file in a directory needs to be regenerated.
 // Regeneration is needed if:
 // - Force is true
-// - glance.md doesn't exist
-// - Any file in the directory is newer than glance.md
+// - GlanceFilename doesn't exist (including when only the legacy filename exists — forces migration)
+// - Any file in the directory is newer than GlanceFilename
 //
 // Parameters:
 //   - dir: The directory to check for regeneration need
@@ -89,22 +89,33 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 		return true, nil
 	}
 
-	// Check if glance.md exists
+	// Check if the current glance output file exists.
+	// If only the legacy filename (glance.md) is present, force regeneration so that
+	// the directory migrates to the new filename (.glance.md) on the next run.
+	// This is a one-time cost per directory for users upgrading from v1.x.
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
-		log.WithField("directory", dir).Debug("glance.md not found, will generate")
+		if !errors.Is(err, os.ErrNotExist) {
+			return false, fmt.Errorf("stat glance output %q: %w", glancePath, err)
+		}
+		legacyPath := filepath.Join(dir, LegacyGlanceFilename)
+		if _, legacyErr := os.Stat(legacyPath); legacyErr == nil {
+			log.WithField("directory", dir).Debug("Found legacy glance output, regenerating to migrate to new filename")
+		} else {
+			log.WithField("directory", dir).Debug("glance output not found, will generate")
+		}
 		return true, nil
 	}
 
-	// Check if any file is newer than glance.md
+	// Check if any file is newer than the glance output
 	latest, err := LatestModTime(dir, ignoreChain)
 	if err != nil {
 		return false, err
 	}
 
 	if latest.After(glanceInfo.ModTime()) {
-		log.WithField("directory", dir).Debug("Found newer files, will regenerate glance.md")
+		log.WithField("directory", dir).Debug("Found newer files, will regenerate glance output")
 		return true, nil
 	}
 

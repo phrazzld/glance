@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"glance/filesystem"
 )
 
 // TestCLIExecution is a basic test to verify the CLI can be executed.
@@ -77,17 +79,17 @@ func TestGlanceWithTestStructure(t *testing.T) {
 	require.NoError(t, err, "Glance command failed with output: %s", output)
 
 	// Verify glance.md files were created in each directory (except ignored ones)
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
-	subdir1GlanceFile := filepath.Join(testProjectDir, "subdir1", "glance.md")
-	subdir2GlanceFile := filepath.Join(testProjectDir, "subdir2", "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
+	subdir1GlanceFile := filepath.Join(testProjectDir, "subdir1", filesystem.GlanceFilename)
+	subdir2GlanceFile := filepath.Join(testProjectDir, "subdir2", filesystem.GlanceFilename)
 
-	assert.FileExists(t, mainGlanceFile, "glance.md should exist in root directory")
-	assert.FileExists(t, subdir1GlanceFile, "glance.md should exist in subdir1")
-	assert.FileExists(t, subdir2GlanceFile, "glance.md should exist in subdir2")
+	assert.FileExists(t, mainGlanceFile, "glance output should exist in root directory")
+	assert.FileExists(t, subdir1GlanceFile, "glance output should exist in subdir1")
+	assert.FileExists(t, subdir2GlanceFile, "glance output should exist in subdir2")
 
-	// Verify that glance.md was not created in ignored directory
-	ignoredGlanceFile := filepath.Join(testProjectDir, "ignored_dir", "glance.md")
-	assert.NoFileExists(t, ignoredGlanceFile, "glance.md should not exist in ignored_dir")
+	// Verify that glance output was not created in ignored directory
+	ignoredGlanceFile := filepath.Join(testProjectDir, "ignored_dir", filesystem.GlanceFilename)
+	assert.NoFileExists(t, ignoredGlanceFile, "glance output should not exist in ignored_dir")
 }
 
 // TestGlanceForceFlag tests the behavior of the --force flag
@@ -106,27 +108,27 @@ func TestGlanceForceFlag(t *testing.T) {
 
 	// Create an initial glance.md file with known content
 	initialContent := "# Initial content - should be replaced when --force is used"
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 	err := os.WriteFile(mainGlanceFile, []byte(initialContent), 0644)
-	require.NoError(t, err, "Failed to create initial glance.md file")
+	require.NoError(t, err, "Failed to create initial glance output file")
 
 	// Get the creation time
 	initialStat, err := os.Stat(mainGlanceFile)
-	require.NoError(t, err, "Failed to stat initial glance.md")
+	require.NoError(t, err, "Failed to stat initial glance output file")
 	initialTime := initialStat.ModTime()
 
 	// Wait a moment to ensure file timestamps will be different
 	time.Sleep(1 * time.Second)
 
-	// Run glance normally (should not replace existing glance.md)
+	// Run glance normally (should not replace existing glance output)
 	cmd := exec.Command("./glance", testProjectDir)
 	_, err = cmd.CombinedOutput()
 	require.NoError(t, err, "First glance run failed")
 
 	// Check that the file was not modified
 	currentStat, err := os.Stat(mainGlanceFile)
-	require.NoError(t, err, "Failed to stat glance.md after first run")
-	assert.Equal(t, initialTime, currentStat.ModTime(), "glance.md should not have been modified")
+	require.NoError(t, err, "Failed to stat glance output after first run")
+	assert.Equal(t, initialTime, currentStat.ModTime(), "glance output should not have been modified")
 
 	// Run glance with --force flag
 	cmd = exec.Command("./glance", "--force", testProjectDir)
@@ -135,13 +137,13 @@ func TestGlanceForceFlag(t *testing.T) {
 
 	// Check that the file was modified
 	currentStat, err = os.Stat(mainGlanceFile)
-	require.NoError(t, err, "Failed to stat glance.md after force run")
-	assert.NotEqual(t, initialTime, currentStat.ModTime(), "glance.md should have been modified with --force")
+	require.NoError(t, err, "Failed to stat glance output after force run")
+	assert.NotEqual(t, initialTime, currentStat.ModTime(), "glance output should have been modified with --force")
 
 	// Check content was changed
 	content, err := os.ReadFile(mainGlanceFile)
-	require.NoError(t, err, "Failed to read glance.md content")
-	assert.NotEqual(t, initialContent, string(content), "glance.md content should have changed")
+	require.NoError(t, err, "Failed to read glance output content")
+	assert.NotEqual(t, initialContent, string(content), "glance output content should have changed")
 }
 
 // TestGlanceWithModifiedFiles tests that glance.md is regenerated when files in the directory are modified
@@ -164,9 +166,9 @@ func TestGlanceWithModifiedFiles(t *testing.T) {
 	require.NoError(t, err, "Initial glance run failed")
 
 	// Get the initial modification time of the glance.md file
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 	initialStat, err := os.Stat(mainGlanceFile)
-	require.NoError(t, err, "Failed to stat initial glance.md")
+	require.NoError(t, err, "Failed to stat initial glance output file")
 	initialTime := initialStat.ModTime()
 
 	// Wait a moment to ensure file timestamps will be different
@@ -184,8 +186,8 @@ func TestGlanceWithModifiedFiles(t *testing.T) {
 
 	// Check that the glance.md file was regenerated
 	currentStat, err := os.Stat(mainGlanceFile)
-	require.NoError(t, err, "Failed to stat glance.md after file modification")
-	assert.NotEqual(t, initialTime, currentStat.ModTime(), "glance.md should have been regenerated after file modification")
+	require.NoError(t, err, "Failed to stat glance output after file modification")
+	assert.NotEqual(t, initialTime, currentStat.ModTime(), "glance output should have been regenerated after file modification")
 }
 
 // TestDebugLogging verifies that debug level logs are present by default
@@ -238,8 +240,8 @@ func TestGlanceWithCustomPromptFile(t *testing.T) {
 	require.NoError(t, err, "Glance with custom prompt file failed")
 
 	// Verify glance.md was created
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
-	assert.FileExists(t, mainGlanceFile, "glance.md should exist when using custom prompt file")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
+	assert.FileExists(t, mainGlanceFile, "glance output should exist when using custom prompt file")
 }
 
 // TestGlanceChangePropagation tests that changes in subdirectories trigger regeneration in parent directories
@@ -262,7 +264,7 @@ func TestGlanceChangePropagation(t *testing.T) {
 	require.NoError(t, err, "Initial glance run failed")
 
 	// Get the initial modification time of the root glance.md file
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 
 	mainInitialStat, err := os.Stat(mainGlanceFile)
 	require.NoError(t, err, "Failed to stat initial root glance.md")
@@ -325,15 +327,15 @@ func TestBinaryFileHandling(t *testing.T) {
 	outputStr := string(output)
 	assert.Contains(t, outputStr, "binary", "Output should mention binary file detection")
 
-	// Verify glance.md was created
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	// Verify glance output was created
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 	content, err := os.ReadFile(mainGlanceFile)
-	require.NoError(t, err, "Failed to read glance.md content")
+	require.NoError(t, err, "Failed to read glance output content")
 
 	// The content should not reference the binary file content
 	contentStr := string(content)
 	assert.NotContains(t, contentStr, string(binaryFileContent),
-		"glance.md should not contain binary file content")
+		"glance output should not contain binary file content")
 }
 
 // setupTestProjectStructure creates a test directory structure for testing the glance tool

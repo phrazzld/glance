@@ -10,6 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestGlanceFilenameIsDotPrefixed verifies that the output filename is dot-prefixed
+// so build systems (SwiftPM, Cargo, Go modules) that scan source directories skip it.
+func TestGlanceFilenameIsDotPrefixed(t *testing.T) {
+	if len(GlanceFilename) == 0 || GlanceFilename[0] != '.' {
+		t.Errorf("GlanceFilename must start with '.' to be hidden from build system scanners, got %q", GlanceFilename)
+	}
+}
+
 func TestShouldIgnoreFile(t *testing.T) {
 	// Setup test directory and files
 	testDir := t.TempDir()
@@ -47,8 +55,15 @@ func TestShouldIgnoreFile(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "glance.md file",
-			path:     filepath.Join(testDir, "glance.md"),
+			name:     "glance output file",
+			path:     filepath.Join(testDir, GlanceFilename),
+			baseDir:  testDir,
+			chain:    ignoreChain,
+			expected: true,
+		},
+		{
+			name:     "legacy glance output file (backward compat)",
+			path:     filepath.Join(testDir, LegacyGlanceFilename),
 			baseDir:  testDir,
 			chain:    ignoreChain,
 			expected: true,

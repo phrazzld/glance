@@ -11,8 +11,15 @@ import (
 
 // Constants for default ignore patterns
 const (
-	// GlanceFilename is the standard filename for glance summaries
-	GlanceFilename = "glance.md"
+	// GlanceFilename is the standard filename for glance summaries.
+	// The dot prefix hides it from build-system source scanners (SwiftPM, Cargo, Go modules)
+	// that warn or error on unrecognized files in managed source trees.
+	GlanceFilename = ".glance.md"
+
+	// LegacyGlanceFilename is the output filename used by glance v1.x before the
+	// dot-prefix rename. It is ignored alongside GlanceFilename so that users upgrading
+	// from older versions do not have stale summaries fed back to the LLM.
+	LegacyGlanceFilename = "glance.md"
 
 	// NodeModulesDir is a heavy directory that should be skipped by default
 	NodeModulesDir = "node_modules"
@@ -20,8 +27,8 @@ const (
 
 // ShouldIgnoreFile determines if a file should be ignored during processing.
 // A file is ignored if:
+// - It's our own output file (GlanceFilename) to avoid feeding it back to the LLM
 // - It's a hidden file (name starts with ".")
-// - It's named glance.md (to avoid processing our own output files)
 // - It matches any gitignore rule in the provided chain
 //
 // Parameters:
@@ -35,15 +42,17 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain) bool
 	// Get the file name without the path
 	filename := filepath.Base(path)
 
-	// Always ignore hidden files
-	if strings.HasPrefix(filename, ".") {
-		log.WithField("file", path).Debug("Ignoring hidden file")
+	// Always ignore our own output files — both the current name and the legacy name
+	// from v1.x so that users upgrading do not have old summaries fed back to the LLM.
+	// Checked before the hidden-file rule so the log message is specific.
+	if filename == GlanceFilename || filename == LegacyGlanceFilename {
+		log.WithField("file", path).Debug("Ignoring glance output file")
 		return true
 	}
 
-	// Always ignore glance.md files (our output files)
-	if filename == GlanceFilename {
-		log.WithField("file", path).Debug("Ignoring glance.md file")
+	// Always ignore hidden files
+	if strings.HasPrefix(filename, ".") {
+		log.WithField("file", path).Debug("Ignoring hidden file")
 		return true
 	}
 
