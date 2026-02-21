@@ -99,7 +99,7 @@ type SafetySetting struct {
 // It allows customizing client behavior while providing sensible defaults.
 type ClientOptions struct {
 	// Basic client configuration
-	// ModelName is the name of the model to use (e.g., "gemini-2.5-flash")
+	// ModelName is the name of the model to use (e.g., "gemini-3-flash-preview")
 	ModelName string
 
 	// MaxRetries is the number of times to retry failed API calls
@@ -138,7 +138,7 @@ type ClientOptions struct {
 func DefaultClientOptions() ClientOptions {
 	return ClientOptions{
 		// Basic configuration
-		ModelName:  "gemini-2.5-flash",
+		ModelName:  "gemini-3-flash-preview",
 		MaxRetries: 3,
 		Timeout:    60, // 60 seconds
 
@@ -393,8 +393,9 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 		contents = append([]*genai.Content{systemContent}, contents...)
 	}
 
-	// Retry logic
-	for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
+	// Retry logic: MaxRetries means retries after the initial attempt
+	maxAttempts := c.options.MaxRetries + 1
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
 			logrus.WithFields(logrus.Fields{
 				"attempt":     attempt,
@@ -520,8 +521,9 @@ func (c *GeminiClient) CountTokens(ctx context.Context, prompt string) (int, err
 	// Create a config for counting tokens (has fewer options than generation)
 	countConfig := &genai.CountTokensConfig{}
 
-	// Retry logic
-	for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
+	// Retry logic: MaxRetries means retries after the initial attempt
+	maxAttempts := c.options.MaxRetries + 1
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
 			logrus.WithFields(logrus.Fields{
 				"attempt":     attempt,
@@ -647,8 +649,9 @@ func (c *GeminiClient) GenerateStream(ctx context.Context, prompt string) (<-cha
 		var lastError error
 		success := false
 
-		// Retry logic
-		for attempt := 1; attempt <= c.options.MaxRetries; attempt++ {
+		// Retry logic: MaxRetries means retries after the initial attempt
+		maxAttempts := c.options.MaxRetries + 1
+		for attempt := 1; attempt <= maxAttempts; attempt++ {
 			if attempt > 1 {
 				logrus.WithFields(logrus.Fields{
 					"attempt":     attempt,
