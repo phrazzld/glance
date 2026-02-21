@@ -18,7 +18,7 @@ jobs:
     outputs:
       is_draft: ${{ steps.draft.outputs.is_draft }}
     steps:
-      - uses: misty-step/cerberus/draft-check@v2
+      - uses: misty-step/cerberus/draft-check@8b61c2cfb328fd45eda3013fc92b0cf9370dd1ff # v2
         id: draft
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: misty-step/cerberus/validate@v2
+      - uses: misty-step/cerberus/validate@8b61c2cfb328fd45eda3013fc92b0cf9370dd1ff # v2
 
   matrix:
     needs: validate
@@ -40,12 +40,13 @@ jobs:
       matrix: ${{ steps.generate.outputs.matrix }}
       count: ${{ steps.generate.outputs.count }}
     steps:
-      - uses: misty-step/cerberus/matrix@v2
+      - uses: misty-step/cerberus/matrix@8b61c2cfb328fd45eda3013fc92b0cf9370dd1ff # v2
         id: generate
 
   review:
     needs: [matrix, draft-check]
     if: github.event.pull_request.head.repo.full_name == github.repository && needs.draft-check.outputs.is_draft != 'true'
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: read
@@ -55,8 +56,8 @@ jobs:
       matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: misty-step/cerberus@v2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: misty-step/cerberus@8b61c2cfb328fd45eda3013fc92b0cf9370dd1ff # v2
         with:
           perspective: ${{ matrix.perspective }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -77,6 +78,6 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: misty-step/cerberus/verdict@v2
+      - uses: misty-step/cerberus/verdict@8b61c2cfb328fd45eda3013fc92b0cf9370dd1ff # v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
