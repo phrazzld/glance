@@ -215,6 +215,19 @@ func TestShouldRegenerate(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, shouldRegen, "Should force regeneration to migrate legacy glance.md to new .glance.md filename")
 	})
+
+	t.Run("Unexpected stat error propagated", func(t *testing.T) {
+		// Use a regular file as the "dir" argument so that filepath.Join(dir, GlanceFilename)
+		// points to a path whose parent is not a directory. os.Stat returns ENOTDIR,
+		// which is not os.ErrNotExist and must be propagated to the caller.
+		tmpFile, err := os.CreateTemp("", "glance-stattest-*")
+		require.NoError(t, err)
+		defer os.Remove(tmpFile.Name())
+		tmpFile.Close()
+
+		_, err = ShouldRegenerate(tmpFile.Name(), false, IgnoreChain{})
+		assert.Error(t, err, "should propagate non-ErrNotExist stat errors")
+	})
 }
 
 func TestBubbleUpParents(t *testing.T) {

@@ -96,6 +96,9 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return false, fmt.Errorf("stat glance output %q: %w", glancePath, err)
+		}
 		legacyPath := filepath.Join(dir, LegacyGlanceFilename)
 		if _, legacyErr := os.Stat(legacyPath); legacyErr == nil {
 			log.WithField("directory", dir).Debug("Found legacy glance output, regenerating to migrate to new filename")
