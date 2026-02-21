@@ -16,6 +16,11 @@ const (
 	// that warn or error on unrecognized files in managed source trees.
 	GlanceFilename = ".glance.md"
 
+	// LegacyGlanceFilename is the output filename used by glance v1.x before the
+	// dot-prefix rename. It is ignored alongside GlanceFilename so that users upgrading
+	// from older versions do not have stale summaries fed back to the LLM.
+	LegacyGlanceFilename = "glance.md"
+
 	// NodeModulesDir is a heavy directory that should be skipped by default
 	NodeModulesDir = "node_modules"
 )
@@ -37,9 +42,10 @@ func ShouldIgnoreFile(path string, baseDir string, ignoreChain IgnoreChain) bool
 	// Get the file name without the path
 	filename := filepath.Base(path)
 
-	// Always ignore our own output files (checked before the hidden-file rule so the
-	// log message is specific even though GlanceFilename is itself dot-prefixed)
-	if filename == GlanceFilename {
+	// Always ignore our own output files — both the current name and the legacy name
+	// from v1.x so that users upgrading do not have old summaries fed back to the LLM.
+	// Checked before the hidden-file rule so the log message is specific.
+	if filename == GlanceFilename || filename == LegacyGlanceFilename {
 		log.WithField("file", path).Debug("Ignoring glance output file")
 		return true
 	}

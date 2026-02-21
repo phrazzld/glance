@@ -62,6 +62,13 @@ func TestShouldIgnoreFile(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "legacy glance output file (backward compat)",
+			path:     filepath.Join(testDir, LegacyGlanceFilename),
+			baseDir:  testDir,
+			chain:    ignoreChain,
+			expected: true,
+		},
+		{
 			name:     "Regular file",
 			path:     filepath.Join(testDir, "regular.txt"),
 			baseDir:  testDir,
