@@ -132,7 +132,7 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	primaryClient, err := llm.NewGeminiClient(
 		cfg.APIKey,
 		llm.WithModelName("gemini-3-flash-preview"),
-		llm.WithMaxRetries(1), // Retry/failover is handled by FallbackClient.
+		llm.WithMaxRetries(0), // Single attempt per tier; FallbackClient handles retries.
 		llm.WithMaxOutputTokens(4096),
 		llm.WithTimeout(60),
 	)
@@ -143,7 +143,7 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	stableClient, err := llm.NewGeminiClient(
 		cfg.APIKey,
 		llm.WithModelName("gemini-2.5-flash"),
-		llm.WithMaxRetries(1), // Retry/failover is handled by FallbackClient.
+		llm.WithMaxRetries(0), // Single attempt per tier; FallbackClient handles retries.
 		llm.WithMaxOutputTokens(4096),
 		llm.WithTimeout(60),
 	)
@@ -164,7 +164,7 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 		grokFallbackClient, grokErr := llm.NewOpenRouterClient(
 			openRouterKey,
 			llm.WithModelName("x-ai/grok-4.1-fast"),
-			llm.WithMaxRetries(1), // Retry/failover is handled by FallbackClient.
+			llm.WithMaxRetries(0), // Single attempt per tier; FallbackClient handles retries.
 			llm.WithMaxOutputTokens(4096),
 			llm.WithTimeout(60),
 		)

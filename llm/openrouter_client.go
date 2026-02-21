@@ -33,7 +33,7 @@ type openRouterChatRequest struct {
 	MaxTokens   int32               `json:"max_tokens,omitempty"`
 	Temperature *float32            `json:"temperature,omitempty"`
 	TopP        *float32            `json:"top_p,omitempty"`
-	TopK        *float32            `json:"top_k,omitempty"`
+	TopK        *int32              `json:"top_k,omitempty"`
 	Stop        []string            `json:"stop,omitempty"`
 }
 
@@ -159,7 +159,7 @@ func (c *OpenRouterClient) generateOnce(ctx context.Context, prompt string) (str
 		reqBody.TopP = &topP
 	}
 	if c.options.TopK > 0 {
-		topK := c.options.TopK
+		topK := int32(c.options.TopK)
 		reqBody.TopK = &topK
 	}
 	if len(c.options.StopSequences) > 0 {
