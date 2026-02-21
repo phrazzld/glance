@@ -10,6 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"glance/filesystem"
 )
 
 // TestSetupLogging verifies that the setupLogging function properly configures the logger
@@ -127,6 +129,6 @@ func TestMainWithConfig(t *testing.T) {
 	require.NoError(t, err, "Glance command failed with output: %s", output)
 
 	// Verify glance.md files were created
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
-	assert.FileExists(t, mainGlanceFile, "glance.md should exist in test directory")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
+	assert.FileExists(t, mainGlanceFile, "glance output should exist in test directory")
 }

@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"glance/filesystem"
 )
 
 // TestCLIExecution is a basic test to verify the CLI can be executed.
@@ -77,17 +79,17 @@ func TestGlanceWithTestStructure(t *testing.T) {
 	require.NoError(t, err, "Glance command failed with output: %s", output)
 
 	// Verify glance.md files were created in each directory (except ignored ones)
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
-	subdir1GlanceFile := filepath.Join(testProjectDir, "subdir1", "glance.md")
-	subdir2GlanceFile := filepath.Join(testProjectDir, "subdir2", "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
+	subdir1GlanceFile := filepath.Join(testProjectDir, "subdir1", filesystem.GlanceFilename)
+	subdir2GlanceFile := filepath.Join(testProjectDir, "subdir2", filesystem.GlanceFilename)
 
-	assert.FileExists(t, mainGlanceFile, "glance.md should exist in root directory")
-	assert.FileExists(t, subdir1GlanceFile, "glance.md should exist in subdir1")
-	assert.FileExists(t, subdir2GlanceFile, "glance.md should exist in subdir2")
+	assert.FileExists(t, mainGlanceFile, "glance output should exist in root directory")
+	assert.FileExists(t, subdir1GlanceFile, "glance output should exist in subdir1")
+	assert.FileExists(t, subdir2GlanceFile, "glance output should exist in subdir2")
 
-	// Verify that glance.md was not created in ignored directory
-	ignoredGlanceFile := filepath.Join(testProjectDir, "ignored_dir", "glance.md")
-	assert.NoFileExists(t, ignoredGlanceFile, "glance.md should not exist in ignored_dir")
+	// Verify that glance output was not created in ignored directory
+	ignoredGlanceFile := filepath.Join(testProjectDir, "ignored_dir", filesystem.GlanceFilename)
+	assert.NoFileExists(t, ignoredGlanceFile, "glance output should not exist in ignored_dir")
 }
 
 // TestGlanceForceFlag tests the behavior of the --force flag
@@ -106,7 +108,7 @@ func TestGlanceForceFlag(t *testing.T) {
 
 	// Create an initial glance.md file with known content
 	initialContent := "# Initial content - should be replaced when --force is used"
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 	err := os.WriteFile(mainGlanceFile, []byte(initialContent), 0644)
 	require.NoError(t, err, "Failed to create initial glance.md file")
 
@@ -164,7 +166,7 @@ func TestGlanceWithModifiedFiles(t *testing.T) {
 	require.NoError(t, err, "Initial glance run failed")
 
 	// Get the initial modification time of the glance.md file
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 	initialStat, err := os.Stat(mainGlanceFile)
 	require.NoError(t, err, "Failed to stat initial glance.md")
 	initialTime := initialStat.ModTime()
@@ -238,7 +240,7 @@ func TestGlanceWithCustomPromptFile(t *testing.T) {
 	require.NoError(t, err, "Glance with custom prompt file failed")
 
 	// Verify glance.md was created
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 	assert.FileExists(t, mainGlanceFile, "glance.md should exist when using custom prompt file")
 }
 
@@ -262,7 +264,7 @@ func TestGlanceChangePropagation(t *testing.T) {
 	require.NoError(t, err, "Initial glance run failed")
 
 	// Get the initial modification time of the root glance.md file
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 
 	mainInitialStat, err := os.Stat(mainGlanceFile)
 	require.NoError(t, err, "Failed to stat initial root glance.md")
@@ -326,7 +328,7 @@ func TestBinaryFileHandling(t *testing.T) {
 	assert.Contains(t, outputStr, "binary", "Output should mention binary file detection")
 
 	// Verify glance.md was created
-	mainGlanceFile := filepath.Join(testProjectDir, "glance.md")
+	mainGlanceFile := filepath.Join(testProjectDir, filesystem.GlanceFilename)
 	content, err := os.ReadFile(mainGlanceFile)
 	require.NoError(t, err, "Failed to read glance.md content")
 

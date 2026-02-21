@@ -141,8 +141,8 @@ func TestShouldRegenerate(t *testing.T) {
 	err := os.WriteFile(ignoreFile, []byte(ignoreContent), 0644)
 	require.NoError(t, err)
 
-	// Create a glance.md file
-	glanceFile := filepath.Join(baseDir, "glance.md")
+	// Create the glance output file
+	glanceFile := filepath.Join(baseDir, GlanceFilename)
 	err = os.WriteFile(glanceFile, []byte("# Glance\n\nTest summary"), 0644)
 	require.NoError(t, err)
 

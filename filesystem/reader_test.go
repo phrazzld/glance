@@ -248,11 +248,11 @@ func TestGatherLocalFiles(t *testing.T) {
 
 	// Create test files
 	files := map[string]string{
-		"file1.txt":   "Content of file1",
-		"file2.json":  `{"key":"value"}`,
-		".hidden.txt": "Hidden file",                    // Should be ignored (hidden)
-		"glance.md":   "glance file",                    // Should be ignored (glance.md)
-		"binary.bin":  string([]byte{0, 1, 2, 3, 4, 5}), // Should be ignored (binary)
+		"file1.txt":    "Content of file1",
+		"file2.json":   `{"key":"value"}`,
+		".hidden.txt":  "Hidden file",                    // Should be ignored (hidden)
+		GlanceFilename: "glance file",                    // Should be ignored (glance output)
+		"binary.bin":   string([]byte{0, 1, 2, 3, 4, 5}), // Should be ignored (binary)
 	}
 
 	for name, content := range files {
@@ -280,9 +280,9 @@ func TestGatherLocalFiles(t *testing.T) {
 		assert.Contains(t, results, "file1.txt")
 		assert.Contains(t, results, "file2.json")
 
-		// Should not contain hidden, glance.md, or nested files
+		// Should not contain hidden, glance output, or nested files
 		assert.NotContains(t, results, ".hidden.txt")
-		assert.NotContains(t, results, "glance.md")
+		assert.NotContains(t, results, GlanceFilename)
 		assert.NotContains(t, results, "nested/nested.txt")
 
 		// Content should match

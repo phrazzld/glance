@@ -423,8 +423,8 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		return r
 	}
 
-	// Validate the glance.md path before writing
-	glancePath := filepath.Join(dir, "glance.md")
+	// Validate the glance output path before writing
+	glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 	logrus.WithFields(logrus.Fields{
 		"directory": dir,
 		"path":      glancePath,
@@ -511,8 +511,8 @@ func gatherSubGlances(baseDir string, subdirs []string) (string, error) {
 			continue
 		}
 
-		// Construct and validate the glance.md path
-		glancePath := filepath.Join(validDir, "glance.md")
+		// Construct and validate the glance output path
+		glancePath := filepath.Join(validDir, filesystem.GlanceFilename)
 		validPath, err := filesystem.ValidateFilePath(glancePath, validDir, true, true)
 		if err != nil {
 			logrus.Debugf("Skipping invalid glance.md path: %v", err)

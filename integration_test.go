@@ -114,7 +114,7 @@ func ProcessDirectory(cfg *config.Config, client llm.Client, service *llm.Servic
 	// Get subdirectory glances
 	subGlances := ""
 	for _, subdir := range subdirs {
-		glanceFile := filepath.Join(subdir, "glance.md")
+		glanceFile := filepath.Join(subdir, filesystem.GlanceFilename)
 		if _, err := os.Stat(glanceFile); err == nil {
 			content, err := os.ReadFile(glanceFile)
 			if err == nil {
@@ -134,7 +134,7 @@ func ProcessDirectory(cfg *config.Config, client llm.Client, service *llm.Servic
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || entry.Name() == "glance.md" {
+		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || entry.Name() == filesystem.GlanceFilename {
 			continue
 		}
 
@@ -162,7 +162,7 @@ func ProcessDirectory(cfg *config.Config, client llm.Client, service *llm.Servic
 	}
 
 	// Validate the glance.md path before writing
-	glancePath := filepath.Join(cfg.TargetDir, "glance.md")
+	glancePath := filepath.Join(cfg.TargetDir, filesystem.GlanceFilename)
 	validatedPath, err := filesystem.ValidateFilePath(glancePath, cfg.TargetDir, true, false)
 	if err != nil {
 		return ProcessDirectoryResults{}, err
@@ -281,7 +281,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		assert.Greater(t, results.FilesProcessed, 0, "At least one file should be processed")
 
 		// Check if glance.md was created
-		glanceMd := filepath.Join(testDir, "glance.md")
+		glanceMd := filepath.Join(testDir, filesystem.GlanceFilename)
 		assert.FileExists(t, glanceMd, "glance.md file should be created")
 
 		// Verify only the expectations we care about - Generate was called
@@ -337,7 +337,7 @@ func TestFileSystemLLMIntegration(t *testing.T) {
 		assert.NoError(t, err, "ProcessDirectory should not return an error")
 
 		// Verify that glance.md was NOT created in the ignored directory
-		ignoredGlanceMd := filepath.Join(ignoredDir, "glance.md")
+		ignoredGlanceMd := filepath.Join(ignoredDir, filesystem.GlanceFilename)
 		assert.NoFileExists(t, ignoredGlanceMd, "glance.md should not exist in ignored directory")
 
 		// Verify only the expectations we care about - Generate was called
@@ -380,14 +380,14 @@ func TestParentRegenerationPropagation(t *testing.T) {
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
 	}
 
 	// Get initial modification times
 	initialModTimes := make(map[string]time.Time)
 	for level, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		initialModTimes[level] = info.ModTime()
@@ -426,7 +426,7 @@ func TestParentRegenerationPropagation(t *testing.T) {
 	// Get new modification times
 	finalModTimes := make(map[string]time.Time)
 	for level, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		finalModTimes[level] = info.ModTime()
@@ -487,14 +487,14 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
 	}
 
 	// Get initial modification times
 	initialModTimes := make(map[string]time.Time)
 	for level, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		initialModTimes[level] = info.ModTime()
@@ -538,7 +538,7 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 	// Get new modification times
 	finalModTimes := make(map[string]time.Time)
 	for level, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		finalModTimes[level] = info.ModTime()
@@ -599,7 +599,7 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
 	}
 
@@ -609,7 +609,7 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 	// Get the modification times after the first run
 	initialModTimes := make(map[string]time.Time)
 	for level, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		initialModTimes[level] = info.ModTime()
@@ -631,7 +631,7 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 	// Get modification times after the second run
 	finalModTimes := make(map[string]time.Time)
 	for level, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		finalModTimes[level] = info.ModTime()
@@ -735,7 +735,7 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		assert.FileExists(t, glancePath, "Initial glance.md should exist in "+dir)
 	}
 
@@ -745,7 +745,7 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 	// Get initial modification times for all directories
 	initialModTimes := make(map[string]time.Time)
 	for level, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		initialModTimes[level] = info.ModTime()
@@ -772,7 +772,7 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 	// Get final modification times
 	finalModTimes := make(map[string]time.Time)
 	for level, dir := range dirs {
-		glancePath := filepath.Join(dir, "glance.md")
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		info, err := os.Stat(glancePath)
 		require.NoError(t, err, "Failed to stat glance.md in "+level)
 		finalModTimes[level] = info.ModTime()

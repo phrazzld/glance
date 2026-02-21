@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"glance/filesystem"
 )
 
 func TestGatherSubGlances(t *testing.T) {
@@ -24,11 +26,11 @@ func TestGatherSubGlances(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create glance.md files in subdirectories
-	glanceFile1 := filepath.Join(subDir1, "glance.md")
-	glanceFile2 := filepath.Join(subDir2, "glance.md")
-	glanceFile3 := filepath.Join(subDir3, "glance.md")
-	nestedGlanceFile := filepath.Join(nestedDir, "glance.md")
+	// Create glance output files in subdirectories
+	glanceFile1 := filepath.Join(subDir1, filesystem.GlanceFilename)
+	glanceFile2 := filepath.Join(subDir2, filesystem.GlanceFilename)
+	glanceFile3 := filepath.Join(subDir3, filesystem.GlanceFilename)
+	nestedGlanceFile := filepath.Join(nestedDir, filesystem.GlanceFilename)
 
 	err := os.WriteFile(glanceFile1, []byte("Content from subdir1"), 0644)
 	require.NoError(t, err)
@@ -89,8 +91,8 @@ func TestGatherSubGlances(t *testing.T) {
 		require.NoError(t, err)
 		defer os.RemoveAll(outsideDir)
 
-		// Create a glance.md file in the outside directory
-		outsideGlanceFile := filepath.Join(outsideDir, "glance.md")
+		// Create a glance output file in the outside directory
+		outsideGlanceFile := filepath.Join(outsideDir, filesystem.GlanceFilename)
 		err = os.WriteFile(outsideGlanceFile, []byte("Content from outside"), 0644)
 		require.NoError(t, err)
 
@@ -143,7 +145,7 @@ func TestGatherSubGlances(t *testing.T) {
 
 		// But manually use it with a manipulated path to test security
 		// This test directly checks the path validation logic
-		// In real use, the file name is hardcoded as "glance.md"
+		// In real use, the file name is filesystem.GlanceFilename
 
 		subdirs := []string{validDir}
 		content, err := gatherSubGlances(testDir, subdirs)
