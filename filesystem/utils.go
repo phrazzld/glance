@@ -17,7 +17,7 @@ import (
 // DefaultFileMode defines the file permission mode for files created by the application.
 // Value 0o600 (rw-------) ensures files are only readable and writable by the owner
 // and not accessible to group members or other users. This is important for security
-// as glance.md files may contain sensitive code analysis or information derived
+// as glance output files may contain sensitive code analysis or information derived
 // from private code repositories.
 const DefaultFileMode = 0o600
 
@@ -68,11 +68,11 @@ func LatestModTime(dir string, ignoreChain IgnoreChain) (time.Time, error) {
 	return latest, err
 }
 
-// ShouldRegenerate determines if a glance.md file in a directory needs to be regenerated.
+// ShouldRegenerate determines if the glance output file in a directory needs to be regenerated.
 // Regeneration is needed if:
 // - Force is true
-// - glance.md doesn't exist
-// - Any file in the directory is newer than glance.md
+// - GlanceFilename doesn't exist
+// - Any file in the directory is newer than GlanceFilename
 //
 // Parameters:
 //   - dir: The directory to check for regeneration need
@@ -89,22 +89,22 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 		return true, nil
 	}
 
-	// Check if glance.md exists
+	// Check if glance output file exists
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
-		log.WithField("directory", dir).Debug("glance.md not found, will generate")
+		log.WithField("directory", dir).Debug("glance output not found, will generate")
 		return true, nil
 	}
 
-	// Check if any file is newer than glance.md
+	// Check if any file is newer than the glance output
 	latest, err := LatestModTime(dir, ignoreChain)
 	if err != nil {
 		return false, err
 	}
 
 	if latest.After(glanceInfo.ModTime()) {
-		log.WithField("directory", dir).Debug("Found newer files, will regenerate glance.md")
+		log.WithField("directory", dir).Debug("Found newer files, will regenerate glance output")
 		return true, nil
 	}
 

@@ -239,7 +239,7 @@ func processDirectories(
 	llmService *llm.Service,
 	testing bool,
 ) ([]result, map[string]bool) {
-	logrus.Info("Preparing to generate glance.md files...")
+	logrus.Info("Preparing to generate glance output files...")
 
 	// Set up options for the progress bar
 	options := []progressbar.Option{
@@ -305,7 +305,7 @@ func processDirectories(
 	// Finish the progress bar (ignore errors for non-critical UI)
 	_ = bar.Finish()
 
-	logrus.WithField("target_dir", cfg.TargetDir).Info("All done! glance.md files have been generated for your codebase")
+	logrus.WithField("target_dir", cfg.TargetDir).Info("All done! glance output files have been generated for your codebase")
 
 	return finalResults, needsRegen
 }
