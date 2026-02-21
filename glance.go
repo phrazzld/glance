@@ -429,7 +429,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		"directory": dir,
 		"path":      glancePath,
 		"stage":     "path_validation",
-	}).Debug("Validating glance.md path")
+	}).Debug("Validating glance output path")
 
 	validatedPath, pathErr := filesystem.ValidateFilePath(glancePath, dir, true, false)
 	if pathErr != nil {
@@ -498,8 +498,9 @@ func reverseSlice(s []string) {
 // file collection and processing
 // -----------------------------------------------------------------------------
 
-// gatherSubGlances merges the contents of existing subdirectory glance.md files.
-// This implementation enhances the original by using filesystem.ReadTextFile.
+// gatherSubGlances merges the contents of existing subdirectory glance output files.
+// Falls back to the legacy filename (glance.md) when the current filename (.glance.md)
+// is absent, so parent summaries remain complete during the upgrade migration window.
 // The baseDir parameter defines the security boundary for path validations within the function.
 func gatherSubGlances(baseDir string, subdirs []string) (string, error) {
 	var combined []string
@@ -507,15 +508,23 @@ func gatherSubGlances(baseDir string, subdirs []string) (string, error) {
 		// Validate the subdirectory using the provided baseDir for consistent security boundary
 		validDir, err := filesystem.ValidateDirPath(sd, baseDir, true, true)
 		if err != nil {
-			logrus.Warnf("Skipping invalid subdirectory for glance.md collection: %v", err)
+			logrus.Warnf("Skipping invalid subdirectory for glance output collection: %v", err)
 			continue
 		}
 
-		// Construct and validate the glance output path
-		glancePath := filepath.Join(validDir, filesystem.GlanceFilename)
-		validPath, err := filesystem.ValidateFilePath(glancePath, validDir, true, true)
-		if err != nil {
-			logrus.Debugf("Skipping invalid glance.md path: %v", err)
+		// Resolve the glance output path: prefer current filename, fall back to legacy.
+		candidateNames := []string{filesystem.GlanceFilename, filesystem.LegacyGlanceFilename}
+		var validPath string
+		for _, name := range candidateNames {
+			p := filepath.Join(validDir, name)
+			vp, vpErr := filesystem.ValidateFilePath(p, validDir, true, true)
+			if vpErr == nil {
+				validPath = vp
+				break
+			}
+		}
+		if validPath == "" {
+			logrus.Debugf("Skipping invalid glance output path for subdirectory: %s", validDir)
 			continue
 		}
 

@@ -71,7 +71,7 @@ func LatestModTime(dir string, ignoreChain IgnoreChain) (time.Time, error) {
 // ShouldRegenerate determines if the glance output file in a directory needs to be regenerated.
 // Regeneration is needed if:
 // - Force is true
-// - GlanceFilename doesn't exist
+// - GlanceFilename doesn't exist (including when only the legacy filename exists — forces migration)
 // - Any file in the directory is newer than GlanceFilename
 //
 // Parameters:
@@ -89,19 +89,20 @@ func ShouldRegenerate(dir string, globalForce bool, ignoreChain IgnoreChain) (bo
 		return true, nil
 	}
 
-	// Check if glance output file exists. Fall back to the legacy filename so that
-	// users upgrading from v1.x don't trigger a full regeneration on first run.
+	// Check if the current glance output file exists.
+	// If only the legacy filename (glance.md) is present, force regeneration so that
+	// the directory migrates to the new filename (.glance.md) on the next run.
+	// This is a one-time cost per directory for users upgrading from v1.x.
 	glancePath := filepath.Join(dir, GlanceFilename)
 	glanceInfo, err := os.Stat(glancePath)
 	if err != nil {
 		legacyPath := filepath.Join(dir, LegacyGlanceFilename)
-		if legacyInfo, legacyErr := os.Stat(legacyPath); legacyErr == nil {
-			log.WithField("directory", dir).Debug("Found legacy glance output, using its mtime")
-			glanceInfo = legacyInfo
+		if _, legacyErr := os.Stat(legacyPath); legacyErr == nil {
+			log.WithField("directory", dir).Debug("Found legacy glance output, regenerating to migrate to new filename")
 		} else {
 			log.WithField("directory", dir).Debug("glance output not found, will generate")
-			return true, nil
 		}
+		return true, nil
 	}
 
 	// Check if any file is newer than the glance output

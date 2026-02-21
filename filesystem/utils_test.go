@@ -200,7 +200,9 @@ func TestShouldRegenerate(t *testing.T) {
 	})
 
 	t.Run("Legacy glance.md present (upgrade scenario)", func(t *testing.T) {
-		// Simulate a directory from a v1.x install: has glance.md, no .glance.md
+		// Simulate a directory from a v1.x install: has glance.md, no .glance.md.
+		// Should always force regeneration to migrate to the new filename,
+		// even when no source files are newer than the legacy output.
 		legacyDir := filepath.Join(baseDir, "legacy")
 		err := os.Mkdir(legacyDir, 0755)
 		require.NoError(t, err)
@@ -209,10 +211,9 @@ func TestShouldRegenerate(t *testing.T) {
 		err = os.WriteFile(legacyFile, []byte("# Legacy summary"), 0644)
 		require.NoError(t, err)
 
-		// No newer source files exist, so should NOT regenerate — legacy mtime is current
 		shouldRegen, err := ShouldRegenerate(legacyDir, false, ignoreChain)
 		assert.NoError(t, err)
-		assert.False(t, shouldRegen, "Should not regenerate when only legacy glance.md exists and nothing is newer")
+		assert.True(t, shouldRegen, "Should force regeneration to migrate legacy glance.md to new .glance.md filename")
 	})
 }
 
