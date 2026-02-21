@@ -438,22 +438,39 @@ func TestLoadConfigMissingAPIKey(t *testing.T) {
 	assert.Contains(t, err.Error(), "GEMINI_API_KEY", "Error should mention missing API key")
 }
 
-func TestLoadConfigMissingTargetDir(t *testing.T) {
-	// Save and restore environment variables
+func TestLoadConfigDefaultsToCurrentDir(t *testing.T) {
+	mock, cleanup := setupMockDirectoryChecker(true, "")
+	defer cleanup()
+
 	cleanupEnv := setupEnvVars(t, map[string]string{
 		"GEMINI_API_KEY": "test-api-key",
 	})
 	defer cleanupEnv()
 
-	// Create test arguments without target directory
 	args := []string{"glance"}
 
-	// Run the function
+	cfg, err := LoadConfig(args)
+
+	assert.NoError(t, err, "LoadConfig should succeed when no directory is given")
+	assert.Equal(t, []string{"."}, mock.checkedPaths, "Should check '.' with directory checker")
+
+	// TargetDir gets resolved to absolute path by LoadConfig
+	cwd, _ := filepath.Abs(".")
+	assert.Equal(t, cwd, cfg.TargetDir, "Should resolve to absolute current directory")
+}
+
+func TestLoadConfigTooManyArgs(t *testing.T) {
+	cleanupEnv := setupEnvVars(t, map[string]string{
+		"GEMINI_API_KEY": "test-api-key",
+	})
+	defer cleanupEnv()
+
+	args := []string{"glance", "dir1", "dir2"}
+
 	_, err := LoadConfig(args)
 
-	// Verify error for missing target directory
-	assert.Error(t, err, "LoadConfig should return an error when target directory is missing")
-	assert.Contains(t, err.Error(), "directory", "Error should mention missing directory")
+	assert.Error(t, err, "LoadConfig should error with too many arguments")
+	assert.Contains(t, err.Error(), "too many arguments", "Error should mention too many arguments")
 }
 
 func TestLoadConfigWithRelativePath(t *testing.T) {

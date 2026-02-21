@@ -80,13 +80,16 @@ func LoadConfig(args []string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse command-line arguments: %w", err)
 	}
 
-	// Validate target directory
-	if cmdFlags.NArg() != 1 {
-		return nil, errors.New("missing target directory: exactly one directory must be specified")
+	// Validate target directory — default to current directory when omitted
+	if cmdFlags.NArg() > 1 {
+		return nil, errors.New("too many arguments: at most one directory may be specified")
 	}
 
 	// Get target directory and validate it
-	targetDir := cmdFlags.Arg(0)
+	targetDir := "."
+	if cmdFlags.NArg() == 1 {
+		targetDir = cmdFlags.Arg(0)
+	}
 
 	// Check if directory exists and is actually a directory
 	// The directoryChecker will clean the path and verify it's a directory
