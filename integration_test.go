@@ -111,18 +111,22 @@ func ProcessDirectory(cfg *config.Config, client llm.Client, service *llm.Servic
 	// We'll use the functions from the main package
 	subdirs := findImmediateSubdirectories(cfg.TargetDir, dirsList)
 
-	// Get subdirectory glances
+	// Get subdirectory glances (mirrors gatherSubGlances fallback logic)
 	subGlances := ""
 	for _, subdir := range subdirs {
-		glanceFile := filepath.Join(subdir, filesystem.GlanceFilename)
-		if _, err := os.Stat(glanceFile); err == nil {
-			content, err := os.ReadFile(glanceFile)
-			if err == nil {
-				if subGlances != "" {
-					subGlances += "\n\n"
-				}
-				subGlances += string(content)
+		var content []byte
+		for _, name := range []string{filesystem.GlanceFilename, filesystem.LegacyGlanceFilename} {
+			glanceFile := filepath.Join(subdir, name)
+			if data, err := os.ReadFile(glanceFile); err == nil {
+				content = data
+				break
 			}
+		}
+		if content != nil {
+			if subGlances != "" {
+				subGlances += "\n\n"
+			}
+			subGlances += string(content)
 		}
 	}
 
@@ -134,7 +138,7 @@ func ProcessDirectory(cfg *config.Config, client llm.Client, service *llm.Servic
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || entry.Name() == filesystem.GlanceFilename {
+		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || entry.Name() == filesystem.GlanceFilename || entry.Name() == filesystem.LegacyGlanceFilename {
 			continue
 		}
 

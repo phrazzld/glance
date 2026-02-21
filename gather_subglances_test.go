@@ -131,6 +131,48 @@ func TestGatherSubGlances(t *testing.T) {
 		assert.Empty(t, content)
 	})
 
+	t.Run("LegacyGlanceFileFallback", func(t *testing.T) {
+		// Create a subdirectory containing only the legacy glance.md (no .glance.md).
+		// This simulates a subdirectory that was processed by glance v1.x and has not
+		// yet been regenerated after upgrading to a version that writes .glance.md.
+		legacyDir := filepath.Join(testDir, "legacy")
+		err := os.MkdirAll(legacyDir, 0755)
+		require.NoError(t, err)
+
+		legacyFile := filepath.Join(legacyDir, filesystem.LegacyGlanceFilename)
+		err = os.WriteFile(legacyFile, []byte("Content from legacy glance.md"), 0644)
+		require.NoError(t, err)
+
+		subdirs := []string{legacyDir}
+		content, err := gatherSubGlances(testDir, subdirs)
+
+		// Fallback should succeed and include the legacy file content.
+		assert.NoError(t, err)
+		assert.Contains(t, content, "Content from legacy glance.md")
+	})
+
+	t.Run("NewFileTakesPrecedenceOverLegacy", func(t *testing.T) {
+		// When both .glance.md and glance.md exist, .glance.md should be preferred.
+		bothDir := filepath.Join(testDir, "both")
+		err := os.MkdirAll(bothDir, 0755)
+		require.NoError(t, err)
+
+		newFile := filepath.Join(bothDir, filesystem.GlanceFilename)
+		err = os.WriteFile(newFile, []byte("Content from new .glance.md"), 0644)
+		require.NoError(t, err)
+
+		legacyFile := filepath.Join(bothDir, filesystem.LegacyGlanceFilename)
+		err = os.WriteFile(legacyFile, []byte("Content from legacy glance.md"), 0644)
+		require.NoError(t, err)
+
+		subdirs := []string{bothDir}
+		content, err := gatherSubGlances(testDir, subdirs)
+
+		assert.NoError(t, err)
+		assert.Contains(t, content, "Content from new .glance.md")
+		assert.NotContains(t, content, "Content from legacy glance.md")
+	})
+
 	t.Run("InvalidBaseDirForGlancePath", func(t *testing.T) {
 		// This test ensures that using a parent directory as baseDir for validating glance.md
 		// correctly prevents path traversal
