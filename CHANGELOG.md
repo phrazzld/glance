@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/phrazzld/glance/compare/v1.0.0...v1.1.0) (2026-02-21)
+
+
+### Features
+
+* **config:** default to current directory when no target specified ([c7b1ec0](https://github.com/phrazzld/glance/commit/c7b1ec0c6d8842d4ee98887ba530f8264cbecc09))
+
 # 1.0.0 (2026-02-21)
 
 
