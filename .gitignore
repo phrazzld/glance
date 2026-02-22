@@ -4,7 +4,9 @@ glance
 
 # Generated summaries
 glance.md
-*/glance.md
+**/glance.md
+.glance.md
+**/.glance.md
 
 # Temporary files
 *-plan.md
