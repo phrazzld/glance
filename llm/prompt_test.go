@@ -18,8 +18,8 @@ func TestDefaultTemplate(t *testing.T) {
 
 	// Verify it contains essential prompt instructions
 	assert.Contains(t, template, "expert code reviewer")
-	assert.Contains(t, template, "technical overview")
-	assert.Contains(t, template, "highlight purpose")
+	assert.Contains(t, template, "technical summary")
+	assert.Contains(t, template, "respond with ONLY the sections above")
 }
 
 func TestGeneratePrompt(t *testing.T) {

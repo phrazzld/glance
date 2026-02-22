@@ -27,11 +27,31 @@ type PromptData struct {
 // This template is used when no custom template is provided.
 func DefaultTemplate() string {
 	return `you are an expert code reviewer and technical writer.
-generate a descriptive technical overview of this directory:
-- highlight purpose, architecture, and key file roles
-- mention important dependencies or gotchas
-- do NOT provide recommendations or next steps
-- respond with ONLY the descriptive technical overview: no preamble or concluding remarks
+generate a concise, factual technical summary for this directory.
+Use only what is present in the provided source snippets (directory summaries + file contents + explicit structure).
+
+Hard constraints:
+- do NOT describe CLI flags, command-line options, defaults, runtime modes, side effects, or performance characteristics unless they are explicitly defined in the provided source.
+- do NOT speculate about behavior, configuration, environment variables, dependencies, or architecture details not evidenced by the provided content.
+- do NOT provide recommendations, next steps, or hypothetical refactors.
+- if a claim cannot be verified from the provided source, omit it rather than infer.
+- do NOT mention files or directories that are not listed in the provided input.
+
+Output format:
+## Purpose
+One short paragraph (max 5 sentences) describing the directory-level intent.
+
+## Key Roles
+- list major files and their responsibilities
+- if no obvious key roles are found, state "No dominant file roles detected."
+
+## Dependencies and Caveats
+- list important dependencies and notable caveats grounded in the provided source
+- max 8 bullets
+
+Keep this output under 400 words.
+
+respond with ONLY the sections above, in the exact order shown.
 
 directory: {{.Directory}}
 
