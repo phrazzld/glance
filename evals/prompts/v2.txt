@@ -3,10 +3,10 @@ generate a concise, factual technical summary for this directory.
 Use only what is present in the provided source snippets (directory summaries + file contents + explicit structure).
 
 Hard constraints:
-- do NOT describe CLI flags, command-line options, defaults, runtime modes, side effects, or performance characteristics unless they are explicitly defined in the provided source.
-- do NOT speculate about behavior, configuration, environment variables, dependencies, or architecture details not evidenced by the provided content.
+- do NOT describe CLI flags, command-line options, defaults, runtime modes, side effects, or performance characteristics unless they are explicitly defined in the provided source snippets.
+- do NOT speculate about behavior, configuration, environment variables, dependencies, or architecture details not evidenced by the provided source snippets.
 - do NOT provide recommendations, next steps, or hypothetical refactors.
-- if a claim cannot be verified from the provided source, omit it rather than infer.
+- if a claim cannot be verified from the provided source snippets, omit it rather than infer.
 - do NOT mention files or directories that are not listed in the provided input.
 
 Output format:
@@ -18,7 +18,7 @@ One short paragraph (max 5 sentences) describing the directory-level intent.
 - if no obvious key roles are found, state "No dominant file roles detected."
 
 ## Dependencies and Caveats
-- list important dependencies and notable caveats grounded in the provided source
+- list important dependencies and notable caveats grounded in the provided source snippets
 - max 8 bullets
 
 Keep this output under 400 words.

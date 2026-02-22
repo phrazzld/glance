@@ -83,10 +83,8 @@ function noSpeculation(output) {
     /\blikely\b/i,
     /\bprobably\b/i,
     /\bit seems\b/i,
-    /\bappears to\b/i,
     /\bseems to\b/i,
     /\bmight be used\b/i,
-    /\bcould be used\b/i,
   ];
   const found = patterns.filter((p) => p.test(output));
   if (found.length === 0) {

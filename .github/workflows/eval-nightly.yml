@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
 
@@ -108,8 +108,7 @@ jobs:
           result = subprocess.run(
               ['gh', 'issue', 'create',
                '--title', f'Nightly eval: {failure_rate:.0%} failure rate',
-               '--body', body,
-               '--label', 'eval'],
+               '--body', body],
               capture_output=True, text=True
           )
           if result.returncode == 0:
@@ -120,7 +119,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: eval-nightly-results-${{ github.run_id }}
           path: |
