@@ -31,8 +31,8 @@ generate a concise, factual technical summary for this directory.
 Use only what is present in the provided source snippets (directory summaries + file contents + explicit structure).
 
 Hard constraints:
-- do NOT describe CLI flags, command-line options, defaults, runtime modes, side effects, or performance characteristics unless they are explicitly defined in the provided source.
-- do NOT speculate about behavior, configuration, environment variables, dependencies, or architecture details not evidenced by the provided content.
+- do NOT describe CLI flags, command-line options, defaults, runtime modes, side effects, or performance characteristics unless they are explicitly defined in the provided source snippets.
+- do NOT speculate about behavior, configuration, environment variables, dependencies, or architecture details not evidenced by the provided source snippets.
 - do NOT provide recommendations, next steps, or hypothetical refactors.
 - if a claim cannot be verified from the provided source, omit it rather than infer.
 - do NOT mention files or directories that are not listed in the provided input.
