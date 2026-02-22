@@ -30,10 +30,6 @@ type result struct {
 	err      error
 }
 
-// No need for queueItem anymore as we're using the filesystem package for directory scanning
-
-// Removed the promptData struct - this is now part of the llm package
-
 // -----------------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------------
@@ -62,8 +58,8 @@ func main() {
 		logrus.WithField("error", err).Fatal("Directory scan failed - Check file permissions and disk space")
 	}
 
-	// Process directories and generate glance.md files (not a test run)
-	results, _ := processDirectories(dirs, ignoreChains, cfg, llmService, false)
+	// Process directories and generate glance.md files
+	results, _ := processDirectories(dirs, ignoreChains, cfg, llmService, os.Stderr)
 
 	// Print summary of results
 	printDebrief(results)
@@ -230,13 +226,13 @@ func scanDirectories(cfg *config.Config) ([]string, map[string]filesystem.Ignore
 }
 
 // processDirectories generates glance.md files for each directory in the list and returns the map of directories
-// needing regeneration for testing purposes. The testing parameter controls whether the progress bar output should be suppressed.
+// needing regeneration. progressOut controls where progress bar output is written; pass io.Discard to suppress it.
 func processDirectories(
 	dirsList []string,
 	dirToIgnoreChain map[string]filesystem.IgnoreChain,
 	cfg *config.Config,
 	llmService *llm.Service,
-	testing bool,
+	progressOut io.Writer,
 ) ([]result, map[string]bool) {
 	logrus.Info("Preparing to generate glance output files...")
 
@@ -246,11 +242,7 @@ func processDirectories(
 		progressbar.OptionShowCount(),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionSetPredictTime(false),
-	}
-
-	// Suppress output in tests by setting the writer to io.Discard
-	if testing {
-		options = append(options, progressbar.OptionSetWriter(io.Discard))
+		progressbar.OptionSetWriter(progressOut),
 	}
 
 	// Create progress bar with the configured options
@@ -494,8 +486,6 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	return r
 }
 
-// Removed the generateMarkdown function - this functionality is now handled by the LLM service
-
 // -----------------------------------------------------------------------------
 // .gitignore scanning and BFS
 // -----------------------------------------------------------------------------
@@ -507,8 +497,6 @@ func listAllDirsWithIgnores(root string) ([]string, map[string]filesystem.Ignore
 	// Use the filesystem package function to get the directories and ignore chains
 	return filesystem.ListDirsWithIgnores(root)
 }
-
-// Removed loadGitignore and isIgnored functions - now using filesystem package directly
 
 // reverseSlice reverses a slice of directory paths in-place.
 func reverseSlice(s []string) {
@@ -634,22 +622,6 @@ func gatherLocalFiles(dir string, ignoreChain filesystem.IgnoreChain, maxFileByt
 	// Use the filesystem package function that provides comprehensive validation and handling
 	return filesystem.GatherLocalFiles(dir, ignoreChain, maxFileBytes)
 }
-
-// Note: We now use filesystem.IsTextFile instead of this local function
-// which provides path validation
-
-// -----------------------------------------------------------------------------
-// regeneration logic and utilities
-// -----------------------------------------------------------------------------
-
-// Removed shouldRegenerate, latestModTime, and bubbleUpParents functions
-// Now using filesystem package functions directly
-
-// -----------------------------------------------------------------------------
-// utility functions
-// -----------------------------------------------------------------------------
-
-// Removed loadPromptTemplate - this functionality is now handled by the llm package
 
 // -----------------------------------------------------------------------------
 // results reporting

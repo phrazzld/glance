@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -379,8 +380,8 @@ func TestParentRegenerationPropagation(t *testing.T) {
 
 	// Initial run to generate all glance.md files - force to ensure all are generated
 	cfg = cfg.WithForce(true)
-	// Use the real processDirectories function with testing=true to suppress output
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, cfg, service, true)
+	// Suppress progress output in tests
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, cfg, service, io.Discard)
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
@@ -416,7 +417,7 @@ func TestParentRegenerationPropagation(t *testing.T) {
 
 	// Run without global force flag, so only changed dirs and parents regenerate
 	cfg = cfg.WithForce(false)
-	_, parentRegenMap := processDirectories(dirsList, dirToIgnoreChain, cfg, service, true)
+	_, parentRegenMap := processDirectories(dirsList, dirToIgnoreChain, cfg, service, io.Discard)
 
 	// Check that parent dirs are marked for regeneration in the map
 	for level, dir := range dirs {
@@ -487,7 +488,7 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 
 	// Initial run to generate all glance.md files without force flag
 	rootCfg = rootCfg.WithForce(false)
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, true)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, io.Discard)
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
@@ -519,7 +520,7 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 		WithForce(true) // Using the actual force mechanism here
 
 	// Process level3 directory with force flag to trigger regeneration
-	_, _ = processDirectories(level3DirsList, level3IgnoreChain, level3Cfg, service, true)
+	_, _ = processDirectories(level3DirsList, level3IgnoreChain, level3Cfg, service, io.Discard)
 
 	// Wait a bit to ensure timestamps will be different if files are regenerated
 	time.Sleep(100 * time.Millisecond)
@@ -537,7 +538,7 @@ func TestForcedChildRegenerationBubblesUp(t *testing.T) {
 	rootCfg = rootCfg.WithForce(false)
 	// We're not asserting on the regenMap anymore since we've already verified the bubbling behavior above
 	// The important part is that the timestamps show files actually get regenerated
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, true)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, rootCfg, service, io.Discard)
 
 	// Get new modification times
 	finalModTimes := make(map[string]time.Time)
@@ -599,7 +600,7 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 
 	// Initial run to generate all glance.md files - force to ensure all are generated initially
 	firstRunCfg := cfg.WithForce(true)
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, firstRunCfg, service, true)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, firstRunCfg, service, io.Discard)
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
@@ -624,7 +625,7 @@ func TestNoChangesMeansNoRegeneration(t *testing.T) {
 
 	// Run again without force flag and without any file changes
 	secondRunCfg := cfg.WithForce(false)
-	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, true)
+	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, io.Discard)
 
 	// Verify no directories were marked for regeneration
 	for level, dir := range dirs {
@@ -735,7 +736,7 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 
 	// Initial run to generate all glance.md files
 	initialCfg := cfg.WithForce(true)
-	_, _ = processDirectories(dirsList, dirToIgnoreChain, initialCfg, service, true)
+	_, _ = processDirectories(dirsList, dirToIgnoreChain, initialCfg, service, io.Discard)
 
 	// Verify all directories have glance.md files
 	for _, dir := range dirs {
@@ -771,7 +772,7 @@ func TestSiblingDirectoryIsolation(t *testing.T) {
 
 	// Run again without the force flag
 	secondRunCfg := cfg.WithForce(false)
-	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, true)
+	_, regenMap := processDirectories(dirsList, dirToIgnoreChain, secondRunCfg, service, io.Discard)
 
 	// Get final modification times
 	finalModTimes := make(map[string]time.Time)
