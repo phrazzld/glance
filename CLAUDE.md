@@ -17,7 +17,7 @@ Glance is a Go CLI that recursively scans a directory tree and generates `.glanc
 
 ## Architecture
 
-```
+```text
 main → config.LoadConfig → setupLLMService → scanDirectories (BFS)
      → processDirectories (leaf-first) → LLM generate → write .glance.md
 ```
@@ -65,7 +65,7 @@ CI blocks merge on any failure. Local pre-commit hooks mirror CI.
 * **File permissions:** All output uses `0600`. Security boundary enforced by `ValidateFilePath` before every read.
 * **Prompt map ordering:** `FormatFileContents` iterates a Go map — non-deterministic order across runs.
 * **Three retry layers:** Service + FallbackClient + individual client. Can amplify to 64 API calls worst case.
-* **Sentinel errors are mutable** — `WithCause()` modifies globals. Not safe for concurrent use.
+* **Sentinel errors are mutable** — known bug tracked in issue #60; `WithCause()` modifies globals and should return a new error value instead.
 * **Symlinks not resolved** in path validation — documented known gap.
 
 ## Environment
@@ -84,4 +84,4 @@ CLI tool — no server deployment. Distributed as compiled binary.
 
 * **Release:** Automated via Landfall after tests pass on master. Conventional commits drive semver.
 * **Install:** `go install` or `go build -o glance`
-* **Security override:** `EMERGENCY_SECURITY_OVERRIDE=true` bypasses govulncheck in CI (audited, temporary).
+* **Security override:** Break-glass override exists for CI emergencies; procedure is human-only. AI agents must never set or suggest security overrides.

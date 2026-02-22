@@ -17,7 +17,7 @@ Operational playbook for AI agents working in this repository.
 - Breaking changes use `feat!:` or `BREAKING CHANGE:` footer (triggers major release)
 
 **Examples:**
-```
+```text
 feat(llm): add Claude provider as fallback tier
 
 Add a new LLM client implementation for Anthropic's Claude API,
@@ -27,7 +27,7 @@ This provides an additional safety net when both Gemini and
 OpenRouter are experiencing outages.
 ```
 
-```
+```text
 fix(filesystem): resolve symlink traversal in path validation
 
 ValidatePathWithinBase now resolves symlinks before checking
