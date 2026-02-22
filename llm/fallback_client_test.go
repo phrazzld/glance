@@ -299,6 +299,12 @@ func TestFallbackClientBackoffCap(t *testing.T) {
 
 	client, ok := clientIface.(*FallbackClient)
 	assert.True(t, ok)
-	assert.Equal(t, 2*time.Millisecond, client.retryBackoff(1))
-	assert.Equal(t, 3*time.Millisecond, client.retryBackoff(3)) // capped
+
+	attemptOne := ExponentialBackoff(1, client.baseBackoff, client.maxBackoff)
+	assert.GreaterOrEqual(t, attemptOne, 1600*time.Microsecond)
+	assert.LessOrEqual(t, attemptOne, 2400*time.Microsecond)
+
+	capped := ExponentialBackoff(3, client.baseBackoff, client.maxBackoff)
+	assert.GreaterOrEqual(t, capped, 2400*time.Microsecond)
+	assert.LessOrEqual(t, capped, 3*time.Millisecond)
 }

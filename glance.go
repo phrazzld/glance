@@ -197,7 +197,6 @@ func createLLMService(cfg *config.Config) (llm.Client, *llm.Service, error) {
 	// Create the service with functional options
 	service, err := llm.NewService(
 		client,
-		llm.WithServiceMaxRetries(0), // Retry/failover is handled by FallbackClient.
 		llm.WithServiceModelName(compositeModelName),
 		llm.WithPromptTemplate(cfg.PromptTemplate),
 	)
@@ -442,7 +441,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 			"error":     llmErr,
 			"stage":     "llm_generation",
 		}).Error("Failed to generate markdown with LLM service")
-		r.attempts = 1 // Service already handles retries internally
+		r.attempts = 1
 		r.err = llmErr
 		return r
 	}
@@ -490,7 +489,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	}).Debug("Successfully generated and wrote glance.md file")
 
 	r.success = true
-	r.attempts = 1 // Service already handles retries internally
+	r.attempts = 1
 	r.err = nil
 	return r
 }

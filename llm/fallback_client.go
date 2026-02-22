@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	defaultFallbackBackoff    = 250 * time.Millisecond
-	defaultFallbackMaxBackoff = 4 * time.Second
+	defaultFallbackBackoff    = 200 * time.Millisecond
+	defaultFallbackMaxBackoff = 30 * time.Second
 )
 
 // FallbackTier defines a model/provider tier in a failover chain.
@@ -138,7 +138,7 @@ func (c *FallbackClient) Generate(ctx context.Context, prompt string) (string, e
 			}
 
 			if attempt < maxAttempts {
-				wait := c.retryBackoff(attempt)
+				wait := ExponentialBackoff(attempt, c.baseBackoff, c.maxBackoff)
 				logFields["backoff_ms"] = wait.Milliseconds()
 				logrus.WithFields(logFields).Warn("LLM tier attempt failed, retrying tier")
 
@@ -192,18 +192,6 @@ func (c *FallbackClient) Close() {
 	for _, tier := range c.tiers {
 		tier.Client.Close()
 	}
-}
-
-func (c *FallbackClient) retryBackoff(attempt int) time.Duration {
-	if attempt <= 0 {
-		return c.baseBackoff
-	}
-
-	backoff := c.baseBackoff * time.Duration(1<<(attempt-1))
-	if backoff > c.maxBackoff {
-		return c.maxBackoff
-	}
-	return backoff
 }
 
 func sleepWithContext(ctx context.Context, d time.Duration) error {

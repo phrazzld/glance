@@ -118,7 +118,7 @@ func TestClientOptions(t *testing.T) {
 	// Test default options
 	options := DefaultClientOptions()
 	assert.Equal(t, "gemini-3-flash-preview", options.ModelName)
-	assert.Greater(t, options.MaxRetries, 0)
+	assert.Zero(t, options.MaxRetries)
 	assert.Greater(t, options.Timeout, 0)
 
 	// Verify default generation parameters have sensible values
@@ -370,23 +370,6 @@ func TestGeminiClientCountTokens(t *testing.T) {
 		assert.Contains(t, err.Error(), "not properly initialized")
 	})
 
-	// Test retry behavior
-	t.Run("Retry behavior with API error", func(t *testing.T) {
-		opts := DefaultClientOptions()
-		opts.MaxRetries = 2
-		// Unable to directly test retry logic without mocking the genai.Client
-		// which is challenging due to its structure. This is more of an integration test.
-		client := &GeminiClient{
-			client:  nil, // Will always fail
-			model:   "test-model",
-			options: &opts,
-		}
-
-		result, err := client.CountTokens(context.Background(), "test prompt")
-		assert.Error(t, err)
-		assert.Equal(t, 0, result)
-		assert.Contains(t, err.Error(), "not properly initialized")
-	})
 }
 
 // TestGeminiClientClose tests the Close method of GeminiClient
@@ -432,33 +415,6 @@ func TestGeminiClientTimeout(t *testing.T) {
 		// The actual API call would fail due to nil client, but we're testing the timeout setup
 		_, err := client.Generate(ctx, "test prompt")
 		assert.Error(t, err) // Error because client is nil, not because of timeout
-		assert.Contains(t, err.Error(), "not properly initialized")
-	})
-}
-
-// TestGeminiClientRetryLogic tests the retry logic in the Generate and CountTokens methods
-func TestGeminiClientRetryLogic(t *testing.T) {
-	t.Run("Maximum retries reached", func(t *testing.T) {
-		// Create a client with a small number of retries for testing
-		options := ClientOptions{
-			ModelName:  "test-model",
-			MaxRetries: 2,
-			Timeout:    1,
-		}
-		client := &GeminiClient{
-			client:  nil, // We won't use the actual client in this test
-			model:   "",
-			options: &options,
-		}
-
-		// Test Generate retry logic (will fail due to uninitialized client)
-		_, err := client.Generate(context.Background(), "test prompt")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not properly initialized")
-
-		// Test CountTokens retry logic (will fail due to uninitialized client)
-		_, err = client.CountTokens(context.Background(), "test prompt")
-		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "not properly initialized")
 	})
 }
