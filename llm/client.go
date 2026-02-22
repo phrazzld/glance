@@ -426,6 +426,13 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 			WithCode("GENAI-008")
 	}
 
+	// Guard against nil Content even on successful finish reasons.
+	if resp.Candidates[0].Content == nil || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", customerrors.NewAPIError("response contains no content parts", nil).
+			WithCode("GENAI-009").
+			WithSuggestion("Check if the prompt contains content that may be filtered")
+	}
+
 	// Extract text from the response.
 	var result strings.Builder
 	for _, part := range resp.Candidates[0].Content.Parts {
