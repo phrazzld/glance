@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/phrazzld/glance/compare/v1.1.1...v1.1.2) (2026-02-22)
+
+
+### Bug Fixes
+
+* **prompt:** tighten default template to prevent hallucination ([#62](https://github.com/phrazzld/glance/issues/62)) ([2453cf2](https://github.com/phrazzld/glance/commit/2453cf2b57102a0a03da66f87377b4562224cb20)), closes [#246](https://github.com/phrazzld/glance/issues/246)
+
 ## [1.1.1](https://github.com/phrazzld/glance/compare/v1.1.0...v1.1.1) (2026-02-21)
 
 
