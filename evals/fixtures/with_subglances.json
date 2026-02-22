@@ -1,0 +1,10 @@
+{
+  "directory": "glance",
+  "files": {
+    "glance.go": "package main\n\nimport (\n\t\"context\"\n\t\"os\"\n\n\t\"glance/config\"\n\t\"glance/filesystem\"\n\t\"glance/llm\"\n)\n\nfunc main() {\n\tcfg, err := config.LoadConfig(os.Args)\n\tif err != nil {\n\t\tos.Exit(1)\n\t}\n\t_ = cfg\n\t_ = filesystem.ScanDirectories\n\t_ = llm.DefaultTemplate\n\t_ = context.Background\n}\n"
+  },
+  "subGlances": [
+    "## Purpose\nThe errors package defines the GlanceError interface and a typed error hierarchy for the glance application. It provides structured errors with codes, severity levels, and resolution suggestions.\n\n## Key Roles\n- errors.go: Defines GlanceError interface, baseError implementation, four typed error structs (FileSystemError, APIError, ConfigError, ValidationError), creation/wrapping functions, and package-level sentinel errors.\n\n## Dependencies and Caveats\n- Sentinel errors (ErrFileNotFound, ErrAPITimeout, etc.) are package-level vars; WithCause() mutates them directly, making them unsafe for concurrent use.\n- Type-checking functions (IsFileSystemError, IsAPIError, etc.) use errors.As internally.",
+    "## Purpose\nThe llm package provides LLM client abstractions and a multi-tier failover chain for generating directory summaries from file contents.\n\n## Key Roles\n- client.go: Client interface with Generate, GenerateStream, CountTokens, and Close methods.\n- fallback_client.go: FallbackClient wraps N tier clients; retries each tier with exponential backoff before falling through.\n- prompt.go: PromptData struct, DefaultTemplate, GeneratePrompt (Go text/template rendering), FormatFileContents, and BuildPromptData.\n- service.go: Service wraps a Client with retry logic and prompt rendering; GenerateGlanceMarkdown is the main entry point.\n\n## Dependencies and Caveats\n- Three retry layers (Service + FallbackClient + individual client) can amplify to 64 API calls worst case.\n- FormatFileContents iterates a Go map, producing non-deterministic file ordering across runs."
+  ]
+}

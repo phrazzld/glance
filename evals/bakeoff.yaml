@@ -1,0 +1,77 @@
+description: "Glance prompt bakeoff — v1 (legacy unstructured) vs v2 (fix/issue-52 constrained)"
+
+# Two providers run the same fixtures through different prompt versions.
+# v1: free-form technical overview, no output format constraints
+# v2: strict format (## Purpose / ## Key Roles / ## Dependencies and Caveats) + hard constraints
+providers:
+  - id: file://provider.js
+    label: prompt-v1-legacy
+    config:
+      promptVersion: v1
+
+  - id: file://provider.js
+    label: prompt-v2-constrained
+    config:
+      promptVersion: v2
+
+prompts:
+  - "{{fixtureFile}}"
+
+tests:
+  - description: "Format: required headers present (errors pkg)"
+    vars:
+      fixtureFile: fixtures/errors_pkg.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.hasRequiredHeaders(output);"
+
+  - description: "Format: required headers present (minimal)"
+    vars:
+      fixtureFile: fixtures/minimal.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.hasRequiredHeaders(output);"
+
+  - description: "Constraint: no CLI flag descriptions (config pkg)"
+    vars:
+      fixtureFile: fixtures/config_pkg.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.noCliSpeculation(output);"
+
+  - description: "Constraint: no recommendations (llm pkg)"
+    vars:
+      fixtureFile: fixtures/llm_pkg.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.noRecommendations(output);"
+
+  - description: "Constraint: no speculation (llm pkg)"
+    vars:
+      fixtureFile: fixtures/llm_pkg.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.noSpeculation(output);"
+
+  - description: "Quality: factual accuracy (llm pkg)"
+    vars:
+      fixtureFile: fixtures/llm_pkg.json
+    assert:
+      - type: llm-rubric
+        value: >
+          Does this summary accurately describe the glance/llm directory based only on the provided
+          file contents? Score 1-5. Deduct for: hallucinated functions, described CLI flags,
+          speculative language, missing key architectural information.
+        threshold: 0.7
+        provider: openrouter:deepseek/deepseek-v3.2
+
+  - description: "Sub-glance inheritance: parent references child topics"
+    vars:
+      fixtureFile: fixtures/with_subglances.json
+    assert:
+      - type: llm-rubric
+        value: >
+          Does this summary incorporate information from the subdirectory summaries?
+          It should reference topics from the errors or llm packages.
+        threshold: 0.7
+        provider: openrouter:deepseek/deepseek-v3.2
