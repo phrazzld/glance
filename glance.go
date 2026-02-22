@@ -402,6 +402,29 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		"stage":            "data_gathering_complete",
 	}).Debug("Directory data gathering complete")
 
+	// Empty directories have no content for the LLM to analyze.
+	// Calling the LLM with an empty prompt causes hallucination based on the
+	// directory path name alone (e.g., inventing Rails framework details for
+	// a Next.js project's /lib/assets). Write a minimal stub instead.
+	if len(fileContents) == 0 && strings.TrimSpace(subGlances) == "" {
+		logrus.WithField("directory", dir).Debug("Skipping LLM for empty directory — writing minimal stub")
+		stub := fmt.Sprintf("# %s\n\nEmpty directory.\n", filepath.Base(dir))
+		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
+		validatedPath, pathErr := filesystem.ValidateFilePath(glancePath, dir, true, false)
+		if pathErr != nil {
+			r.err = fmt.Errorf("invalid glance.md path for %s: %w", dir, pathErr)
+			return r
+		}
+		// #nosec G306 -- Using filesystem.DefaultFileMode (0600) for security & path validated
+		if werr := os.WriteFile(validatedPath, []byte(stub), filesystem.DefaultFileMode); werr != nil {
+			r.err = fmt.Errorf("failed writing stub glance.md to %s: %w", dir, werr)
+			return r
+		}
+		r.success = true
+		r.attempts = 0
+		return r
+	}
+
 	// Create context for LLM operations
 	ctx := context.Background()
 
