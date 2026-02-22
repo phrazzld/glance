@@ -20,6 +20,19 @@ func TestDefaultTemplate(t *testing.T) {
 	assert.Contains(t, template, "expert code reviewer")
 	assert.Contains(t, template, "technical summary")
 	assert.Contains(t, template, "respond with ONLY the sections above")
+
+	// Verify required output section headers
+	assert.Contains(t, template, "## Purpose")
+	assert.Contains(t, template, "## Key Roles")
+	assert.Contains(t, template, "## Dependencies and Caveats")
+
+	// Verify key anti-hallucination constraints
+	assert.Contains(t, template, "do NOT describe CLI flags")
+	assert.Contains(t, template, "max 8 bullets")
+	assert.Contains(t, template, "provided source snippets")
+
+	// Verify word limit constraint
+	assert.Contains(t, template, "400 words")
 }
 
 func TestGeneratePrompt(t *testing.T) {
