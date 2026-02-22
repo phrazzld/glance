@@ -402,13 +402,14 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 		"stage":            "data_gathering_complete",
 	}).Debug("Directory data gathering complete")
 
-	// Empty directories have no content for the LLM to analyze.
+	// Directories with no analyzable content have nothing for the LLM to work with.
 	// Calling the LLM with an empty prompt causes hallucination based on the
 	// directory path name alone (e.g., inventing Rails framework details for
 	// a Next.js project's /lib/assets). Write a minimal stub instead.
 	if len(fileContents) == 0 && strings.TrimSpace(subGlances) == "" {
-		logrus.WithField("directory", dir).Debug("Skipping LLM for empty directory — writing minimal stub")
-		stub := fmt.Sprintf("# %s\n\nEmpty directory.\n", filepath.Base(dir))
+		stubDesc := stubDescription(dir, subdirs)
+		logrus.WithField("directory", dir).Debug("Skipping LLM for directory with no analyzable content — writing minimal stub")
+		stub := fmt.Sprintf("# %s\n\n%s\n", filepath.Base(dir), stubDesc)
 		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		validatedPath, pathErr := filesystem.ValidateFilePath(glancePath, dir, true, false)
 		if pathErr != nil {
@@ -604,6 +605,28 @@ func readSubdirectories(dir string, ignoreChain filesystem.IgnoreChain) ([]strin
 		subdirs = append(subdirs, validPath)
 	}
 	return subdirs, nil
+}
+
+// stubDescription returns the body text for a minimal stub when no LLM-analyzable content
+// exists. It distinguishes truly empty directories from directories that have files the LLM
+// cannot process (binary, hidden, oversized, or gitignored files).
+func stubDescription(dir string, subdirs []string) string {
+	if len(subdirs) > 0 {
+		// Has subdirectories (whose own summaries were also empty) — not truly empty.
+		return "No analyzable text content."
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "Empty directory."
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if !e.IsDir() && name != filesystem.GlanceFilename && name != filesystem.LegacyGlanceFilename {
+			// At least one real file exists that GatherLocalFiles filtered out.
+			return "No analyzable text content."
+		}
+	}
+	return "Empty directory."
 }
 
 // gatherLocalFiles reads immediate files in a directory (excluding glance.md, hidden files, etc.).
