@@ -1,0 +1,11 @@
+{
+  "name": "glance-evals",
+  "private": true,
+  "description": "Promptfoo eval suite for Glance prompt quality",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "promptfoo": "^0.103.0"
+  }
+}

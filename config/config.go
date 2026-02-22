@@ -1,6 +1,8 @@
 // Package config provides configuration management for the glance application.
 package config
 
+import "glance/llm"
+
 // Config holds the application configuration parameters.
 // This structure centralizes all application settings, making them easier to
 // manage, test, and extend in the future.
@@ -33,22 +35,6 @@ const (
 	DefaultMaxFileBytes = 5 * 1024 * 1024
 )
 
-// Default prompt template used when no custom template is provided
-var defaultPromptTemplate = `you are an expert code reviewer and technical writer.
-generate a descriptive technical overview of this directory:
-- highlight purpose, architecture, and key file roles
-- mention important dependencies or gotchas
-- do NOT provide recommendations or next steps
-
-directory: {{.Directory}}
-
-subdirectory summaries:
-{{.SubGlances}}
-
-local file contents:
-{{.FileContents}}
-`
-
 // NewDefaultConfig creates a new Config with default values.
 // This provides a starting point for configuration that can be
 // customized using the With* methods.
@@ -57,7 +43,7 @@ func NewDefaultConfig() *Config {
 		APIKey:         "",
 		TargetDir:      "",
 		Force:          false,
-		PromptTemplate: defaultPromptTemplate,
+		PromptTemplate: llm.DefaultTemplate(),
 		MaxRetries:     DefaultMaxRetries,
 		MaxFileBytes:   DefaultMaxFileBytes,
 	}

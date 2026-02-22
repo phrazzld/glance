@@ -1,0 +1,7 @@
+{
+  "directory": "example/minimal",
+  "files": {
+    "add.go": "package math\n\n// Add returns the sum of two integers.\nfunc Add(a, b int) int {\n\treturn a + b\n}\n"
+  },
+  "subGlances": []
+}

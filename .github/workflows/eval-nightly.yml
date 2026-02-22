@@ -1,0 +1,129 @@
+name: Eval Nightly Full Suite
+
+# Runs full eval + bakeoff nightly to catch prompt drift.
+# Also runnable manually for on-demand bakeoff comparison.
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 3 AM UTC daily
+  workflow_dispatch:
+
+concurrency:
+  group: eval-nightly
+  cancel-in-progress: true
+
+jobs:
+  eval-full:
+    name: Full Eval + Bakeoff
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Install eval dependencies
+        run: npm install
+        working-directory: evals
+
+      - name: Run smoke eval
+        id: smoke
+        continue-on-error: true
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          npx promptfoo eval \
+            --config promptfooconfig.yaml \
+            --output smoke-results.json \
+            --no-cache
+        working-directory: evals
+
+      - name: Run bakeoff
+        id: bakeoff
+        continue-on-error: true
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          npx promptfoo eval \
+            --config bakeoff.yaml \
+            --output bakeoff-results.json \
+            --no-cache
+        working-directory: evals
+
+      - name: Check failure rate and file issue if threshold exceeded
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'EOF'
+          import json, subprocess, os, sys
+
+          results_file = 'evals/smoke-results.json'
+          if not os.path.exists(results_file):
+              print('No smoke results found — skipping threshold check')
+              sys.exit(0)
+
+          with open(results_file) as f:
+              data = json.load(f)
+
+          results = data.get('results', {}).get('results', [])
+          if not results:
+              print('Empty results — skipping threshold check')
+              sys.exit(0)
+
+          passed = sum(1 for r in results if r.get('success'))
+          total = len(results)
+          failure_rate = (total - passed) / total if total > 0 else 0
+          print(f'Eval results: {passed}/{total} passed ({failure_rate:.0%} failure rate)')
+
+          if failure_rate <= 0.2:
+              print('Failure rate within threshold — no issue filed')
+              sys.exit(0)
+
+          run_url = f"{os.environ.get('GITHUB_SERVER_URL', '')}/{os.environ.get('GH_REPO', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          body = f"""## Nightly Eval Alert
+
+          Failure rate **{failure_rate:.0%}** exceeded the 20% threshold.
+
+          **Results:** {passed}/{total} passed
+          **Date:** {__import__('datetime').date.today()}
+
+          [View workflow run]({run_url}) for full results and artifacts.
+
+          > Filed automatically by the nightly eval workflow.
+          """
+
+          result = subprocess.run(
+              ['gh', 'issue', 'create',
+               '--title', f'Nightly eval: {failure_rate:.0%} failure rate',
+               '--body', body],
+              capture_output=True, text=True
+          )
+          if result.returncode == 0:
+              print(f'Issue filed: {result.stdout.strip()}')
+          else:
+              print(f'Warning: could not file issue: {result.stderr.strip()}')
+          EOF
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: eval-nightly-results-${{ github.run_id }}
+          path: |
+            evals/smoke-results.json
+            evals/bakeoff-results.json
+          retention-days: 90
+          if-no-files-found: warn

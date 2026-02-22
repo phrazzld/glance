@@ -54,3 +54,10 @@ performance-report-*.json
 /docs/leyline
 
 .flywheel/
+
+# Eval pipeline artifacts
+evals/node_modules/
+evals/.promptfoo/
+evals/results/
+evals/*-results.json
+evals/results.json

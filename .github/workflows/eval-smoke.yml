@@ -1,0 +1,86 @@
+name: Eval Smoke Suite
+
+# Runs on PRs touching the prompt or eval infrastructure.
+# Non-blocking (continue-on-error) — serves as a regression signal, not a hard gate.
+on:
+  pull_request:
+    paths:
+      - 'llm/prompt.go'
+      - 'llm/service.go'
+      - 'evals/**'
+
+concurrency:
+  group: eval-smoke-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  eval-smoke:
+    name: Promptfoo Smoke Eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    # Non-blocking: prompt quality signal only, does not block merge
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Install eval dependencies
+        run: npm install
+        working-directory: evals
+
+      - name: Run smoke eval
+        id: eval
+        continue-on-error: true
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          npx promptfoo eval \
+            --config promptfooconfig.yaml \
+            --output results.json \
+            --no-cache
+        working-directory: evals
+
+      - name: Post eval summary to PR
+        if: github.event_name == 'pull_request' && always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f evals/results.json ]; then
+            SUMMARY=$(python3 -c "
+          import json, sys
+          with open('evals/results.json') as f:
+              data = json.load(f)
+          results = data.get('results', {}).get('results', [])
+          passed = sum(1 for r in results if r.get('success'))
+          total = len(results)
+          emoji = '\u2705' if passed == total else '\u26a0\ufe0f'
+          print(f'{emoji} Eval smoke: {passed}/{total} passed')
+            " 2>/dev/null || echo "Could not parse results")
+            gh pr comment "${{ github.event.pull_request.number }}" \
+              --body "### Eval Smoke Results
+
+          ${SUMMARY}
+
+          > Non-blocking: prompt quality regression signal only. See workflow for details." \
+              2>/dev/null || true
+          fi
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: eval-smoke-results-pr${{ github.event.pull_request.number }}
+          path: evals/results.json
+          retention-days: 30
+          if-no-files-found: warn

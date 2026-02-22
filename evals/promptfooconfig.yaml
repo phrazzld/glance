@@ -1,0 +1,73 @@
+description: "Glance eval smoke suite — validates prompt constraints and output format"
+
+providers:
+  - id: file://provider.js
+    label: glance-prompt-v2
+
+# The rendered prompt is passed to provider.callApi() but not used —
+# the provider builds its own prompt from the fixture file.
+prompts:
+  - "{{fixtureFile}}"
+
+tests:
+  - description: "Format: required headers present (errors pkg)"
+    vars:
+      fixtureFile: fixtures/errors_pkg.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.hasRequiredHeaders(output);"
+
+  - description: "Format: required headers present (minimal)"
+    vars:
+      fixtureFile: fixtures/minimal.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.hasRequiredHeaders(output);"
+
+  - description: "Constraint: no CLI flag descriptions (config pkg)"
+    vars:
+      fixtureFile: fixtures/config_pkg.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.noCliSpeculation(output);"
+
+  - description: "Constraint: no recommendations (llm pkg)"
+    vars:
+      fixtureFile: fixtures/llm_pkg.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.noRecommendations(output);"
+
+  - description: "Constraint: no speculation (llm pkg)"
+    vars:
+      fixtureFile: fixtures/llm_pkg.json
+    assert:
+      - type: javascript
+        value: "const a = require('./assertions/glance.assert.js'); return a.noSpeculation(output);"
+
+  - description: "Quality: factual accuracy (llm pkg)"
+    vars:
+      fixtureFile: fixtures/llm_pkg.json
+    assert:
+      - type: llm-rubric
+        value: >
+          Does this summary accurately describe the glance/llm directory based only on the provided
+          file contents? Score 1-5. Deduct for: hallucinated functions not present in source,
+          described CLI flags or options, speculative language, missing key architectural
+          information (such as the Client interface, GeneratePrompt, FormatFileContents,
+          or the FallbackClient retry strategy).
+        threshold: 0.7
+        provider: openrouter:deepseek/deepseek-v3.2
+
+  - description: "Sub-glance inheritance: parent references child topics"
+    vars:
+      fixtureFile: fixtures/with_subglances.json
+    assert:
+      - type: llm-rubric
+        value: >
+          Does this summary incorporate information from the subdirectory summaries provided?
+          It should reference topics from at least one of: (1) the errors package
+          (error types, codes, severity, sentinel errors), or (2) the llm package
+          (LLM client interface, failover chain, prompt generation, or FormatFileContents).
+        threshold: 0.7
+        provider: openrouter:deepseek/deepseek-v3.2
