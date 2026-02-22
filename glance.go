@@ -422,7 +422,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 			return r
 		}
 		r.success = true
-		r.attempts = 0
+		r.attempts = 1 // Counts as processed: triggers BubbleUpParents for parent regen
 		return r
 	}
 

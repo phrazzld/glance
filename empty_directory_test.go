@@ -43,6 +43,9 @@ func TestEmptyDirectorySkipsLLM(t *testing.T) {
 		assert.NoError(t, r.err)
 		mockLLMClient.AssertNotCalled(t, "Generate", mock.Anything, mock.Anything)
 
+		// Assert: attempts == 1 so BubbleUpParents fires and parent dirs get regenerated
+		assert.Equal(t, 1, r.attempts, "stub path must set attempts=1 to trigger parent propagation")
+
 		// Assert: stub file written with minimal honest content
 		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		require.FileExists(t, glancePath)
