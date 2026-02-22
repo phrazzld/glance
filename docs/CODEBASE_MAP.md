@@ -51,7 +51,7 @@ Tier 2: gemini-2.5-flash (stable fallback, Gemini SDK)
 Tier 3: x-ai/grok-4.1-fast (cross-provider, OpenRouter REST)
 ```
 
-Each tier gets `retriesPerTier` attempts with exponential backoff (250ms base, 4s cap) before advancing.
+Each tier gets `retriesPerTier` attempts with exponential backoff (200ms base, 30s cap, ±20% jitter) before advancing. `FallbackClient` is the sole retry owner — `GeminiClient.Generate` and `Service` each make a single attempt.
 
 ## Directory Structure
 
@@ -74,10 +74,11 @@ glance/
 ├── llm/
 │   ├── client.go          # Client interface + GeminiClient impl
 │   ├── client_adapter.go  # Mock adapter (breaks import cycle)
-│   ├── fallback_client.go # Multi-tier failover composite client
+│   ├── backoff.go         # Shared ExponentialBackoff with jitter
+│   ├── fallback_client.go # Multi-tier failover composite client (sole retry owner)
 │   ├── openrouter_client.go # OpenRouter REST client
 │   ├── prompt.go          # Template rendering + file formatting
-│   └── service.go         # App-layer orchestration
+│   └── service.go         # App-layer orchestration (single-attempt)
 ├── ui/
 │   └── feedback.go        # Spinner + error reporting
 ├── internal/mocks/
@@ -133,12 +134,11 @@ Core file operations with security-first design.
 LLM abstraction layer with interface-based design and composite failover.
 
 - **Client interface** — `Generate`, `GenerateStream`, `CountTokens`, `Close`
-- **GeminiClient** — Google GenAI SDK, functional options, quadratic backoff
+- **GeminiClient** — Google GenAI SDK, functional options, single-attempt Generate
 - **OpenRouterClient** — HTTP REST, fake streaming (single chunk), no token counting
-- **FallbackClient** — Composite pattern wrapping N clients with true exponential backoff
-- **Service** — Builds prompts, calls client, logs metadata
-
-**Backoff inconsistency:** GeminiClient/OpenRouterClient use quadratic (`100*attempt²`), FallbackClient uses true exponential (`250ms*2^n`).
+- **FallbackClient** — Composite pattern wrapping N clients; sole retry owner with `ExponentialBackoff` (200ms base, 30s cap, ±20% jitter)
+- **Service** — Builds prompts, calls client once, logs metadata
+- **ExponentialBackoff** (`backoff.go`) — Shared utility: `base*2^(attempt-1)`, capped at maxWait, with cryptographic ±20% jitter
 
 **Token management:** `CountTokens` is called for logging only. No automatic truncation — oversized prompts fail at the API and retry.
 
@@ -170,7 +170,7 @@ for each dir:
     ├─ gatherSubGlances() → child .glance.md content
     ├─ gatherLocalFiles() → map[filename]content
     ├─ BuildPromptData() + GeneratePrompt() → rendered prompt
-    ├─ Service.GenerateGlanceMarkdown() → LLM call with retries
+    ├─ Service.GenerateGlanceMarkdown() → single LLM call (FallbackClient retries)
     ├─ ValidateFilePath() → security check
     └─ os.WriteFile(.glance.md, 0600)
 ```
@@ -212,7 +212,7 @@ All are package-level function variables enabling test injection without constru
 ## Gotchas
 
 1. **Map iteration in prompts** — `FormatFileContents` iterates `map[string]string` non-deterministically. Same input produces different prompt orderings across runs.
-2. **Three retry layers** — Service, FallbackClient, and individual clients each retry. Worst case: `4 × (retriesPerTier+1) × 4 = 64` API calls for one directory.
+2. **Single retry owner** — Only `FallbackClient` retries. `GeminiClient.Generate` and `Service.GenerateGlanceMarkdown` are single-attempt. Worst case: `(retriesPerTier+1) × len(tiers)` API calls per directory.
 3. **Sentinel error mutation** — `errors.ErrFileNotFound.WithCause(err)` permanently mutates the global sentinel. Unsafe for concurrent use.
 4. **Symlinks not resolved** — Path validation checks string prefixes, not resolved targets. A symlink inside base pointing outside base passes validation.
 5. **Service.promptTemplate defaults to ""** — Callers must explicitly pass `WithPromptTemplate(llm.DefaultTemplate())` or get empty prompts.

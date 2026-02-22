@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"glance/internal/mocks"
 )
@@ -288,6 +289,43 @@ func TestSleepWithContextCanceled(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestFallbackClientContextCancelDuringRetry(t *testing.T) {
+	prompt := "test prompt"
+
+	primaryMock := new(mocks.LLMClient)
+	primary := NewMockClientAdapter(primaryMock)
+
+	// First attempt fails, triggering a backoff sleep
+	primaryMock.
+		On("Generate", mock.Anything, prompt).
+		Return("", errors.New("transient")).
+		Once()
+	primaryMock.On("Close").Return().Once()
+
+	client, err := NewFallbackClientWithBackoff(
+		[]FallbackTier{{Name: "primary", Client: primary}},
+		2,           // 2 retries = 3 attempts
+		time.Second, // long backoff so cancel fires during sleep
+		5*time.Second,
+	)
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Cancel after a short delay — during the backoff sleep
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	_, genErr := client.Generate(ctx, prompt)
+	assert.Error(t, genErr)
+	assert.ErrorIs(t, genErr, context.Canceled)
+
+	client.Close()
+	primaryMock.AssertExpectations(t)
+}
+
 func TestFallbackClientBackoffCap(t *testing.T) {
 	clientIface, err := NewFallbackClientWithBackoff(
 		[]FallbackTier{{Name: "tier", Client: NewMockClientAdapter(new(mocks.LLMClient))}},
@@ -299,6 +337,12 @@ func TestFallbackClientBackoffCap(t *testing.T) {
 
 	client, ok := clientIface.(*FallbackClient)
 	assert.True(t, ok)
-	assert.Equal(t, 2*time.Millisecond, client.retryBackoff(1))
-	assert.Equal(t, 3*time.Millisecond, client.retryBackoff(3)) // capped
+
+	attemptOne := ExponentialBackoff(1, client.baseBackoff, client.maxBackoff)
+	assert.GreaterOrEqual(t, attemptOne, 1600*time.Microsecond)
+	assert.LessOrEqual(t, attemptOne, 2400*time.Microsecond)
+
+	capped := ExponentialBackoff(3, client.baseBackoff, client.maxBackoff)
+	assert.GreaterOrEqual(t, capped, 2400*time.Microsecond)
+	assert.LessOrEqual(t, capped, 3*time.Millisecond)
 }

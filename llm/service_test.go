@@ -35,7 +35,6 @@ func TestNewService(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		assert.Equal(t, adapter, service.client)
-		assert.Equal(t, DefaultServiceConfig().MaxRetries, service.maxRetries)
 		assert.Equal(t, DefaultServiceConfig().ModelName, service.modelName)
 	})
 
@@ -43,12 +42,12 @@ func TestNewService(t *testing.T) {
 	t.Run("Valid client with custom options", func(t *testing.T) {
 		mockClient := new(mocks.LLMClient)
 		adapter := NewMockClientAdapter(mockClient)
-		customRetries := 10
-		service, err := NewService(adapter, WithServiceMaxRetries(customRetries))
+		customModel := "custom-model"
+		service, err := NewService(adapter, WithServiceModelName(customModel))
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
-		assert.Equal(t, customRetries, service.maxRetries)
+		assert.Equal(t, customModel, service.modelName)
 	})
 
 	// Test with multiple options
@@ -56,13 +55,14 @@ func TestNewService(t *testing.T) {
 		mockClient := new(mocks.LLMClient)
 		adapter := NewMockClientAdapter(mockClient)
 		service, err := NewService(adapter,
-			WithServiceMaxRetries(5),
-			WithServiceModelName("custom-model"))
+			WithServiceModelName("custom-model"),
+			WithPromptTemplate("custom template"),
+		)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
-		assert.Equal(t, 5, service.maxRetries)
 		assert.Equal(t, "custom-model", service.modelName)
+		assert.Equal(t, "custom template", service.promptTemplate)
 	})
 }
 
@@ -100,44 +100,18 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 		mockClient.AssertExpectations(t)
 	})
 
-	// Test with retries
-	t.Run("Generation succeeds after retries", func(t *testing.T) {
+	// Test generation failure on single attempt
+	t.Run("Generation fails", func(t *testing.T) {
 		// Reset mock
 		mockClient = new(mocks.LLMClient)
 		adapter = NewMockClientAdapter(mockClient)
 
-		// Setup service with mock client and 3 retries
-		service, err := NewService(adapter, WithServiceMaxRetries(3), WithPromptTemplate("test template"))
+		service, err := NewService(adapter, WithPromptTemplate("test template"))
 		assert.NoError(t, err)
 
-		// Setup expectations - first 2 attempts fail, 3rd succeeds
-		expectedError := errors.New("API error")
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return("", expectedError).Times(2)
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return(expectedResponse, nil).Once()
-		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
-
-		// Call the method
-		result, err := service.GenerateGlanceMarkdown(ctx, dir, fileMap, subGlances)
-
-		// Verify results
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResponse, result)
-		mockClient.AssertExpectations(t)
-	})
-
-	// Test with all retries failing
-	t.Run("All retries fail", func(t *testing.T) {
-		// Reset mock
-		mockClient = new(mocks.LLMClient)
-		adapter = NewMockClientAdapter(mockClient)
-
-		// Setup service with mock client and 2 retries
-		service, err := NewService(adapter, WithServiceMaxRetries(2), WithPromptTemplate("test template"))
-		assert.NoError(t, err)
-
-		// Setup expectations - all attempts fail
+		// Setup expectations - single attempt fails
 		expectedError := errors.New("persistent API error")
-		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return("", expectedError).Times(3)
+		mockClient.On("Generate", ctx, mock.AnythingOfType("string")).Return("", expectedError).Once()
 		mockClient.On("CountTokens", ctx, mock.AnythingOfType("string")).Return(100, nil).Maybe()
 
 		// Call the method
@@ -207,18 +181,11 @@ func TestGenerateGlanceMarkdown(t *testing.T) {
 func TestServiceConfig(t *testing.T) {
 	// Test default config
 	defaults := DefaultServiceConfig()
-	assert.Greater(t, defaults.MaxRetries, 0)
 	assert.NotEmpty(t, defaults.ModelName)
 
 	// Test config option functions
 	// Create test config instance
 	testConfig := DefaultServiceConfig()
-
-	// Test WithServiceMaxRetries
-	retries := 5
-	retriesOption := WithServiceMaxRetries(retries)
-	retriesOption(&testConfig)
-	assert.Equal(t, retries, testConfig.MaxRetries)
 
 	// Test WithServiceModelName
 	modelName := "custom-model"
@@ -231,22 +198,17 @@ func TestServiceConfig(t *testing.T) {
 
 	// Test applying multiple options
 	testConfig = DefaultServiceConfig()
-	retriesOption(&testConfig)
 	modelOption(&testConfig)
+	WithPromptTemplate("custom template")(&testConfig)
 
-	assert.Equal(t, retries, testConfig.MaxRetries)
 	assert.Equal(t, modelName, testConfig.ModelName)
+	assert.Equal(t, "custom template", testConfig.PromptTemplate)
 }
 
 func TestServiceConfigFunctions(t *testing.T) {
 	// Test the config functions directly
 	// Create base config
 	config := DefaultServiceConfig()
-
-	// Apply WithServiceMaxRetries
-	maxRetriesOption := WithServiceMaxRetries(7)
-	maxRetriesOption(&config)
-	assert.Equal(t, 7, config.MaxRetries)
 
 	// Apply WithServiceModelName
 	modelNameOption := WithServiceModelName("functional-option-model")
@@ -260,10 +222,6 @@ func TestServiceConfigFunctions(t *testing.T) {
 	assert.Equal(t, promptTemplate, config.PromptTemplate)
 
 	// Test invalid option values (should still work)
-	negativeRetries := WithServiceMaxRetries(-1)
-	negativeRetries(&config)
-	assert.Equal(t, -1, config.MaxRetries) // Should allow negative values even if they're invalid
-
 	emptyModel := WithServiceModelName("")
 	emptyModel(&config)
 	assert.Equal(t, "", config.ModelName) // Should allow empty string even if it's invalid

@@ -102,7 +102,10 @@ type ClientOptions struct {
 	// ModelName is the name of the model to use (e.g., "gemini-3-flash-preview")
 	ModelName string
 
-	// MaxRetries is the number of times to retry failed API calls
+	// MaxRetries controls retry behavior for CountTokens and GenerateStream.
+	// Generate is always single-attempt and delegates retries to FallbackClient.
+	// Defaults to 0 (single-attempt for all methods); set via WithMaxRetries to
+	// enable retries for CountTokens/GenerateStream.
 	MaxRetries int
 
 	// Timeout is the maximum time in seconds to wait for API responses
@@ -139,7 +142,7 @@ func DefaultClientOptions() ClientOptions {
 	return ClientOptions{
 		// Basic configuration
 		ModelName:  "gemini-3-flash-preview",
-		MaxRetries: 3,
+		MaxRetries: 0,
 		Timeout:    60, // 60 seconds
 
 		// Generation parameters with reasonable defaults
@@ -336,8 +339,6 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 		genCtx = ctx
 	}
 
-	var lastError error
-
 	// Prepare the content for the request
 	contents := []*genai.Content{
 		genai.NewContentFromText(prompt, "user"),
@@ -393,88 +394,56 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 		contents = append([]*genai.Content{systemContent}, contents...)
 	}
 
-	// Retry logic: MaxRetries means retries after the initial attempt
-	maxAttempts := c.options.MaxRetries + 1
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if attempt > 1 {
-			logrus.WithFields(logrus.Fields{
-				"attempt":     attempt,
-				"max_retries": c.options.MaxRetries,
-			}).Debug("Retry attempt for generating content")
+	// Use non-streaming API with our configured generation options.
+	resp, err := c.client.Models.GenerateContent(genCtx, c.model, contents, genConfig)
+	if err != nil {
+		// Handle context deadline exceeded specifically.
+		if errors.Is(err, context.DeadlineExceeded) {
+			return "", customerrors.WrapAPIError(err, "content generation timed out").
+				WithCode("GENAI-005").
+				WithSuggestion("Consider increasing the timeout value")
 		}
 
-		// Use non-streaming API with our configured generation options
-		resp, err := c.client.Models.GenerateContent(genCtx, c.model, contents, genConfig)
-		if err != nil {
-			// Detect specific API error types
-			lastError = customerrors.WrapAPIError(err, "failed to generate content").
-				WithCode("GENAI-004")
-
-			// Handle context deadline exceeded error specifically
-			if errors.Is(err, context.DeadlineExceeded) {
-				lastError = customerrors.WrapAPIError(err, "content generation timed out").
-					WithCode("GENAI-005").
-					WithSuggestion("Consider increasing the timeout value")
-			}
-
-			// Simple backoff before retry
-			if attempt < c.options.MaxRetries {
-				backoffMs := 100 * attempt * attempt // Exponential backoff
-				time.Sleep(time.Duration(backoffMs) * time.Millisecond)
-			}
-			continue
-		}
-
-		// Check if we have valid candidates
-		if resp == nil || len(resp.Candidates) == 0 {
-			lastError = customerrors.NewAPIError("received empty response from API", nil).
-				WithCode("GENAI-006").
-				WithSuggestion("Check if the prompt contains content that may be filtered")
-
-			// Simple backoff before retry
-			if attempt < c.options.MaxRetries {
-				backoffMs := 100 * attempt * attempt // Exponential backoff
-				time.Sleep(time.Duration(backoffMs) * time.Millisecond)
-			}
-			continue
-		}
-
-		// Check for finish reason issues
-		if resp.Candidates[0].FinishReason != "FINISHED" && resp.Candidates[0].FinishReason != "STOP" {
-			// Handle various non-success finish reasons
-			reason := resp.Candidates[0].FinishReason
-			if reason == "SAFETY" {
-				lastError = customerrors.NewAPIError("content blocked by safety settings", nil).
-					WithCode("GENAI-007").
-					WithSuggestion("Modify the prompt to avoid potentially harmful content")
-			} else {
-				lastError = customerrors.NewAPIError(fmt.Sprintf("generation incomplete: %s", reason), nil).
-					WithCode("GENAI-008")
-			}
-
-			// Simple backoff before retry
-			if attempt < c.options.MaxRetries {
-				backoffMs := 100 * attempt * attempt // Exponential backoff
-				time.Sleep(time.Duration(backoffMs) * time.Millisecond)
-			}
-			continue
-		}
-
-		// Extract text from the response
-		var result strings.Builder
-		for _, part := range resp.Candidates[0].Content.Parts {
-			if part.Text != "" {
-				result.WriteString(part.Text)
-			}
-		}
-
-		return result.String(), nil
+		return "", customerrors.WrapAPIError(err, "failed to generate content").
+			WithCode("GENAI-004")
 	}
 
-	// If we get here, all retries failed
-	return "", customerrors.WrapAPIError(lastError, fmt.Sprintf("failed to generate content after %d attempts", c.options.MaxRetries)).
-		WithCode("GENAI-009").
-		WithSuggestion("Check internet connectivity, API key validity, and prompt content")
+	// Check if we have valid candidates.
+	if resp == nil || len(resp.Candidates) == 0 {
+		return "", customerrors.NewAPIError("received empty response from API", nil).
+			WithCode("GENAI-006").
+			WithSuggestion("Check if the prompt contains content that may be filtered")
+	}
+
+	// Check for finish reason issues.
+	if resp.Candidates[0].FinishReason != genai.FinishReasonStop {
+		reason := resp.Candidates[0].FinishReason
+		if reason == genai.FinishReasonSafety {
+			return "", customerrors.NewAPIError("content blocked by safety settings", nil).
+				WithCode("GENAI-007").
+				WithSuggestion("Modify the prompt to avoid potentially harmful content")
+		}
+
+		return "", customerrors.NewAPIError(fmt.Sprintf("generation incomplete: %s", reason), nil).
+			WithCode("GENAI-008")
+	}
+
+	// Guard against nil Content even on successful finish reasons.
+	if resp.Candidates[0].Content == nil || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", customerrors.NewAPIError("response contains no content parts", nil).
+			WithCode("GENAI-009").
+			WithSuggestion("Check if the prompt contains content that may be filtered")
+	}
+
+	// Extract text from the response.
+	var result strings.Builder
+	for _, part := range resp.Candidates[0].Content.Parts {
+		if part.Text != "" {
+			result.WriteString(part.Text)
+		}
+	}
+
+	return result.String(), nil
 }
 
 // CountTokens implements the Client interface for GeminiClient.
@@ -696,9 +665,9 @@ func (c *GeminiClient) GenerateStream(ctx context.Context, prompt string) (<-cha
 					candidate := resp.Candidates[0]
 
 					// Check for finish reason issues
-					if candidate.FinishReason != "" && candidate.FinishReason != "FINISHED" && candidate.FinishReason != "STOP" {
+					if candidate.FinishReason != "" && candidate.FinishReason != genai.FinishReasonStop {
 						reason := candidate.FinishReason
-						if reason == "SAFETY" {
+						if reason == genai.FinishReasonSafety {
 							lastError = customerrors.NewAPIError("content blocked by safety settings", nil).
 								WithCode("GENAI-019").
 								WithSuggestion("Modify the prompt to avoid potentially harmful content")

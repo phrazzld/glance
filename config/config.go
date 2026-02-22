@@ -19,7 +19,7 @@ type Config struct {
 	// PromptTemplate contains the template text used for generating prompts
 	PromptTemplate string
 
-	// MaxRetries defines how many times to retry API calls before giving up
+	// MaxRetries defines retries per tier in the fallback LLM chain.
 	MaxRetries int
 
 	// MaxFileBytes is the maximum file size in bytes to process (larger files are truncated)
@@ -28,7 +28,7 @@ type Config struct {
 
 // Default constants used in configuration
 const (
-	// DefaultMaxRetries is the default number of API retry attempts
+	// DefaultMaxRetries is the default retries per fallback tier.
 	DefaultMaxRetries = 3
 
 	// DefaultMaxFileBytes is the default maximum file size (5MB)
