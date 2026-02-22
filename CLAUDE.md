@@ -64,7 +64,7 @@ CI blocks merge on any failure. Local pre-commit hooks mirror CI.
 * **Output file is `.glance.md`** (dot-prefix) — legacy `glance.md` is read but not written.
 * **File permissions:** All output uses `0600`. Security boundary enforced by `ValidateFilePath` before every read.
 * **Prompt map ordering:** `FormatFileContents` iterates a Go map — non-deterministic order across runs.
-* **Three retry layers:** Service + FallbackClient + individual client. Can amplify to 64 API calls worst case.
+* **Single retry owner:** Only `FallbackClient` retries. `GeminiClient.Generate` and `Service` are single-attempt. Worst case: `(retriesPerTier+1) × len(tiers)` calls.
 * **Sentinel errors are mutable** — known bug tracked in issue #60; `WithCause()` modifies globals and should return a new error value instead.
 * **Symlinks not resolved** in path validation — documented known gap.
 
