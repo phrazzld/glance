@@ -416,9 +416,9 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 	}
 
 	// Check for finish reason issues.
-	if resp.Candidates[0].FinishReason != "FINISHED" && resp.Candidates[0].FinishReason != "STOP" {
+	if resp.Candidates[0].FinishReason != genai.FinishReasonStop {
 		reason := resp.Candidates[0].FinishReason
-		if reason == "SAFETY" {
+		if reason == genai.FinishReasonSafety {
 			return "", customerrors.NewAPIError("content blocked by safety settings", nil).
 				WithCode("GENAI-007").
 				WithSuggestion("Modify the prompt to avoid potentially harmful content")
@@ -665,9 +665,9 @@ func (c *GeminiClient) GenerateStream(ctx context.Context, prompt string) (<-cha
 					candidate := resp.Candidates[0]
 
 					// Check for finish reason issues
-					if candidate.FinishReason != "" && candidate.FinishReason != "FINISHED" && candidate.FinishReason != "STOP" {
+					if candidate.FinishReason != "" && candidate.FinishReason != genai.FinishReasonStop {
 						reason := candidate.FinishReason
-						if reason == "SAFETY" {
+						if reason == genai.FinishReasonSafety {
 							lastError = customerrors.NewAPIError("content blocked by safety settings", nil).
 								WithCode("GENAI-019").
 								WithSuggestion("Modify the prompt to avoid potentially harmful content")

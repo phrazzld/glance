@@ -51,7 +51,7 @@ Tier 2: gemini-2.5-flash (stable fallback, Gemini SDK)
 Tier 3: x-ai/grok-4.1-fast (cross-provider, OpenRouter REST)
 ```
 
-Each tier gets `retriesPerTier` attempts with exponential backoff (200ms base, 30s cap, ±20% jitter) before advancing. `FallbackClient` is the sole retry owner — `GeminiClient` and `Service` each make a single attempt.
+Each tier gets `retriesPerTier` attempts with exponential backoff (200ms base, 30s cap, ±20% jitter) before advancing. `FallbackClient` is the sole retry owner — `GeminiClient.Generate` and `Service` each make a single attempt.
 
 ## Directory Structure
 
