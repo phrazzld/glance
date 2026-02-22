@@ -102,8 +102,10 @@ type ClientOptions struct {
 	// ModelName is the name of the model to use (e.g., "gemini-3-flash-preview")
 	ModelName string
 
-	// MaxRetries controls retry behavior for methods that support retries.
-	// Generate is single-attempt and relies on FallbackClient for retries.
+	// MaxRetries controls retry behavior for CountTokens and GenerateStream.
+	// Generate is always single-attempt and delegates retries to FallbackClient.
+	// Defaults to 0 (single-attempt for all methods); set via WithMaxRetries to
+	// enable retries for CountTokens/GenerateStream.
 	MaxRetries int
 
 	// Timeout is the maximum time in seconds to wait for API responses
