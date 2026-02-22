@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"glance/internal/mocks"
 )
@@ -286,6 +287,43 @@ func TestSleepWithContextCanceled(t *testing.T) {
 
 	err := sleepWithContext(ctx, 10*time.Millisecond)
 	assert.Error(t, err)
+}
+
+func TestFallbackClientContextCancelDuringRetry(t *testing.T) {
+	prompt := "test prompt"
+
+	primaryMock := new(mocks.LLMClient)
+	primary := NewMockClientAdapter(primaryMock)
+
+	// First attempt fails, triggering a backoff sleep
+	primaryMock.
+		On("Generate", mock.Anything, prompt).
+		Return("", errors.New("transient")).
+		Once()
+	primaryMock.On("Close").Return().Once()
+
+	client, err := NewFallbackClientWithBackoff(
+		[]FallbackTier{{Name: "primary", Client: primary}},
+		2,           // 2 retries = 3 attempts
+		time.Second, // long backoff so cancel fires during sleep
+		5*time.Second,
+	)
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Cancel after a short delay — during the backoff sleep
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	_, genErr := client.Generate(ctx, prompt)
+	assert.Error(t, genErr)
+	assert.ErrorIs(t, genErr, context.Canceled)
+
+	client.Close()
+	primaryMock.AssertExpectations(t)
 }
 
 func TestFallbackClientBackoffCap(t *testing.T) {

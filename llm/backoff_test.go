@@ -37,4 +37,27 @@ func TestExponentialBackoff(t *testing.T) {
 			assert.LessOrEqual(t, wait, 120*time.Millisecond)
 		}
 	})
+
+	t.Run("returns zero for non-positive base", func(t *testing.T) {
+		assert.Equal(t, time.Duration(0), ExponentialBackoff(1, 0, maxWait))
+		assert.Equal(t, time.Duration(0), ExponentialBackoff(1, -time.Second, maxWait))
+	})
+
+	t.Run("returns zero for non-positive maxWait", func(t *testing.T) {
+		assert.Equal(t, time.Duration(0), ExponentialBackoff(1, base, 0))
+		assert.Equal(t, time.Duration(0), ExponentialBackoff(1, base, -time.Second))
+	})
+
+	t.Run("caps when base exceeds maxWait", func(t *testing.T) {
+		wait := ExponentialBackoff(1, 5*time.Second, time.Second)
+		// base > maxWait: doubling loop doesn't run, wait caps to maxWait
+		assert.LessOrEqual(t, wait, time.Second)
+	})
+
+	t.Run("large attempt does not overflow", func(t *testing.T) {
+		wait := ExponentialBackoff(100, base, maxWait)
+		// Must cap at maxWait regardless of attempt count
+		assert.GreaterOrEqual(t, wait, 8*time.Second) // maxWait * 0.8
+		assert.LessOrEqual(t, wait, maxWait)
+	})
 }
