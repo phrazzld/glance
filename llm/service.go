@@ -92,7 +92,7 @@ func NewService(client Client, options ...func(*ServiceConfig)) (*Service, error
 //
 // Returns:
 //   - The generated markdown content
-//   - An error if generation fails after all retries
+//   - An error if generation fails
 func (s *Service) GenerateGlanceMarkdown(ctx context.Context, dir string, fileMap map[string]string, subGlances string) (string, error) {
 	// Build prompt data
 	promptData := BuildPromptData(dir, subGlances, fileMap)
