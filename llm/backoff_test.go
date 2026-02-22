@@ -7,6 +7,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestExponentialBackoffJitter(t *testing.T) {
+	const samples = 100
+	base := 100 * time.Millisecond
+	maxWait := 10 * time.Second
+
+	results := make([]time.Duration, samples)
+	for i := range results {
+		results[i] = ExponentialBackoff(1, base, maxWait)
+	}
+
+	// All samples must be within ±20% of base.
+	lo, hi := 80*time.Millisecond, 120*time.Millisecond
+	for _, d := range results {
+		assert.GreaterOrEqual(t, d, lo)
+		assert.LessOrEqual(t, d, hi)
+	}
+
+	// Jitter must produce variance: at least two distinct values across 100 draws.
+	first := results[0]
+	allSame := true
+	for _, d := range results[1:] {
+		if d != first {
+			allSame = false
+			break
+		}
+	}
+	assert.False(t, allSame, "expected jitter to produce distinct values across %d samples", samples)
+}
+
 func TestExponentialBackoff(t *testing.T) {
 	base := 100 * time.Millisecond
 	maxWait := 10 * time.Second
