@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/phrazzld/glance/compare/v1.1.2...v1.1.3) (2026-02-22)
+
+
+### Bug Fixes
+
+* skip LLM for empty directories, write minimal stub instead ([#63](https://github.com/phrazzld/glance/issues/63)) ([40547bf](https://github.com/phrazzld/glance/commit/40547bfb6b4cbe864bb32a7526c1417a84c619ea)), closes [#61](https://github.com/phrazzld/glance/issues/61)
+
 ## [1.1.2](https://github.com/phrazzld/glance/compare/v1.1.1...v1.1.2) (2026-02-22)
 
 
