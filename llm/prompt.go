@@ -5,6 +5,7 @@ package llm
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -97,9 +98,16 @@ func GeneratePrompt(data *PromptData, templateStr string) (string, error) {
 // Returns:
 //   - A formatted string containing all file contents
 func FormatFileContents(fileMap map[string]string) string {
+	keys := make([]string, 0, len(fileMap))
+	for filename := range fileMap {
+		keys = append(keys, filename)
+	}
+	sort.Strings(keys)
+
 	var builder strings.Builder
 
-	for filename, content := range fileMap {
+	for _, filename := range keys {
+		content := fileMap[filename]
 		builder.WriteString(fmt.Sprintf("=== file: %s ===\n%s\n\n", filename, content))
 	}
 
