@@ -400,6 +400,7 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	if len(fileContents) == 0 && strings.TrimSpace(subGlances) == "" {
 		stubDesc := stubDescription(dir, subdirs)
 		logrus.WithField("directory", dir).Debug("Skipping LLM for directory with no analyzable content — writing minimal stub")
+		// Base(dir) is intentional: stub heading is a display label, not a path reference.
 		stub := fmt.Sprintf("# %s\n\n%s\n", filepath.Base(dir), stubDesc)
 		glancePath := filepath.Join(dir, filesystem.GlanceFilename)
 		validatedPath, pathErr := filesystem.ValidateFilePath(glancePath, dir, true, false)
@@ -420,13 +421,25 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// Create context for LLM operations
 	ctx := context.Background()
 
-	// Generate markdown content using the LLM service
+	// Use relative path in the LLM prompt to avoid leaking machine-specific paths.
+	// Both cfg.TargetDir and dir are absolute (enforced by LoadConfig + scanning),
+	// so Rel should never fail; the fallback is a safeguard, not an expected code path.
+	relDir, relErr := filepath.Rel(cfg.TargetDir, dir)
+	if relErr != nil {
+		logrus.WithFields(logrus.Fields{
+			"root":  cfg.TargetDir,
+			"dir":   dir,
+			"error": relErr,
+		}).Warn("filepath.Rel failed; falling back to Base — absolute path may appear in LLM prompt")
+		relDir = filepath.Base(dir)
+	}
+
 	logrus.WithFields(logrus.Fields{
 		"directory": dir,
 		"stage":     "llm_generation",
 	}).Debug("Generating markdown content using LLM service")
 
-	summary, llmErr := llmService.GenerateGlanceMarkdown(ctx, dir, fileContents, subGlances)
+	summary, llmErr := llmService.GenerateGlanceMarkdown(ctx, relDir, fileContents, subGlances)
 	if llmErr != nil {
 		logrus.WithFields(logrus.Fields{
 			"directory": dir,
