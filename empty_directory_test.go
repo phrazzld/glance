@@ -76,8 +76,38 @@ func TestProcessDirectoryUsesRelativePathForRoot(t *testing.T) {
 	r := processDirectory(root, true, ignoreChain, cfg, service)
 
 	require.True(t, r.success, "processDirectory should succeed: %v", r.err)
+	assert.Equal(t, "dir: .", capturedPrompt, "root dir should render exactly as '.'")
+}
+
+// TestProcessDirectoryUsesRelativePathForNestedDir verifies multi-level paths are fully relativized.
+func TestProcessDirectoryUsesRelativePathForNestedDir(t *testing.T) {
+	root, err := os.MkdirTemp("", "glance-relpath-nested-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(root)
+
+	nested := filepath.Join(root, "pkg", "auth")
+	require.NoError(t, os.MkdirAll(nested, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(nested, "token.go"), []byte("package auth\n"), 0600))
+
+	var capturedPrompt string
+	mockLLMClient := new(mocks.LLMClient)
+	mockClient := &MockClient{LLMClient: mockLLMClient}
+	mockLLMClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
+		Run(func(args mock.Arguments) { capturedPrompt = args.String(1) }).
+		Return("# summary\n", nil)
+	mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(10, nil).Maybe()
+
+	service, err := llm.NewService(mockClient, llm.WithPromptTemplate("dir: {{.Directory}}"))
+	require.NoError(t, err)
+
+	cfg := config.NewDefaultConfig().WithTargetDir(root).WithMaxFileBytes(1 << 20)
+	ignoreChain := filesystem.IgnoreChain{}
+
+	r := processDirectory(nested, true, ignoreChain, cfg, service)
+
+	require.True(t, r.success, "processDirectory should succeed: %v", r.err)
 	assert.NotContains(t, capturedPrompt, root, "prompt must not contain the absolute root path")
-	assert.Contains(t, capturedPrompt, ".", "root dir should be represented as '.'")
+	assert.Equal(t, "dir: pkg/auth", capturedPrompt, "nested path should render as full relative path")
 }
 
 // TestEmptyDirectorySkipsLLM verifies that processDirectory writes a minimal stub for empty
