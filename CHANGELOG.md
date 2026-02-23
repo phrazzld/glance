@@ -1,3 +1,10 @@
+## [1.1.4](https://github.com/phrazzld/glance/compare/v1.1.3...v1.1.4) (2026-02-23)
+
+
+### Bug Fixes
+
+* **prompt:** use relative paths in LLM prompt instead of absolute ([#69](https://github.com/phrazzld/glance/issues/69)) ([ceb9052](https://github.com/phrazzld/glance/commit/ceb9052a4c708b3d4fc653749fa349dc571a8c3a)), closes [#51](https://github.com/phrazzld/glance/issues/51)
+
 ## [1.1.3](https://github.com/phrazzld/glance/compare/v1.1.2...v1.1.3) (2026-02-22)
 
 
