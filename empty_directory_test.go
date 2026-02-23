@@ -16,6 +16,70 @@ import (
 	"glance/llm"
 )
 
+// TestProcessDirectoryUsesRelativePath verifies that the prompt sent to the LLM contains
+// only the relative path from cfg.TargetDir, not the absolute machine path.
+func TestProcessDirectoryUsesRelativePath(t *testing.T) {
+	// Arrange: root dir as TargetDir, with a subdirectory "src" containing a file
+	root, err := os.MkdirTemp("", "glance-relpath-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(root)
+
+	subdir := filepath.Join(root, "src")
+	require.NoError(t, os.Mkdir(subdir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(subdir, "main.go"), []byte("package main\n"), 0600))
+
+	var capturedPrompt string
+	mockLLMClient := new(mocks.LLMClient)
+	mockClient := &MockClient{LLMClient: mockLLMClient}
+	mockLLMClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
+		Run(func(args mock.Arguments) { capturedPrompt = args.String(1) }).
+		Return("# summary\n", nil)
+	mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(10, nil).Maybe()
+
+	service, err := llm.NewService(mockClient, llm.WithPromptTemplate("dir: {{.Directory}}"))
+	require.NoError(t, err)
+
+	cfg := config.NewDefaultConfig().WithTargetDir(root).WithMaxFileBytes(1 << 20)
+	ignoreChain := filesystem.IgnoreChain{}
+
+	// Act
+	r := processDirectory(subdir, true, ignoreChain, cfg, service)
+
+	// Assert
+	require.True(t, r.success, "processDirectory should succeed: %v", r.err)
+	assert.NotContains(t, capturedPrompt, root, "prompt must not contain the absolute root path")
+	assert.Contains(t, capturedPrompt, "src", "prompt should contain the relative directory name")
+}
+
+// TestProcessDirectoryUsesRelativePathForRoot verifies root directory is represented as "."
+func TestProcessDirectoryUsesRelativePathForRoot(t *testing.T) {
+	root, err := os.MkdirTemp("", "glance-relpath-root-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(root)
+
+	require.NoError(t, os.WriteFile(filepath.Join(root, "main.go"), []byte("package main\n"), 0600))
+
+	var capturedPrompt string
+	mockLLMClient := new(mocks.LLMClient)
+	mockClient := &MockClient{LLMClient: mockLLMClient}
+	mockLLMClient.On("Generate", mock.Anything, mock.AnythingOfType("string")).
+		Run(func(args mock.Arguments) { capturedPrompt = args.String(1) }).
+		Return("# summary\n", nil)
+	mockLLMClient.On("CountTokens", mock.Anything, mock.Anything).Return(10, nil).Maybe()
+
+	service, err := llm.NewService(mockClient, llm.WithPromptTemplate("dir: {{.Directory}}"))
+	require.NoError(t, err)
+
+	cfg := config.NewDefaultConfig().WithTargetDir(root).WithMaxFileBytes(1 << 20)
+	ignoreChain := filesystem.IgnoreChain{}
+
+	r := processDirectory(root, true, ignoreChain, cfg, service)
+
+	require.True(t, r.success, "processDirectory should succeed: %v", r.err)
+	assert.NotContains(t, capturedPrompt, root, "prompt must not contain the absolute root path")
+	assert.Contains(t, capturedPrompt, ".", "root dir should be represented as '.'")
+}
+
 // TestEmptyDirectorySkipsLLM verifies that processDirectory writes a minimal stub for empty
 // directories and never calls the LLM — preventing hallucination from directory path names.
 func TestEmptyDirectorySkipsLLM(t *testing.T) {

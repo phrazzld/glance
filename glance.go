@@ -420,13 +420,19 @@ func processDirectory(dir string, forceDir bool, ignoreChain filesystem.IgnoreCh
 	// Create context for LLM operations
 	ctx := context.Background()
 
-	// Generate markdown content using the LLM service
+	// Generate markdown content using the LLM service.
+	// Use relative path to avoid leaking machine-specific paths to external LLMs.
+	relDir, relErr := filepath.Rel(cfg.TargetDir, dir)
+	if relErr != nil {
+		relDir = filepath.Base(dir)
+	}
+
 	logrus.WithFields(logrus.Fields{
 		"directory": dir,
 		"stage":     "llm_generation",
 	}).Debug("Generating markdown content using LLM service")
 
-	summary, llmErr := llmService.GenerateGlanceMarkdown(ctx, dir, fileContents, subGlances)
+	summary, llmErr := llmService.GenerateGlanceMarkdown(ctx, relDir, fileContents, subGlances)
 	if llmErr != nil {
 		logrus.WithFields(logrus.Fields{
 			"directory": dir,
