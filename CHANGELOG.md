@@ -1,3 +1,10 @@
+## [1.1.5](https://github.com/phrazzld/glance/compare/v1.1.4...v1.1.5) (2026-02-24)
+
+
+### Bug Fixes
+
+* **prompt:** sort filenames in FormatFileContents for deterministic output ([#70](https://github.com/phrazzld/glance/issues/70)) ([0e21975](https://github.com/phrazzld/glance/commit/0e219750e27dc7f0cd8f0d69cb506e9b905de81a))
+
 ## [1.1.4](https://github.com/phrazzld/glance/compare/v1.1.3...v1.1.4) (2026-02-23)
 
 
