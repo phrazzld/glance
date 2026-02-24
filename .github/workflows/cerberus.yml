@@ -18,7 +18,7 @@ jobs:
     outputs:
       is_draft: ${{ steps.draft.outputs.is_draft }}
     steps:
-      - uses: misty-step/cerberus/draft-check@db5610f105b9c3cb7f78447dc68838d9f041f465 # v2.27.0
+      - uses: misty-step/cerberus/draft-check@master
         id: draft
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: misty-step/cerberus/validate@db5610f105b9c3cb7f78447dc68838d9f041f465 # v2.27.0
+      - uses: misty-step/cerberus/validate@master
 
   matrix:
     needs: validate
@@ -40,7 +40,7 @@ jobs:
       matrix: ${{ steps.generate.outputs.matrix }}
       count: ${{ steps.generate.outputs.count }}
     steps:
-      - uses: misty-step/cerberus/matrix@db5610f105b9c3cb7f78447dc68838d9f041f465 # v2.27.0
+      - uses: misty-step/cerberus/matrix@master
         id: generate
 
   review:
@@ -57,7 +57,7 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: misty-step/cerberus@db5610f105b9c3cb7f78447dc68838d9f041f465 # v2.27.0
+      - uses: misty-step/cerberus@master
         with:
           perspective: ${{ matrix.perspective }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -78,6 +78,6 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: misty-step/cerberus/verdict@db5610f105b9c3cb7f78447dc68838d9f041f465 # v2.27.0
+      - uses: misty-step/cerberus/verdict@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

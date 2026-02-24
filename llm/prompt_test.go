@@ -129,8 +129,8 @@ func TestFormatFileContents(t *testing.T) {
 	// Test with normal input
 	t.Run("Normal file map", func(t *testing.T) {
 		fileMap := map[string]string{
-			"file1.txt": "Content 1",
 			"file2.go":  "package main\n\nfunc main() {\n\tfmt.Println(\"Hello\")\n}",
+			"file1.txt": "Content 1",
 		}
 
 		formatted := FormatFileContents(fileMap)
@@ -140,6 +140,23 @@ func TestFormatFileContents(t *testing.T) {
 		assert.Contains(t, formatted, "=== file: file2.go ===")
 		assert.Contains(t, formatted, "package main")
 		assert.True(t, strings.Contains(formatted, "\n\n"))
+	})
+
+	// Test with unsorted input map that should produce sorted output
+	t.Run("Sorted file map output", func(t *testing.T) {
+		fileMap := map[string]string{
+			"b.txt": "B content",
+			"a.txt": "A content",
+			"c.txt": "C content",
+		}
+
+		formatted := FormatFileContents(fileMap)
+
+		aPos := strings.Index(formatted, "=== file: a.txt ===")
+		bPos := strings.Index(formatted, "=== file: b.txt ===")
+		cPos := strings.Index(formatted, "=== file: c.txt ===")
+		assert.True(t, aPos > -1 && bPos > -1 && cPos > -1)
+		assert.True(t, aPos < bPos && bPos < cPos)
 	})
 
 	// Test with empty map
