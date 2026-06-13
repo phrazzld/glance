@@ -34,10 +34,11 @@ jobs:
           persist-credentials: false
 
       - name: Run Landfall
-        uses: misty-step/landfall@e991bd36d85efd957225d384643b0ecc582176bf # v1
+        uses: misty-step/landfall@90249a366099e6a5f66b081de24359c5b3cbf506 # v1.23.0
         with:
           github-token: ${{ secrets.GH_RELEASE_TOKEN }}
           llm-api-key: ${{ secrets.OPENROUTER_API_KEY }}
           synthesis: "true"
+          healthcheck: "true"
           audience: developer
           node-version: "22"
